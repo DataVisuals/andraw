@@ -25,6 +25,7 @@ let resizeHandle = null;
 // Pan/Scroll state
 let panOffsetX = 0;
 let panOffsetY = 0;
+let zoomLevel = 1;
 
 // Stroke and fill settings
 const strokeColorInput = document.getElementById('strokeColor');
@@ -380,17 +381,27 @@ canvas.addEventListener('wheel', handleWheel, { passive: false });
 function handleWheel(e) {
     e.preventDefault();
 
-    // Pan the canvas based on wheel delta
-    panOffsetX -= e.deltaX;
-    panOffsetY -= e.deltaY;
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    // Calculate zoom factor
+    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+    const oldZoom = zoomLevel;
+    zoomLevel = Math.max(0.1, Math.min(10, zoomLevel * zoomFactor));
+
+    // Zoom towards cursor position
+    const zoomChange = zoomLevel / oldZoom;
+    panOffsetX = mouseX - (mouseX - panOffsetX) * zoomChange;
+    panOffsetY = mouseY - (mouseY - panOffsetY) * zoomChange;
 
     redraw();
 }
 
 function handleMouseDown(e) {
     const rect = canvas.getBoundingClientRect();
-    let x = e.clientX - rect.left - panOffsetX;
-    let y = e.clientY - rect.top - panOffsetY;
+    let x = (e.clientX - rect.left - panOffsetX) / zoomLevel;
+    let y = (e.clientY - rect.top - panOffsetY) / zoomLevel;
 
     // Snap to shape edge for arrows and lines
     if (currentTool === 'arrow' || currentTool === 'line') {
@@ -449,8 +460,8 @@ function handleMouseDown(e) {
 
 function handleMouseMove(e) {
     const rect = canvas.getBoundingClientRect();
-    const currentX = e.clientX - rect.left - panOffsetX;
-    const currentY = e.clientY - rect.top - panOffsetY;
+    const currentX = (e.clientX - rect.left - panOffsetX) / zoomLevel;
+    const currentY = (e.clientY - rect.top - panOffsetY) / zoomLevel;
 
     if (!isDrawing) {
         // Update cursor based on hover
@@ -491,8 +502,8 @@ function handleMouseUp(e) {
     if (!isDrawing) return;
 
     const rect = canvas.getBoundingClientRect();
-    let endX = e.clientX - rect.left - panOffsetX;
-    let endY = e.clientY - rect.top - panOffsetY;
+    let endX = (e.clientX - rect.left - panOffsetX) / zoomLevel;
+    let endY = (e.clientY - rect.top - panOffsetY) / zoomLevel;
 
     // Snap endpoint to shape edge for arrows and lines
     if (currentTool === 'arrow' || currentTool === 'line') {
@@ -2285,9 +2296,10 @@ function redraw() {
     ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Apply pan transformation
+    // Apply pan and zoom transformations
     ctx.save();
     ctx.translate(panOffsetX, panOffsetY);
+    ctx.scale(zoomLevel, zoomLevel);
 
     elements.forEach(element => {
         drawElement(element);
@@ -2422,8 +2434,8 @@ function createTextInput(x, y) {
     const input = document.createElement('textarea');
     input.className = 'text-input';
     const rect = canvas.getBoundingClientRect();
-    input.style.left = (rect.left + x) + 'px';
-    input.style.top = (rect.top + y) + 'px';
+    input.style.left = (rect.left + panOffsetX + x * zoomLevel) + 'px';
+    input.style.top = (rect.top + panOffsetY + y * zoomLevel) + 'px';
     input.style.fontFamily = fontSelect.value;
     input.rows = 1;
     document.body.appendChild(input);
@@ -2468,8 +2480,8 @@ function createTextInputForShape(centerX, centerY, shape) {
     input.className = 'text-input';
     input.style.textAlign = 'center';
     const rect = canvas.getBoundingClientRect();
-    input.style.left = (rect.left + centerX - 50) + 'px'; // Offset to center the input box
-    input.style.top = (rect.top + centerY - 12) + 'px';
+    input.style.left = (rect.left + panOffsetX + centerX * zoomLevel - 50) + 'px'; // Offset to center the input box
+    input.style.top = (rect.top + panOffsetY + centerY * zoomLevel - 12) + 'px';
     input.style.fontFamily = fontSelect.value;
     input.style.width = '100px';
     input.rows = 1;
@@ -2520,8 +2532,8 @@ function createTextInputBelowShape(centerX, bottomY, shape) {
     input.className = 'text-input';
     input.style.textAlign = 'center';
     const rect = canvas.getBoundingClientRect();
-    input.style.left = (rect.left + centerX - 50) + 'px'; // Offset to center the input box
-    input.style.top = (rect.top + bottomY - 12) + 'px';
+    input.style.left = (rect.left + panOffsetX + centerX * zoomLevel - 50) + 'px'; // Offset to center the input box
+    input.style.top = (rect.top + panOffsetY + bottomY * zoomLevel - 12) + 'px';
     input.style.fontFamily = fontSelect.value;
     input.style.width = '100px';
     input.rows = 1;
