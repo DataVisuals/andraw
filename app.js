@@ -34,21 +34,21 @@ let backgroundColor = '#FFFEF9';
 // AWS Icon Loading System
 const awsIconCache = {};
 const awsIconURLs = {
-    ec2: 'https://cdn.jsdelivr.net/npm/aws-icons@latest/icons/architecture-service/AmazonEC2.svg',
-    s3: 'https://cdn.jsdelivr.net/npm/aws-icons@latest/icons/architecture-service/AmazonS3.svg',
-    rds: 'https://cdn.jsdelivr.net/npm/aws-icons@latest/icons/architecture-service/AmazonRDS.svg',
-    dynamodb: 'https://cdn.jsdelivr.net/npm/aws-icons@latest/icons/architecture-service/AmazonDynamoDB.svg',
-    athena: 'https://cdn.jsdelivr.net/npm/aws-icons@latest/icons/architecture-service/AmazonAthena.svg',
-    redshift: 'https://cdn.jsdelivr.net/npm/aws-icons@latest/icons/architecture-service/AmazonRedshift.svg',
-    sqs: 'https://cdn.jsdelivr.net/npm/aws-icons@latest/icons/architecture-service/AmazonSQS.svg',
-    sns: 'https://cdn.jsdelivr.net/npm/aws-icons@latest/icons/architecture-service/AmazonSNS.svg',
-    apiGateway: 'https://cdn.jsdelivr.net/npm/aws-icons@latest/icons/architecture-service/AmazonAPIGateway.svg',
-    cloudfront: 'https://cdn.jsdelivr.net/npm/aws-icons@latest/icons/architecture-service/AmazonCloudFront.svg',
-    route53: 'https://cdn.jsdelivr.net/npm/aws-icons@latest/icons/architecture-service/AmazonRoute53.svg',
-    ecs: 'https://cdn.jsdelivr.net/npm/aws-icons@latest/icons/architecture-service/AmazonECS.svg',
-    eks: 'https://cdn.jsdelivr.net/npm/aws-icons@latest/icons/architecture-service/AmazonEKS.svg',
-    elb: 'https://cdn.jsdelivr.net/npm/aws-icons@latest/icons/architecture-service/ElasticLoadBalancing.svg',
-    cloudwatch: 'https://cdn.jsdelivr.net/npm/aws-icons@latest/icons/architecture-service/AmazonCloudWatch.svg'
+    ec2: 'aws-icons/ec2.svg',
+    s3: 'aws-icons/s3.svg',
+    rds: 'aws-icons/rds.svg',
+    dynamodb: 'aws-icons/dynamodb.svg',
+    athena: 'aws-icons/athena.svg',
+    redshift: 'aws-icons/redshift.svg',
+    sqs: 'aws-icons/sqs.svg',
+    sns: 'aws-icons/sns.svg',
+    apiGateway: 'aws-icons/apigateway.svg',
+    cloudfront: 'aws-icons/cloudfront.svg',
+    route53: 'aws-icons/route53.svg',
+    ecs: 'aws-icons/ecs.svg',
+    eks: 'aws-icons/eks.svg',
+    elb: 'aws-icons/elb.svg',
+    cloudwatch: 'aws-icons/cloudwatch.svg'
 };
 
 // Preload AWS icons
@@ -58,7 +58,6 @@ function loadAWSIcon(serviceName, url) {
     }
 
     const img = new Image();
-    img.crossOrigin = 'anonymous';
     img.src = url;
 
     awsIconCache[serviceName] = {
