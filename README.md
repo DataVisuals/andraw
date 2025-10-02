@@ -8,7 +8,7 @@ A local drawing app with hand-drawn aesthetic and comprehensive AWS architecture
 - **Hand-drawn Style**: Rough, sketchy aesthetic like Excalidraw
 - **Auto Text**: Drawing shapes automatically prompts for centered text
 - **Selection & Manipulation**: Select, move, and resize elements
-- **Customization**: Stroke color, fill color, fill toggle, background color, font selector (14 fonts), and line styles (solid, dashed, dotted). Selected elements can be recolored in real-time.
+- **Customization**: Stroke color, fill color, fill toggle, background color, font selector (14 fonts), line styles (solid, dashed, dotted), and line routing (straight, stepped). Selected elements can be recolored in real-time.
 - **Templates**: Collapsible categories with visual previews
   - **Flowchart**: Process, Decision, Data, Terminator, Document
   - **UML**: Class, Actor, Package
@@ -43,3 +43,73 @@ A local drawing app with hand-drawn aesthetic and comprehensive AWS architecture
 - **Move**: Select an element and drag it
 - **Resize**: Select an element and drag the corner handles
 - **Delete**: Select an element and press Delete/Backspace
+
+## Development History
+
+This project was developed iteratively with Claude Code. Here's the progression of prompts that shaped Andraw:
+
+### Initial Foundation
+- Started as an Excalidraw-inspired drawing app with basic shapes and hand-drawn aesthetic
+- Built template system with collapsible categories
+- Added arrow snapping to shape edges
+- Implemented live color editing for selected elements
+- Added multiple export formats (PNG, JPG, SVG)
+
+### AWS Architecture Templates
+1. **"Can we position the text for the AWS icons underneath rather than in the middle and also fix the ambiguity in the panel sections 2 use AWS"**
+   - Modified text positioning for AWS templates to appear below icons
+   - Renamed "Cloud/AWS" section to "Cloud" to avoid confusion
+
+2. **Using official AWS Architecture Icons**
+   - Switched from CDN to official AWS Architecture Icons from aws.amazon.com
+   - Downloaded icon package and hosted locally
+   - Created aws-icons/ directory with SVG files
+
+3. **"Add all of these under subpanels by type"**
+   - Expanded from 15 to 44 AWS services
+   - Organized across 9 categories: Compute, Storage, Database, Networking, Security, Dev Tools, Integration, Analytics & ML, Management
+   - Added drawing functions for each new service
+
+4. **"No all the AWS icons should appear as sub sub sections not siblings of other non AWS sections"**
+   - Restructured HTML to create nested hierarchy
+   - Created parent "AWS" category with 9 subcategories underneath
+   - Added CSS for subcategory styling with proper indentation
+   - Implemented JavaScript event handlers for subcategory toggling
+
+### Branding & Publishing
+5. **"Change the name of the project to Andraw and commit to github"**
+   - Rebranded from "Excalidraw Clone" to "Andraw"
+   - Updated title, README, and documentation
+   - Created GitHub repository: DataVisuals/andraw
+   - Pushed all commits to remote
+
+### Advanced Features
+6. **"Can we add support for stepped connector lines"**
+   - Added line routing selector (Straight/Stepped)
+   - Implemented orthogonal routing with 3-segment paths
+   - Created drawSteppedLine() and drawSteppedArrow() functions
+   - Updated both canvas rendering and SVG export
+   - Arrowheads correctly orient based on final segment direction
+
+### UI Consistency & Polish
+7. **"Make the dropdown choices consistent across font, line style, stepped and the choice of image export in the popup"**
+   - Replaced export format prompt dialog with dropdown
+   - Changed "Image" button to "Export"
+   - Standardized all toolbar controls to use dropdowns
+
+8. **"We still have different styles across the dropdowns and let's put all the buttons on the right"**
+   - Applied consistent styling to all dropdowns (padding, borders, hover states)
+   - Added toolbar-spacer to push action buttons to the right
+   - Reorganized layout: tools/controls on left, action buttons on right
+   - Moved Clear button to far right
+
+## Technical Stack
+
+- **Frontend**: Vanilla JavaScript, HTML5 Canvas, CSS3
+- **Icons**: Official AWS Architecture Icons (SVG), Font Awesome
+- **Architecture**: No dependencies, runs entirely in browser
+- **Export**: Canvas API for PNG/JPG, custom SVG generation
+
+## License
+
+This project was created with assistance from Claude Code (Anthropic).
