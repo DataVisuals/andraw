@@ -363,8 +363,11 @@ document.querySelectorAll('.template-btn').forEach(btn => {
         const templateName = btn.dataset.template;
         const template = templates[templateName];
         if (template) {
-            const centerX = canvas.width / 2 - template.width / 2;
-            const centerY = canvas.height / 2 - template.height / 2;
+            // Calculate center in world coordinates (accounting for pan and zoom)
+            const viewportCenterWorldX = (canvas.width / 2 - panOffsetX) / zoomLevel;
+            const viewportCenterWorldY = (canvas.height / 2 - panOffsetY) / zoomLevel;
+            const centerX = viewportCenterWorldX - template.width / 2;
+            const centerY = viewportCenterWorldY - template.height / 2;
 
             const element = {
                 ...template,
