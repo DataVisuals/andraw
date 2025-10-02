@@ -2402,25 +2402,20 @@ document.getElementById('clearBtn').addEventListener('click', () => {
 });
 
 document.getElementById('exportImage').addEventListener('click', () => {
-    const format = prompt('Choose format: PNG, JPG, or SVG', 'PNG');
-    if (!format) return;
+    const format = document.getElementById('exportFormatSelect').value;
 
-    const formatLower = format.toLowerCase().trim();
-
-    if (formatLower === 'svg') {
+    if (format === 'svg') {
         exportAsSVG();
-    } else if (formatLower === 'png') {
+    } else if (format === 'png') {
         const link = document.createElement('a');
         link.download = 'drawing.png';
         link.href = canvas.toDataURL('image/png');
         link.click();
-    } else if (formatLower === 'jpg' || formatLower === 'jpeg') {
+    } else if (format === 'jpg') {
         const link = document.createElement('a');
         link.download = 'drawing.jpg';
         link.href = canvas.toDataURL('image/jpeg', 0.95);
         link.click();
-    } else {
-        alert('Invalid format. Please choose PNG, JPG, or SVG');
     }
 });
 
