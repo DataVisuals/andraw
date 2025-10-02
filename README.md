@@ -1,6 +1,6 @@
-# Excalidraw Clone
+# Andraw
 
-A local drawing app inspired by Excalidraw with hand-drawn aesthetic.
+A local drawing app with hand-drawn aesthetic and comprehensive AWS architecture templates.
 
 ## Features
 
@@ -13,7 +13,7 @@ A local drawing app inspired by Excalidraw with hand-drawn aesthetic.
   - **Flowchart**: Process, Decision, Data, Terminator, Document
   - **UML**: Class, Actor, Package
   - **Cloud**: Server, Database, Cloud, Lambda, Storage, Queue
-  - **AWS**: EC2, S3, RDS, DynamoDB, Athena, Redshift, SQS, SNS, API Gateway, CloudFront, Route 53, ECS, EKS, ELB, CloudWatch
+  - **AWS**: 44 AWS services organized in 9 subcategories (Compute, Storage, Database, Networking, Security, Dev Tools, Integration, Analytics & ML, Management)
   - **Shapes**: Hexagon, Triangle, Star, Note, Cylinder
   - **Network**: Router, Firewall, Switch
 - **Export/Import**: Save as PNG, JPG, or SVG images, or save/load as JSON
