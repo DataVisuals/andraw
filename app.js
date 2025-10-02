@@ -2119,6 +2119,8 @@ function drawPreview(x, y) {
     const height = y - startY;
 
     ctx.save();
+    ctx.translate(panOffsetX, panOffsetY);
+    ctx.scale(zoomLevel, zoomLevel);
     ctx.globalAlpha = 0.5;
 
     const previewElement = {
