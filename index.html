@@ -158,56 +158,232 @@
 
                 <div class="template-category">
                     <div class="category-header" data-category="aws">
-                        <i class="fab fa-aws"></i>
+                        <i class="fas fa-cloud"></i>
                         <span>AWS</span>
                         <i class="fas fa-chevron-down toggle-icon"></i>
                     </div>
-                    <div class="template-items">
-                        <button class="template-btn" data-template="ec2">
-                            <i class="fas fa-server"></i>EC2
-                        </button>
-                        <button class="template-btn" data-template="s3">
-                            <i class="fas fa-box"></i>S3
-                        </button>
-                        <button class="template-btn" data-template="rds">
-                            <i class="fas fa-database"></i>RDS
-                        </button>
-                        <button class="template-btn" data-template="dynamodb">
-                            <i class="fas fa-table"></i>DynamoDB
-                        </button>
-                        <button class="template-btn" data-template="athena">
-                            <i class="fas fa-search"></i>Athena
-                        </button>
-                        <button class="template-btn" data-template="redshift">
-                            <i class="fas fa-warehouse"></i>Redshift
-                        </button>
-                        <button class="template-btn" data-template="sqs">
-                            <i class="fas fa-stream"></i>SQS
-                        </button>
-                        <button class="template-btn" data-template="sns">
-                            <i class="fas fa-bell"></i>SNS
-                        </button>
-                        <button class="template-btn" data-template="api-gateway">
-                            <i class="fas fa-plug"></i>API Gateway
-                        </button>
-                        <button class="template-btn" data-template="cloudfront">
-                            <i class="fas fa-globe"></i>CloudFront
-                        </button>
-                        <button class="template-btn" data-template="route53">
-                            <i class="fas fa-network-wired"></i>Route 53
-                        </button>
-                        <button class="template-btn" data-template="ecs">
-                            <i class="fas fa-box-open"></i>ECS
-                        </button>
-                        <button class="template-btn" data-template="eks">
-                            <i class="fas fa-cubes"></i>EKS
-                        </button>
-                        <button class="template-btn" data-template="elb">
-                            <i class="fas fa-balance-scale"></i>ELB
-                        </button>
-                        <button class="template-btn" data-template="cloudwatch">
-                            <i class="fas fa-chart-line"></i>CloudWatch
-                        </button>
+                    <div class="template-items active">
+                        <div class="template-subcategory">
+                            <div class="subcategory-header" data-category="aws-compute">
+                                <i class="fas fa-microchip"></i>
+                                <span>Compute</span>
+                                <i class="fas fa-chevron-down toggle-icon"></i>
+                            </div>
+                            <div class="subcategory-items">
+                                <button class="template-btn" data-template="ec2">
+                                    <i class="fas fa-server"></i>EC2
+                                </button>
+                                <button class="template-btn" data-template="lambda">
+                                    <i class="fas fa-code"></i>Lambda
+                                </button>
+                                <button class="template-btn" data-template="fargate">
+                                    <i class="fas fa-box-open"></i>Fargate
+                                </button>
+                                <button class="template-btn" data-template="batch">
+                                    <i class="fas fa-tasks"></i>Batch
+                                </button>
+                                <button class="template-btn" data-template="ecs">
+                                    <i class="fas fa-box-open"></i>ECS
+                                </button>
+                                <button class="template-btn" data-template="eks">
+                                    <i class="fas fa-cubes"></i>EKS
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="template-subcategory">
+                            <div class="subcategory-header" data-category="aws-storage">
+                                <i class="fas fa-hdd"></i>
+                                <span>Storage</span>
+                                <i class="fas fa-chevron-down toggle-icon"></i>
+                            </div>
+                            <div class="subcategory-items">
+                                <button class="template-btn" data-template="s3">
+                                    <i class="fas fa-box"></i>S3
+                                </button>
+                                <button class="template-btn" data-template="ebs">
+                                    <i class="fas fa-database"></i>EBS
+                                </button>
+                                <button class="template-btn" data-template="efs">
+                                    <i class="fas fa-folder"></i>EFS
+                                </button>
+                                <button class="template-btn" data-template="glacier">
+                                    <i class="fas fa-snowflake"></i>Glacier
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="template-subcategory">
+                            <div class="subcategory-header" data-category="aws-database">
+                                <i class="fas fa-database"></i>
+                                <span>Database</span>
+                                <i class="fas fa-chevron-down toggle-icon"></i>
+                            </div>
+                            <div class="subcategory-items">
+                                <button class="template-btn" data-template="rds">
+                                    <i class="fas fa-database"></i>RDS
+                                </button>
+                                <button class="template-btn" data-template="dynamodb">
+                                    <i class="fas fa-table"></i>DynamoDB
+                                </button>
+                                <button class="template-btn" data-template="aurora">
+                                    <i class="fas fa-star"></i>Aurora
+                                </button>
+                                <button class="template-btn" data-template="elasticache">
+                                    <i class="fas fa-memory"></i>ElastiCache
+                                </button>
+                                <button class="template-btn" data-template="neptune">
+                                    <i class="fas fa-project-diagram"></i>Neptune
+                                </button>
+                                <button class="template-btn" data-template="documentdb">
+                                    <i class="fas fa-file-alt"></i>DocumentDB
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="template-subcategory">
+                            <div class="subcategory-header" data-category="aws-networking">
+                                <i class="fas fa-network-wired"></i>
+                                <span>Networking</span>
+                                <i class="fas fa-chevron-down toggle-icon"></i>
+                            </div>
+                            <div class="subcategory-items">
+                                <button class="template-btn" data-template="vpc">
+                                    <i class="fas fa-project-diagram"></i>VPC
+                                </button>
+                                <button class="template-btn" data-template="cloudfront">
+                                    <i class="fas fa-globe"></i>CloudFront
+                                </button>
+                                <button class="template-btn" data-template="route53">
+                                    <i class="fas fa-network-wired"></i>Route 53
+                                </button>
+                                <button class="template-btn" data-template="api-gateway">
+                                    <i class="fas fa-plug"></i>API Gateway
+                                </button>
+                                <button class="template-btn" data-template="elb">
+                                    <i class="fas fa-balance-scale"></i>ELB
+                                </button>
+                                <button class="template-btn" data-template="directconnect">
+                                    <i class="fas fa-link"></i>Direct Connect
+                                </button>
+                                <button class="template-btn" data-template="transitgateway">
+                                    <i class="fas fa-road"></i>Transit Gateway
+                                </button>
+                                <button class="template-btn" data-template="natgateway">
+                                    <i class="fas fa-random"></i>NAT Gateway
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="template-subcategory">
+                            <div class="subcategory-header" data-category="aws-security">
+                                <i class="fas fa-shield-alt"></i>
+                                <span>Security</span>
+                                <i class="fas fa-chevron-down toggle-icon"></i>
+                            </div>
+                            <div class="subcategory-items">
+                                <button class="template-btn" data-template="iam">
+                                    <i class="fas fa-user-shield"></i>IAM
+                                </button>
+                                <button class="template-btn" data-template="cognito">
+                                    <i class="fas fa-users-cog"></i>Cognito
+                                </button>
+                                <button class="template-btn" data-template="secretsmanager">
+                                    <i class="fas fa-key"></i>Secrets Manager
+                                </button>
+                                <button class="template-btn" data-template="waf">
+                                    <i class="fas fa-shield-alt"></i>WAF
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="template-subcategory">
+                            <div class="subcategory-header" data-category="aws-devtools">
+                                <i class="fas fa-tools"></i>
+                                <span>Dev Tools</span>
+                                <i class="fas fa-chevron-down toggle-icon"></i>
+                            </div>
+                            <div class="subcategory-items">
+                                <button class="template-btn" data-template="codepipeline">
+                                    <i class="fas fa-stream"></i>CodePipeline
+                                </button>
+                                <button class="template-btn" data-template="codebuild">
+                                    <i class="fas fa-hammer"></i>CodeBuild
+                                </button>
+                                <button class="template-btn" data-template="codedeploy">
+                                    <i class="fas fa-rocket"></i>CodeDeploy
+                                </button>
+                                <button class="template-btn" data-template="codecommit">
+                                    <i class="fas fa-code-branch"></i>CodeCommit
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="template-subcategory">
+                            <div class="subcategory-header" data-category="aws-integration">
+                                <i class="fas fa-plug"></i>
+                                <span>Integration</span>
+                                <i class="fas fa-chevron-down toggle-icon"></i>
+                            </div>
+                            <div class="subcategory-items">
+                                <button class="template-btn" data-template="sqs">
+                                    <i class="fas fa-stream"></i>SQS
+                                </button>
+                                <button class="template-btn" data-template="sns">
+                                    <i class="fas fa-bell"></i>SNS
+                                </button>
+                                <button class="template-btn" data-template="eventbridge">
+                                    <i class="fas fa-calendar-alt"></i>EventBridge
+                                </button>
+                                <button class="template-btn" data-template="stepfunctions">
+                                    <i class="fas fa-sitemap"></i>Step Functions
+                                </button>
+                                <button class="template-btn" data-template="appsync">
+                                    <i class="fas fa-sync"></i>AppSync
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="template-subcategory">
+                            <div class="subcategory-header" data-category="aws-analytics">
+                                <i class="fas fa-chart-bar"></i>
+                                <span>Analytics & ML</span>
+                                <i class="fas fa-chevron-down toggle-icon"></i>
+                            </div>
+                            <div class="subcategory-items">
+                                <button class="template-btn" data-template="athena">
+                                    <i class="fas fa-search"></i>Athena
+                                </button>
+                                <button class="template-btn" data-template="redshift">
+                                    <i class="fas fa-warehouse"></i>Redshift
+                                </button>
+                                <button class="template-btn" data-template="kinesis">
+                                    <i class="fas fa-stream"></i>Kinesis
+                                </button>
+                                <button class="template-btn" data-template="emr">
+                                    <i class="fas fa-server"></i>EMR
+                                </button>
+                                <button class="template-btn" data-template="sagemaker">
+                                    <i class="fas fa-brain"></i>SageMaker
+                                </button>
+                                <button class="template-btn" data-template="glue">
+                                    <i class="fas fa-magic"></i>Glue
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="template-subcategory">
+                            <div class="subcategory-header" data-category="aws-management">
+                                <i class="fas fa-chart-line"></i>
+                                <span>Management</span>
+                                <i class="fas fa-chevron-down toggle-icon"></i>
+                            </div>
+                            <div class="subcategory-items">
+                                <button class="template-btn" data-template="cloudwatch">
+                                    <i class="fas fa-chart-line"></i>CloudWatch
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

@@ -34,20 +34,58 @@ let backgroundColor = '#FFFEF9';
 // AWS Icon Loading System
 const awsIconCache = {};
 const awsIconURLs = {
+    // Compute
     ec2: 'aws-icons/ec2.svg',
-    s3: 'aws-icons/s3.svg',
-    rds: 'aws-icons/rds.svg',
-    dynamodb: 'aws-icons/dynamodb.svg',
-    athena: 'aws-icons/athena.svg',
-    redshift: 'aws-icons/redshift.svg',
-    sqs: 'aws-icons/sqs.svg',
-    sns: 'aws-icons/sns.svg',
-    apiGateway: 'aws-icons/apigateway.svg',
-    cloudfront: 'aws-icons/cloudfront.svg',
-    route53: 'aws-icons/route53.svg',
+    lambda: 'aws-icons/lambda.svg',
+    fargate: 'aws-icons/fargate.svg',
+    batch: 'aws-icons/batch.svg',
     ecs: 'aws-icons/ecs.svg',
     eks: 'aws-icons/eks.svg',
+    // Storage
+    s3: 'aws-icons/s3.svg',
+    ebs: 'aws-icons/ebs.svg',
+    efs: 'aws-icons/efs.svg',
+    glacier: 'aws-icons/glacier.svg',
+    // Database
+    rds: 'aws-icons/rds.svg',
+    dynamodb: 'aws-icons/dynamodb.svg',
+    aurora: 'aws-icons/aurora.svg',
+    elasticache: 'aws-icons/elasticache.svg',
+    neptune: 'aws-icons/neptune.svg',
+    documentdb: 'aws-icons/documentdb.svg',
+    // Networking
+    vpc: 'aws-icons/vpc.svg',
+    cloudfront: 'aws-icons/cloudfront.svg',
+    route53: 'aws-icons/route53.svg',
+    apiGateway: 'aws-icons/apigateway.svg',
     elb: 'aws-icons/elb.svg',
+    directconnect: 'aws-icons/directconnect.svg',
+    transitgateway: 'aws-icons/transitgateway.svg',
+    natgateway: 'aws-icons/natgateway.svg',
+    // Security
+    iam: 'aws-icons/iam.svg',
+    cognito: 'aws-icons/cognito.svg',
+    secretsmanager: 'aws-icons/secretsmanager.svg',
+    waf: 'aws-icons/waf.svg',
+    // Developer Tools
+    codepipeline: 'aws-icons/codepipeline.svg',
+    codebuild: 'aws-icons/codebuild.svg',
+    codedeploy: 'aws-icons/codedeploy.svg',
+    codecommit: 'aws-icons/codecommit.svg',
+    // Integration
+    sqs: 'aws-icons/sqs.svg',
+    sns: 'aws-icons/sns.svg',
+    eventbridge: 'aws-icons/eventbridge.svg',
+    stepfunctions: 'aws-icons/stepfunctions.svg',
+    appsync: 'aws-icons/appsync.svg',
+    // Analytics & ML
+    athena: 'aws-icons/athena.svg',
+    redshift: 'aws-icons/redshift.svg',
+    kinesis: 'aws-icons/kinesis.svg',
+    emr: 'aws-icons/emr.svg',
+    sagemaker: 'aws-icons/sagemaker.svg',
+    glue: 'aws-icons/glue.svg',
+    // Management
     cloudwatch: 'aws-icons/cloudwatch.svg'
 };
 
@@ -113,21 +151,58 @@ const templates = {
     router: { type: 'router', width: 100, height: 80 },
     firewall: { type: 'firewall', width: 100, height: 100 },
     switch: { type: 'switch', width: 120, height: 60 },
-    // AWS Services
+    // AWS Compute
     ec2: { type: 'ec2', width: 100, height: 100 },
+    lambda: { type: 'lambda', width: 100, height: 100 },
+    fargate: { type: 'fargate', width: 100, height: 100 },
+    batch: { type: 'batch', width: 100, height: 100 },
+    ecs: { type: 'ecs', width: 100, height: 100 },
+    eks: { type: 'eks', width: 100, height: 100 },
+    // AWS Storage
     s3: { type: 's3', width: 100, height: 100 },
+    ebs: { type: 'ebs', width: 100, height: 100 },
+    efs: { type: 'efs', width: 100, height: 100 },
+    glacier: { type: 'glacier', width: 100, height: 100 },
+    // AWS Database
     rds: { type: 'rds', width: 100, height: 100 },
     dynamodb: { type: 'dynamodb', width: 100, height: 100 },
-    athena: { type: 'athena', width: 100, height: 100 },
-    redshift: { type: 'redshift', width: 100, height: 100 },
-    sqs: { type: 'sqs', width: 120, height: 80 },
-    sns: { type: 'sns', width: 100, height: 100 },
-    'api-gateway': { type: 'apiGateway', width: 100, height: 100 },
+    aurora: { type: 'aurora', width: 100, height: 100 },
+    elasticache: { type: 'elasticache', width: 100, height: 100 },
+    neptune: { type: 'neptune', width: 100, height: 100 },
+    documentdb: { type: 'documentdb', width: 100, height: 100 },
+    // AWS Networking
+    vpc: { type: 'vpc', width: 100, height: 100 },
     cloudfront: { type: 'cloudfront', width: 100, height: 100 },
     route53: { type: 'route53', width: 100, height: 100 },
-    ecs: { type: 'ecs', width: 120, height: 80 },
-    eks: { type: 'eks', width: 100, height: 100 },
-    elb: { type: 'elb', width: 120, height: 80 },
+    'api-gateway': { type: 'apiGateway', width: 100, height: 100 },
+    elb: { type: 'elb', width: 100, height: 100 },
+    directconnect: { type: 'directconnect', width: 100, height: 100 },
+    transitgateway: { type: 'transitgateway', width: 100, height: 100 },
+    natgateway: { type: 'natgateway', width: 100, height: 100 },
+    // AWS Security
+    iam: { type: 'iam', width: 100, height: 100 },
+    cognito: { type: 'cognito', width: 100, height: 100 },
+    secretsmanager: { type: 'secretsmanager', width: 100, height: 100 },
+    waf: { type: 'waf', width: 100, height: 100 },
+    // AWS Developer Tools
+    codepipeline: { type: 'codepipeline', width: 100, height: 100 },
+    codebuild: { type: 'codebuild', width: 100, height: 100 },
+    codedeploy: { type: 'codedeploy', width: 100, height: 100 },
+    codecommit: { type: 'codecommit', width: 100, height: 100 },
+    // AWS Integration
+    sqs: { type: 'sqs', width: 100, height: 100 },
+    sns: { type: 'sns', width: 100, height: 100 },
+    eventbridge: { type: 'eventbridge', width: 100, height: 100 },
+    stepfunctions: { type: 'stepfunctions', width: 100, height: 100 },
+    appsync: { type: 'appsync', width: 100, height: 100 },
+    // AWS Analytics & ML
+    athena: { type: 'athena', width: 100, height: 100 },
+    redshift: { type: 'redshift', width: 100, height: 100 },
+    kinesis: { type: 'kinesis', width: 100, height: 100 },
+    emr: { type: 'emr', width: 100, height: 100 },
+    sagemaker: { type: 'sagemaker', width: 100, height: 100 },
+    glue: { type: 'glue', width: 100, height: 100 },
+    // AWS Management
     cloudwatch: { type: 'cloudwatch', width: 100, height: 100 }
 };
 
@@ -190,6 +265,22 @@ document.querySelectorAll('.category-header').forEach(header => {
     });
 });
 
+// Template subcategory collapse/expand
+document.querySelectorAll('.subcategory-header').forEach(header => {
+    header.addEventListener('click', () => {
+        const items = header.nextElementSibling;
+        const isActive = items.classList.contains('active');
+
+        if (isActive) {
+            items.classList.remove('active');
+            header.classList.add('collapsed');
+        } else {
+            items.classList.add('active');
+            header.classList.remove('collapsed');
+        }
+    });
+});
+
 // Template selection
 document.querySelectorAll('.template-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -215,9 +306,16 @@ document.querySelectorAll('.template-btn').forEach(btn => {
                                        'class', 'package', 'server', 'database', 'cloud', 'lambda',
                                        'storage', 'queue', 'hexagon', 'note', 'cylinder',
                                        'router', 'firewall', 'switch'];
-            const awsTemplates = ['ec2', 's3', 'rds', 'dynamodb', 'athena', 'redshift',
-                                 'sqs', 'sns', 'api-gateway', 'cloudfront', 'route53',
-                                 'ecs', 'eks', 'elb', 'cloudwatch'];
+            const awsTemplates = ['ec2', 'lambda', 'fargate', 'batch', 'ecs', 'eks',
+                                 's3', 'ebs', 'efs', 'glacier',
+                                 'rds', 'dynamodb', 'aurora', 'elasticache', 'neptune', 'documentdb',
+                                 'vpc', 'cloudfront', 'route53', 'api-gateway', 'elb',
+                                 'directconnect', 'transitgateway', 'natgateway',
+                                 'iam', 'cognito', 'secretsmanager', 'waf',
+                                 'codepipeline', 'codebuild', 'codedeploy', 'codecommit',
+                                 'sqs', 'sns', 'eventbridge', 'stepfunctions', 'appsync',
+                                 'athena', 'redshift', 'kinesis', 'emr', 'sagemaker', 'glue',
+                                 'cloudwatch'];
 
             if (containerTemplates.includes(templateName)) {
                 const shapeCenterX = centerX + template.width / 2;
@@ -1337,6 +1435,123 @@ function drawCloudWatch(x, y, w, h, strokeColor, fillColor) {
     drawAWSService(x, y, w, h, strokeColor, fillColor, 'cloudwatch');
 }
 
+// Additional AWS Services
+function drawLambda(x, y, w, h, strokeColor, fillColor) {
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'lambda');
+}
+
+function drawFargate(x, y, w, h, strokeColor, fillColor) {
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'fargate');
+}
+
+function drawBatch(x, y, w, h, strokeColor, fillColor) {
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'batch');
+}
+
+function drawEBS(x, y, w, h, strokeColor, fillColor) {
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'ebs');
+}
+
+function drawEFS(x, y, w, h, strokeColor, fillColor) {
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'efs');
+}
+
+function drawGlacier(x, y, w, h, strokeColor, fillColor) {
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'glacier');
+}
+
+function drawAurora(x, y, w, h, strokeColor, fillColor) {
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'aurora');
+}
+
+function drawElastiCache(x, y, w, h, strokeColor, fillColor) {
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'elasticache');
+}
+
+function drawNeptune(x, y, w, h, strokeColor, fillColor) {
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'neptune');
+}
+
+function drawDocumentDB(x, y, w, h, strokeColor, fillColor) {
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'documentdb');
+}
+
+function drawVPC(x, y, w, h, strokeColor, fillColor) {
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'vpc');
+}
+
+function drawDirectConnect(x, y, w, h, strokeColor, fillColor) {
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'directconnect');
+}
+
+function drawTransitGateway(x, y, w, h, strokeColor, fillColor) {
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'transitgateway');
+}
+
+function drawNATGateway(x, y, w, h, strokeColor, fillColor) {
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'natgateway');
+}
+
+function drawIAM(x, y, w, h, strokeColor, fillColor) {
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'iam');
+}
+
+function drawCognito(x, y, w, h, strokeColor, fillColor) {
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'cognito');
+}
+
+function drawSecretsManager(x, y, w, h, strokeColor, fillColor) {
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'secretsmanager');
+}
+
+function drawWAF(x, y, w, h, strokeColor, fillColor) {
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'waf');
+}
+
+function drawCodePipeline(x, y, w, h, strokeColor, fillColor) {
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'codepipeline');
+}
+
+function drawCodeBuild(x, y, w, h, strokeColor, fillColor) {
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'codebuild');
+}
+
+function drawCodeDeploy(x, y, w, h, strokeColor, fillColor) {
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'codedeploy');
+}
+
+function drawCodeCommit(x, y, w, h, strokeColor, fillColor) {
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'codecommit');
+}
+
+function drawEventBridge(x, y, w, h, strokeColor, fillColor) {
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'eventbridge');
+}
+
+function drawStepFunctions(x, y, w, h, strokeColor, fillColor) {
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'stepfunctions');
+}
+
+function drawAppSync(x, y, w, h, strokeColor, fillColor) {
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'appsync');
+}
+
+function drawKinesis(x, y, w, h, strokeColor, fillColor) {
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'kinesis');
+}
+
+function drawEMR(x, y, w, h, strokeColor, fillColor) {
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'emr');
+}
+
+function drawSageMaker(x, y, w, h, strokeColor, fillColor) {
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'sagemaker');
+}
+
+function drawGlue(x, y, w, h, strokeColor, fillColor) {
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'glue');
+}
+
 function drawElement(element) {
     const lineStyle = element.lineStyle || 'solid';
 
@@ -1508,6 +1723,122 @@ function drawElement(element) {
         case 'cloudwatch':
             drawCloudWatch(element.x, element.y, element.width, element.height,
                           element.strokeColor, element.fillColor);
+            break;
+        case 'lambda':
+            drawLambda(element.x, element.y, element.width, element.height,
+                      element.strokeColor, element.fillColor);
+            break;
+        case 'fargate':
+            drawFargate(element.x, element.y, element.width, element.height,
+                       element.strokeColor, element.fillColor);
+            break;
+        case 'batch':
+            drawBatch(element.x, element.y, element.width, element.height,
+                     element.strokeColor, element.fillColor);
+            break;
+        case 'ebs':
+            drawEBS(element.x, element.y, element.width, element.height,
+                   element.strokeColor, element.fillColor);
+            break;
+        case 'efs':
+            drawEFS(element.x, element.y, element.width, element.height,
+                   element.strokeColor, element.fillColor);
+            break;
+        case 'glacier':
+            drawGlacier(element.x, element.y, element.width, element.height,
+                       element.strokeColor, element.fillColor);
+            break;
+        case 'aurora':
+            drawAurora(element.x, element.y, element.width, element.height,
+                      element.strokeColor, element.fillColor);
+            break;
+        case 'elasticache':
+            drawElastiCache(element.x, element.y, element.width, element.height,
+                           element.strokeColor, element.fillColor);
+            break;
+        case 'neptune':
+            drawNeptune(element.x, element.y, element.width, element.height,
+                       element.strokeColor, element.fillColor);
+            break;
+        case 'documentdb':
+            drawDocumentDB(element.x, element.y, element.width, element.height,
+                          element.strokeColor, element.fillColor);
+            break;
+        case 'vpc':
+            drawVPC(element.x, element.y, element.width, element.height,
+                   element.strokeColor, element.fillColor);
+            break;
+        case 'directconnect':
+            drawDirectConnect(element.x, element.y, element.width, element.height,
+                             element.strokeColor, element.fillColor);
+            break;
+        case 'transitgateway':
+            drawTransitGateway(element.x, element.y, element.width, element.height,
+                              element.strokeColor, element.fillColor);
+            break;
+        case 'natgateway':
+            drawNATGateway(element.x, element.y, element.width, element.height,
+                          element.strokeColor, element.fillColor);
+            break;
+        case 'iam':
+            drawIAM(element.x, element.y, element.width, element.height,
+                   element.strokeColor, element.fillColor);
+            break;
+        case 'cognito':
+            drawCognito(element.x, element.y, element.width, element.height,
+                       element.strokeColor, element.fillColor);
+            break;
+        case 'secretsmanager':
+            drawSecretsManager(element.x, element.y, element.width, element.height,
+                              element.strokeColor, element.fillColor);
+            break;
+        case 'waf':
+            drawWAF(element.x, element.y, element.width, element.height,
+                   element.strokeColor, element.fillColor);
+            break;
+        case 'codepipeline':
+            drawCodePipeline(element.x, element.y, element.width, element.height,
+                            element.strokeColor, element.fillColor);
+            break;
+        case 'codebuild':
+            drawCodeBuild(element.x, element.y, element.width, element.height,
+                         element.strokeColor, element.fillColor);
+            break;
+        case 'codedeploy':
+            drawCodeDeploy(element.x, element.y, element.width, element.height,
+                          element.strokeColor, element.fillColor);
+            break;
+        case 'codecommit':
+            drawCodeCommit(element.x, element.y, element.width, element.height,
+                          element.strokeColor, element.fillColor);
+            break;
+        case 'eventbridge':
+            drawEventBridge(element.x, element.y, element.width, element.height,
+                           element.strokeColor, element.fillColor);
+            break;
+        case 'stepfunctions':
+            drawStepFunctions(element.x, element.y, element.width, element.height,
+                             element.strokeColor, element.fillColor);
+            break;
+        case 'appsync':
+            drawAppSync(element.x, element.y, element.width, element.height,
+                       element.strokeColor, element.fillColor);
+            break;
+        case 'kinesis':
+            drawKinesis(element.x, element.y, element.width, element.height,
+                       element.strokeColor, element.fillColor);
+            break;
+        case 'emr':
+            drawEMR(element.x, element.y, element.width, element.height,
+                   element.strokeColor, element.fillColor);
+            break;
+        case 'sagemaker':
+            drawSageMaker(element.x, element.y, element.width, element.height,
+                         element.strokeColor, element.fillColor);
+            break;
+        case 'glue':
+            drawGlue(element.x, element.y, element.width, element.height,
+                    element.strokeColor, element.fillColor);
             break;
     }
 }
