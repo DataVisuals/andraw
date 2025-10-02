@@ -22,6 +22,10 @@ let selectedElement = null;
 let dragMode = null; // 'move' or 'resize'
 let resizeHandle = null;
 
+// Pan/Scroll state
+let panOffsetX = 0;
+let panOffsetY = 0;
+
 // Stroke and fill settings
 const strokeColorInput = document.getElementById('strokeColor');
 const fillColorInput = document.getElementById('fillColor');
@@ -371,11 +375,22 @@ document.addEventListener('keydown', (e) => {
 canvas.addEventListener('mousedown', handleMouseDown);
 canvas.addEventListener('mousemove', handleMouseMove);
 canvas.addEventListener('mouseup', handleMouseUp);
+canvas.addEventListener('wheel', handleWheel, { passive: false });
+
+function handleWheel(e) {
+    e.preventDefault();
+
+    // Pan the canvas based on wheel delta
+    panOffsetX -= e.deltaX;
+    panOffsetY -= e.deltaY;
+
+    redraw();
+}
 
 function handleMouseDown(e) {
     const rect = canvas.getBoundingClientRect();
-    let x = e.clientX - rect.left;
-    let y = e.clientY - rect.top;
+    let x = e.clientX - rect.left - panOffsetX;
+    let y = e.clientY - rect.top - panOffsetY;
 
     // Snap to shape edge for arrows and lines
     if (currentTool === 'arrow' || currentTool === 'line') {
@@ -434,8 +449,8 @@ function handleMouseDown(e) {
 
 function handleMouseMove(e) {
     const rect = canvas.getBoundingClientRect();
-    const currentX = e.clientX - rect.left;
-    const currentY = e.clientY - rect.top;
+    const currentX = e.clientX - rect.left - panOffsetX;
+    const currentY = e.clientY - rect.top - panOffsetY;
 
     if (!isDrawing) {
         // Update cursor based on hover
@@ -476,8 +491,8 @@ function handleMouseUp(e) {
     if (!isDrawing) return;
 
     const rect = canvas.getBoundingClientRect();
-    let endX = e.clientX - rect.left;
-    let endY = e.clientY - rect.top;
+    let endX = e.clientX - rect.left - panOffsetX;
+    let endY = e.clientY - rect.top - panOffsetY;
 
     // Snap endpoint to shape edge for arrows and lines
     if (currentTool === 'arrow' || currentTool === 'line') {
@@ -2270,6 +2285,10 @@ function redraw() {
     ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    // Apply pan transformation
+    ctx.save();
+    ctx.translate(panOffsetX, panOffsetY);
+
     elements.forEach(element => {
         drawElement(element);
     });
@@ -2290,6 +2309,9 @@ function redraw() {
             ctx.fillRect(handle.x - 4, handle.y - 4, 8, 8);
         });
     }
+
+    // Restore context
+    ctx.restore();
 }
 
 // Selection and manipulation
