@@ -2000,9 +2000,92 @@ function undo() {
     }
 }
 
+// Helper function to find which element a point is closest to
+function findClosestElement(x, y, excludeTypes = ['line', 'arrow', 'pen']) {
+    let closest = null;
+    let minDistance = Infinity;
+
+    elements.forEach(el => {
+        if (excludeTypes.includes(el.type)) return;
+
+        const centerX = el.x + (el.width || 0) / 2;
+        const centerY = el.y + (el.height || 0) / 2;
+        const distance = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
+
+        if (distance < minDistance && distance < 200) { // Within 200px
+            minDistance = distance;
+            closest = el;
+        }
+    });
+
+    return closest;
+}
+
+// Detect connections for arrows and lines
+function detectConnections() {
+    const connections = [];
+
+    elements.forEach(el => {
+        if (el.type === 'line' || el.type === 'arrow') {
+            const startX = el.x;
+            const startY = el.y;
+            const endX = el.x + (el.width || 0);
+            const endY = el.y + (el.height || 0);
+
+            const fromElement = findClosestElement(startX, startY);
+            const toElement = findClosestElement(endX, endY);
+
+            if (fromElement && toElement && fromElement !== toElement) {
+                connections.push({
+                    connector: el,
+                    from: fromElement,
+                    to: toElement
+                });
+            }
+        }
+    });
+
+    return connections;
+}
+
+// Reconnect arrows for horizontal layout (left to right)
+function reconnectHorizontal(connections) {
+    connections.forEach(({ connector, from, to }) => {
+        // Connect from right edge of 'from' to left edge of 'to'
+        const fromX = from.x + Math.abs(from.width || 100);
+        const fromY = from.y + Math.abs(from.height || 100) / 2;
+        const toX = to.x;
+        const toY = to.y + Math.abs(to.height || 100) / 2;
+
+        connector.x = fromX;
+        connector.y = fromY;
+        connector.width = toX - fromX;
+        connector.height = toY - fromY;
+    });
+}
+
+// Reconnect arrows for vertical layout (top to bottom)
+function reconnectVertical(connections) {
+    connections.forEach(({ connector, from, to }) => {
+        // Connect from bottom edge of 'from' to top edge of 'to'
+        const fromX = from.x + Math.abs(from.width || 100) / 2;
+        const fromY = from.y + Math.abs(from.height || 100);
+        const toX = to.x + Math.abs(to.width || 100) / 2;
+        const toY = to.y;
+
+        connector.x = fromX;
+        connector.y = fromY;
+        connector.width = toX - fromX;
+        connector.height = toY - fromY;
+    });
+}
+
 // Layout functions
 function layoutHorizontal() {
     if (elements.length === 0) return;
+
+    // Detect connections before layout
+    const connections = detectConnections();
 
     const minSpacing = 10;
     const maxSpacing = 100;
@@ -2010,15 +2093,17 @@ function layoutHorizontal() {
     const maxWidth = canvas.width - margin * 2;
     const availableHeight = canvas.height - margin * 2;
 
-    // Sort elements by their current Y position, then X position
-    const sortedElements = [...elements].sort((a, b) => {
-        const ay = a.y || 0;
-        const by = b.y || 0;
-        if (Math.abs(ay - by) < 50) {
-            return (a.x || 0) - (b.x || 0);
-        }
-        return ay - by;
-    });
+    // Sort elements by their current Y position, then X position (exclude connectors)
+    const sortedElements = [...elements]
+        .filter(el => el.type !== 'line' && el.type !== 'arrow')
+        .sort((a, b) => {
+            const ay = a.y || 0;
+            const by = b.y || 0;
+            if (Math.abs(ay - by) < 50) {
+                return (a.x || 0) - (b.x || 0);
+            }
+            return ay - by;
+        });
 
     // Group elements into rows with minimal spacing for grouping
     let currentX = 0;
@@ -2081,6 +2166,9 @@ function layoutHorizontal() {
         startY += row.height + verticalSpacing;
     });
 
+    // Reconnect arrows in horizontal orientation
+    reconnectHorizontal(connections);
+
     saveHistory();
     redraw();
 }
@@ -2088,21 +2176,26 @@ function layoutHorizontal() {
 function layoutVertical() {
     if (elements.length === 0) return;
 
+    // Detect connections before layout
+    const connections = detectConnections();
+
     const minSpacing = 10;
     const maxSpacing = 100;
     const margin = 50;
     const maxHeight = canvas.height - margin * 2;
     const availableWidth = canvas.width - margin * 2;
 
-    // Sort elements by their current X position, then Y position
-    const sortedElements = [...elements].sort((a, b) => {
-        const ax = a.x || 0;
-        const bx = b.x || 0;
-        if (Math.abs(ax - bx) < 50) {
-            return (a.y || 0) - (b.y || 0);
-        }
-        return ax - bx;
-    });
+    // Sort elements by their current X position, then Y position (exclude connectors)
+    const sortedElements = [...elements]
+        .filter(el => el.type !== 'line' && el.type !== 'arrow')
+        .sort((a, b) => {
+            const ax = a.x || 0;
+            const bx = b.x || 0;
+            if (Math.abs(ax - bx) < 50) {
+                return (a.y || 0) - (b.y || 0);
+            }
+            return ax - bx;
+        });
 
     // Group elements into columns with minimal spacing for grouping
     let currentY = 0;
@@ -2164,6 +2257,9 @@ function layoutVertical() {
 
         startX += column.width + horizontalSpacing;
     });
+
+    // Reconnect arrows in vertical orientation
+    reconnectVertical(connections);
 
     saveHistory();
     redraw();
