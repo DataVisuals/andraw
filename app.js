@@ -27,6 +27,7 @@ const fillEnabledInput = document.getElementById('fillEnabled');
 const fontSelect = document.getElementById('fontSelect');
 const bgColorInput = document.getElementById('bgColor');
 const lineStyleSelect = document.getElementById('lineStyleSelect');
+const lineRoutingSelect = document.getElementById('lineRoutingSelect');
 
 // Background color state
 let backgroundColor = '#FFFEF9';
@@ -490,7 +491,8 @@ function handleMouseUp(e) {
                 height: height,
                 strokeColor: strokeColorInput.value,
                 fillColor: fillEnabledInput.checked ? fillColorInput.value : null,
-                lineStyle: lineStyleSelect.value
+                lineStyle: lineStyleSelect.value,
+                lineRouting: (currentTool === 'line' || currentTool === 'arrow') ? lineRoutingSelect.value : undefined
             };
             elements.push(element);
 
@@ -691,6 +693,81 @@ function drawArrow(x1, y1, x2, y2, color, lineStyle = 'solid') {
     ctx.lineTo(
         x2 - headLength * Math.cos(angle + Math.PI / 6),
         y2 - headLength * Math.sin(angle + Math.PI / 6)
+    );
+    ctx.stroke();
+}
+
+// Calculate stepped path points (orthogonal routing)
+function getSteppedPath(x1, y1, x2, y2) {
+    const points = [];
+    points.push({x: x1, y: y1});
+
+    // Create a simple 3-segment stepped path
+    const midX = (x1 + x2) / 2;
+    points.push({x: midX, y: y1});
+    points.push({x: midX, y: y2});
+    points.push({x: x2, y: y2});
+
+    return points;
+}
+
+function drawSteppedLine(x1, y1, x2, y2, color, lineStyle = 'solid') {
+    const points = getSteppedPath(x1, y1, x2, y2);
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    applyLineStyle(lineStyle);
+
+    // Draw the stepped path with rough effect
+    for (let i = 0; i < points.length - 1; i++) {
+        ctx.beginPath();
+        for (let j = 0; j < 2; j++) {
+            const offset = (j - 0.5) * 0.5;
+            ctx.moveTo(points[i].x + offset, points[i].y + offset);
+            ctx.lineTo(points[i + 1].x + offset, points[i + 1].y + offset);
+        }
+        ctx.stroke();
+    }
+    ctx.setLineDash([]);
+}
+
+function drawSteppedArrow(x1, y1, x2, y2, color, lineStyle = 'solid') {
+    const points = getSteppedPath(x1, y1, x2, y2);
+
+    // Draw the stepped line portion
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    applyLineStyle(lineStyle);
+
+    for (let i = 0; i < points.length - 1; i++) {
+        ctx.beginPath();
+        for (let j = 0; j < 2; j++) {
+            const offset = (j - 0.5) * 0.5;
+            ctx.moveTo(points[i].x + offset, points[i].y + offset);
+            ctx.lineTo(points[i + 1].x + offset, points[i + 1].y + offset);
+        }
+        ctx.stroke();
+    }
+    ctx.setLineDash([]);
+
+    // Draw arrowhead at the end (always solid)
+    const lastPoint = points[points.length - 1];
+    const secondLastPoint = points[points.length - 2];
+    const angle = Math.atan2(lastPoint.y - secondLastPoint.y, lastPoint.x - secondLastPoint.x);
+    const headLength = 15;
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(lastPoint.x, lastPoint.y);
+    ctx.lineTo(
+        lastPoint.x - headLength * Math.cos(angle - Math.PI / 6),
+        lastPoint.y - headLength * Math.sin(angle - Math.PI / 6)
+    );
+    ctx.moveTo(lastPoint.x, lastPoint.y);
+    ctx.lineTo(
+        lastPoint.x - headLength * Math.cos(angle + Math.PI / 6),
+        lastPoint.y - headLength * Math.sin(angle + Math.PI / 6)
     );
     ctx.stroke();
 }
@@ -1565,14 +1642,26 @@ function drawElement(element) {
                           element.strokeColor, element.fillColor, lineStyle);
             break;
         case 'line':
-            drawRoughLine(element.x, element.y,
-                         element.x + element.width, element.y + element.height,
-                         element.strokeColor, lineStyle);
+            if (element.lineRouting === 'stepped') {
+                drawSteppedLine(element.x, element.y,
+                               element.x + element.width, element.y + element.height,
+                               element.strokeColor, lineStyle);
+            } else {
+                drawRoughLine(element.x, element.y,
+                             element.x + element.width, element.y + element.height,
+                             element.strokeColor, lineStyle);
+            }
             break;
         case 'arrow':
-            drawArrow(element.x, element.y,
-                     element.x + element.width, element.y + element.height,
-                     element.strokeColor, lineStyle);
+            if (element.lineRouting === 'stepped') {
+                drawSteppedArrow(element.x, element.y,
+                                element.x + element.width, element.y + element.height,
+                                element.strokeColor, lineStyle);
+            } else {
+                drawArrow(element.x, element.y,
+                         element.x + element.width, element.y + element.height,
+                         element.strokeColor, lineStyle);
+            }
             break;
         case 'pen':
             drawPen(element.points, element.strokeColor, lineStyle);
@@ -2193,21 +2282,51 @@ function elementToSVG(element) {
         case 'line':
             const x2 = element.x + element.width;
             const y2 = element.y + element.height;
-            return `<line x1="${element.x}" y1="${element.y}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="2" ${dashArray}/>`;
+            if (element.lineRouting === 'stepped') {
+                const points = getSteppedPath(element.x, element.y, x2, y2);
+                let pathData = `M ${points[0].x} ${points[0].y}`;
+                for (let i = 1; i < points.length; i++) {
+                    pathData += ` L ${points[i].x} ${points[i].y}`;
+                }
+                return `<path d="${pathData}" stroke="${stroke}" fill="none" stroke-width="2" ${dashArray}/>`;
+            } else {
+                return `<line x1="${element.x}" y1="${element.y}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="2" ${dashArray}/>`;
+            }
 
         case 'arrow':
             const ax2 = element.x + element.width;
             const ay2 = element.y + element.height;
-            const angle = Math.atan2(element.height, element.width);
-            const headLength = 15;
-            const arrowPoint1X = ax2 - headLength * Math.cos(angle - Math.PI / 6);
-            const arrowPoint1Y = ay2 - headLength * Math.sin(angle - Math.PI / 6);
-            const arrowPoint2X = ax2 - headLength * Math.cos(angle + Math.PI / 6);
-            const arrowPoint2Y = ay2 - headLength * Math.sin(angle + Math.PI / 6);
+            if (element.lineRouting === 'stepped') {
+                const points = getSteppedPath(element.x, element.y, ax2, ay2);
+                let pathData = `M ${points[0].x} ${points[0].y}`;
+                for (let i = 1; i < points.length; i++) {
+                    pathData += ` L ${points[i].x} ${points[i].y}`;
+                }
+                // Calculate arrowhead based on last segment
+                const lastPoint = points[points.length - 1];
+                const secondLastPoint = points[points.length - 2];
+                const angle = Math.atan2(lastPoint.y - secondLastPoint.y, lastPoint.x - secondLastPoint.x);
+                const headLength = 15;
+                const arrowPoint1X = lastPoint.x - headLength * Math.cos(angle - Math.PI / 6);
+                const arrowPoint1Y = lastPoint.y - headLength * Math.sin(angle - Math.PI / 6);
+                const arrowPoint2X = lastPoint.x - headLength * Math.cos(angle + Math.PI / 6);
+                const arrowPoint2Y = lastPoint.y - headLength * Math.sin(angle + Math.PI / 6);
 
-            return `<line x1="${element.x}" y1="${element.y}" x2="${ax2}" y2="${ay2}" stroke="${stroke}" stroke-width="2" ${dashArray}/>` +
-                   `<line x1="${ax2}" y1="${ay2}" x2="${arrowPoint1X}" y2="${arrowPoint1Y}" stroke="${stroke}" stroke-width="2"/>` +
-                   `<line x1="${ax2}" y1="${ay2}" x2="${arrowPoint2X}" y2="${arrowPoint2Y}" stroke="${stroke}" stroke-width="2"/>`;
+                return `<path d="${pathData}" stroke="${stroke}" fill="none" stroke-width="2" ${dashArray}/>` +
+                       `<line x1="${lastPoint.x}" y1="${lastPoint.y}" x2="${arrowPoint1X}" y2="${arrowPoint1Y}" stroke="${stroke}" stroke-width="2"/>` +
+                       `<line x1="${lastPoint.x}" y1="${lastPoint.y}" x2="${arrowPoint2X}" y2="${arrowPoint2Y}" stroke="${stroke}" stroke-width="2"/>`;
+            } else {
+                const angle = Math.atan2(element.height, element.width);
+                const headLength = 15;
+                const arrowPoint1X = ax2 - headLength * Math.cos(angle - Math.PI / 6);
+                const arrowPoint1Y = ay2 - headLength * Math.sin(angle - Math.PI / 6);
+                const arrowPoint2X = ax2 - headLength * Math.cos(angle + Math.PI / 6);
+                const arrowPoint2Y = ay2 - headLength * Math.sin(angle + Math.PI / 6);
+
+                return `<line x1="${element.x}" y1="${element.y}" x2="${ax2}" y2="${ay2}" stroke="${stroke}" stroke-width="2" ${dashArray}/>` +
+                       `<line x1="${ax2}" y1="${ay2}" x2="${arrowPoint1X}" y2="${arrowPoint1Y}" stroke="${stroke}" stroke-width="2"/>` +
+                       `<line x1="${ax2}" y1="${ay2}" x2="${arrowPoint2X}" y2="${arrowPoint2Y}" stroke="${stroke}" stroke-width="2"/>`;
+            }
 
         case 'pen':
             if (element.points.length < 2) return '';
