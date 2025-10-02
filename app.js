@@ -26,6 +26,10 @@ let resizeHandle = null;
 let panOffsetX = 0;
 let panOffsetY = 0;
 let zoomLevel = 1;
+let isPanning = false;
+let panStartX = 0;
+let panStartY = 0;
+let spacePressed = false;
 
 // Stroke and fill settings
 const strokeColorInput = document.getElementById('strokeColor');
@@ -35,6 +39,17 @@ const fontSelect = document.getElementById('fontSelect');
 const bgColorInput = document.getElementById('bgColor');
 const lineStyleSelect = document.getElementById('lineStyleSelect');
 const lineRoutingSelect = document.getElementById('lineRoutingSelect');
+const stylePresetBtn = document.getElementById('stylePresetBtn');
+const stylePresetDropdown = document.getElementById('stylePresetDropdown');
+
+// Style presets - tasteful, muted color combinations
+const stylePresets = {
+    slate: { stroke: '#2C3E50', fill: '#ECF0F1' },      // Dark blue-grey border, light grey fill
+    sage: { stroke: '#556B2F', fill: '#D8E4BC' },       // Dark olive border, light sage fill
+    terracotta: { stroke: '#A0522D', fill: '#F4DCC4' }, // Sienna border, light peach fill
+    ocean: { stroke: '#2C5F7F', fill: '#B8D4E8' },      // Deep teal border, light blue fill
+    plum: { stroke: '#6B4C7A', fill: '#E6D9ED' }        // Deep purple border, light lavender fill
+};
 
 // Background color state
 let backgroundColor = '#FFFEF9';
@@ -229,8 +244,41 @@ document.querySelectorAll('.tool-btn').forEach(btn => {
 // Background color change
 bgColorInput.addEventListener('input', (e) => {
     backgroundColor = e.target.value;
-    fillColorInput.value = backgroundColor;
     redraw();
+});
+
+// Style preset dropdown toggle
+stylePresetBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    stylePresetDropdown.classList.toggle('active');
+});
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+    if (!stylePresetBtn.contains(e.target) && !stylePresetDropdown.contains(e.target)) {
+        stylePresetDropdown.classList.remove('active');
+    }
+});
+
+// Style preset selection
+stylePresetDropdown.querySelectorAll('.preset-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+        const preset = e.currentTarget.dataset.preset;
+        if (preset && stylePresets[preset]) {
+            strokeColorInput.value = stylePresets[preset].stroke;
+            fillColorInput.value = stylePresets[preset].fill;
+            fillEnabledInput.checked = true;
+
+            // Update selected element if any
+            if (selectedElement && currentTool === 'select') {
+                selectedElement.strokeColor = stylePresets[preset].stroke;
+                selectedElement.fillColor = stylePresets[preset].fill;
+                redraw();
+            }
+
+            stylePresetDropdown.classList.remove('active');
+        }
+    });
 });
 
 // Fill color change - update selected element
@@ -372,6 +420,25 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+// Keyboard events for panning
+document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' && !e.repeat) {
+        spacePressed = true;
+        if (!isDrawing) {
+            canvas.style.cursor = 'grab';
+        }
+        e.preventDefault();
+    }
+});
+
+document.addEventListener('keyup', (e) => {
+    if (e.code === 'Space') {
+        spacePressed = false;
+        isPanning = false;
+        canvas.style.cursor = currentTool === 'select' ? 'default' : 'crosshair';
+    }
+});
+
 // Mouse events
 canvas.addEventListener('mousedown', handleMouseDown);
 canvas.addEventListener('mousemove', handleMouseMove);
@@ -400,6 +467,16 @@ function handleWheel(e) {
 
 function handleMouseDown(e) {
     const rect = canvas.getBoundingClientRect();
+
+    // Handle panning with spacebar
+    if (spacePressed) {
+        isPanning = true;
+        panStartX = e.clientX - panOffsetX;
+        panStartY = e.clientY - panOffsetY;
+        canvas.style.cursor = 'grabbing';
+        return;
+    }
+
     let x = (e.clientX - rect.left - panOffsetX) / zoomLevel;
     let y = (e.clientY - rect.top - panOffsetY) / zoomLevel;
 
@@ -459,6 +536,14 @@ function handleMouseDown(e) {
 }
 
 function handleMouseMove(e) {
+    // Handle panning
+    if (isPanning) {
+        panOffsetX = e.clientX - panStartX;
+        panOffsetY = e.clientY - panStartY;
+        redraw();
+        return;
+    }
+
     const rect = canvas.getBoundingClientRect();
     const currentX = (e.clientX - rect.left - panOffsetX) / zoomLevel;
     const currentY = (e.clientY - rect.top - panOffsetY) / zoomLevel;
@@ -499,6 +584,13 @@ function handleMouseMove(e) {
 }
 
 function handleMouseUp(e) {
+    // Handle panning end
+    if (isPanning) {
+        isPanning = false;
+        canvas.style.cursor = spacePressed ? 'grab' : (currentTool === 'select' ? 'default' : 'crosshair');
+        return;
+    }
+
     if (!isDrawing) return;
 
     const rect = canvas.getBoundingClientRect();

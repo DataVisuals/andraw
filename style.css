@@ -92,6 +92,80 @@ label {
     border-color: #999;
 }
 
+.style-preset-container {
+    position: relative;
+    display: inline-block;
+}
+
+.style-preset-btn {
+    padding: 4px 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: white;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s;
+}
+
+.style-preset-btn:hover {
+    border-color: #999;
+    background: #f0f0f0;
+}
+
+.style-preset-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 4px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    z-index: 1000;
+    min-width: 140px;
+}
+
+.style-preset-dropdown.active {
+    display: block;
+}
+
+.preset-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    width: 100%;
+    border: none;
+    background: white;
+    cursor: pointer;
+    text-align: left;
+    font-size: 13px;
+    transition: background 0.2s;
+}
+
+.preset-item:first-child {
+    border-radius: 4px 4px 0 0;
+}
+
+.preset-item:last-child {
+    border-radius: 0 0 4px 4px;
+}
+
+.preset-item:hover {
+    background: #f0f0f0;
+}
+
+.preset-swatch {
+    width: 24px;
+    height: 24px;
+    border: 2px solid;
+    border-radius: 4px;
+}
+
 .main-content {
     flex: 1;
     display: flex;
