@@ -19,6 +19,9 @@ let currentTool = 'select';
 let isDrawing = false;
 let startX, startY;
 let selectedElement = null;
+let selectedElements = []; // For multi-select
+let isRectangleSelecting = false;
+let selectionRect = null;
 let dragMode = null; // 'move' or 'resize'
 let resizeHandle = null;
 
@@ -253,6 +256,7 @@ document.querySelectorAll('.tool-btn').forEach(btn => {
             canvas.style.cursor = 'crosshair';
         }
         selectedElement = null;
+        selectedElements = [];
         redraw();
     });
 });
@@ -431,7 +435,16 @@ document.addEventListener('keydown', (e) => {
         e.preventDefault();
     }
     if (key === 'delete' || key === 'backspace') {
-        if (selectedElement) {
+        if (selectedElements.length > 0) {
+            // Delete all selected elements
+            elements = elements.filter(el => !selectedElements.includes(el));
+            selectedElements = [];
+            selectedElement = null;
+            saveHistory();
+            redraw();
+            e.preventDefault();
+        } else if (selectedElement) {
+            // Delete single selected element
             elements = elements.filter(el => el !== selectedElement);
             selectedElement = null;
             saveHistory();
@@ -538,21 +551,37 @@ function handleMouseDown(e) {
         }
 
         // Check if clicking on element
-        selectedElement = getElementAtPoint(startX, startY);
-        if (selectedElement) {
-            dragMode = 'move';
-            isDrawing = true;
-
-            // Update color pickers to match selected element
-            if (selectedElement.strokeColor) {
-                strokeColorInput.value = selectedElement.strokeColor;
-            }
-            if (selectedElement.fillColor) {
-                fillColorInput.value = selectedElement.fillColor;
-                fillEnabledInput.checked = true;
+        const clickedElement = getElementAtPoint(startX, startY);
+        if (clickedElement) {
+            // If clicking on already selected element, keep selection
+            if (selectedElements.includes(clickedElement) || clickedElement === selectedElement) {
+                dragMode = 'move';
+                isDrawing = true;
             } else {
-                fillEnabledInput.checked = false;
+                // Select single element
+                selectedElement = clickedElement;
+                selectedElements = [];
+                dragMode = 'move';
+                isDrawing = true;
+
+                // Update color pickers to match selected element
+                if (selectedElement.strokeColor) {
+                    strokeColorInput.value = selectedElement.strokeColor;
+                }
+                if (selectedElement.fillColor) {
+                    fillColorInput.value = selectedElement.fillColor;
+                    fillEnabledInput.checked = true;
+                } else {
+                    fillEnabledInput.checked = false;
+                }
             }
+        } else {
+            // Clicking on empty space - start rectangle selection
+            selectedElement = null;
+            selectedElements = [];
+            isRectangleSelecting = true;
+            isDrawing = true;
+            selectionRect = { x: startX, y: startY, width: 0, height: 0 };
         }
         redraw();
     } else if (currentTool === 'text') {
@@ -600,17 +629,30 @@ function handleMouseMove(e) {
         return;
     }
 
-    if (currentTool === 'select' && selectedElement) {
-        if (dragMode === 'move') {
+    if (currentTool === 'select') {
+        if (isRectangleSelecting) {
+            // Update selection rectangle
+            selectionRect.width = currentX - selectionRect.x;
+            selectionRect.height = currentY - selectionRect.y;
+            redraw();
+        } else if (dragMode === 'move') {
             const dx = currentX - startX;
             const dy = currentY - startY;
-            moveElement(selectedElement, dx, dy);
+
+            // Move all selected elements
+            if (selectedElements.length > 0) {
+                selectedElements.forEach(el => moveElement(el, dx, dy));
+            } else if (selectedElement) {
+                moveElement(selectedElement, dx, dy);
+            }
+
             startX = currentX;
             startY = currentY;
-        } else if (dragMode === 'resize') {
+            redraw();
+        } else if (dragMode === 'resize' && selectedElement) {
             resizeElement(selectedElement, currentX, currentY, resizeHandle);
+            redraw();
         }
-        redraw();
     } else if (currentTool === 'pen') {
         elements[elements.length - 1].points.push({x: currentX, y: currentY});
         redraw();
@@ -641,6 +683,31 @@ function handleMouseUp(e) {
     const rect = canvas.getBoundingClientRect();
     let endX = (e.clientX - rect.left - panOffsetX) / zoomLevel;
     let endY = (e.clientY - rect.top - panOffsetY) / zoomLevel;
+
+    // Handle rectangle selection completion
+    if (isRectangleSelecting) {
+        isRectangleSelecting = false;
+
+        // Find all elements within selection rectangle
+        const selX = Math.min(selectionRect.x, selectionRect.x + selectionRect.width);
+        const selY = Math.min(selectionRect.y, selectionRect.y + selectionRect.height);
+        const selW = Math.abs(selectionRect.width);
+        const selH = Math.abs(selectionRect.height);
+
+        selectedElements = elements.filter(el => {
+            const bounds = getElementBounds(el);
+            // Check if element is within selection rectangle
+            return selX <= bounds.x + bounds.width &&
+                   selX + selW >= bounds.x &&
+                   selY <= bounds.y + bounds.height &&
+                   selY + selH >= bounds.y;
+        });
+
+        selectionRect = null;
+        isDrawing = false;
+        redraw();
+        return;
+    }
 
     // Snap endpoint to shape edge for arrows and lines
     if (currentTool === 'arrow' || currentTool === 'line') {
@@ -2161,6 +2228,7 @@ function undo() {
         historyStep--;
         elements = JSON.parse(JSON.stringify(history[historyStep]));
         selectedElement = null;
+        selectedElements = [];
         redraw();
     }
 }
@@ -2444,21 +2512,42 @@ function redraw() {
         drawElement(element);
     });
 
-    // Draw selection box and resize handles
-    if (selectedElement && currentTool === 'select') {
-        const bounds = getElementBounds(selectedElement);
+    // Draw selection boxes for multi-select
+    if (currentTool === 'select') {
         ctx.strokeStyle = '#2196f3';
         ctx.lineWidth = 2;
         ctx.setLineDash([5, 5]);
-        ctx.strokeRect(bounds.x - 5, bounds.y - 5, bounds.width + 10, bounds.height + 10);
+
+        // Draw selection boxes for all selected elements
+        if (selectedElements.length > 0) {
+            selectedElements.forEach(el => {
+                const bounds = getElementBounds(el);
+                ctx.strokeRect(bounds.x - 5, bounds.y - 5, bounds.width + 10, bounds.height + 10);
+            });
+        } else if (selectedElement) {
+            // Single element selection with resize handles
+            const bounds = getElementBounds(selectedElement);
+            ctx.strokeRect(bounds.x - 5, bounds.y - 5, bounds.width + 10, bounds.height + 10);
+            ctx.setLineDash([]);
+
+            // Draw resize handles only for single selection
+            const handles = getResizeHandles(bounds);
+            ctx.fillStyle = '#2196f3';
+            handles.forEach(handle => {
+                ctx.fillRect(handle.x - 4, handle.y - 4, 8, 8);
+            });
+        }
+
         ctx.setLineDash([]);
 
-        // Draw resize handles
-        const handles = getResizeHandles(bounds);
-        ctx.fillStyle = '#2196f3';
-        handles.forEach(handle => {
-            ctx.fillRect(handle.x - 4, handle.y - 4, 8, 8);
-        });
+        // Draw rectangle selection box
+        if (isRectangleSelecting && selectionRect) {
+            ctx.strokeStyle = '#2196f3';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.strokeRect(selectionRect.x, selectionRect.y, selectionRect.width, selectionRect.height);
+            ctx.setLineDash([]);
+        }
     }
 
     // Restore context
