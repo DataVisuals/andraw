@@ -10,82 +10,45 @@
 <body>
     <div class="container">
         <div class="toolbar">
-            <!-- Navigation Tools -->
-            <div class="toolbar-section">
-                <div class="section-label">Navigate</div>
-                <div class="section-content">
-                    <button class="tool-btn active" data-tool="select" title="Selection (V)">
-                        <svg width="20" height="20" viewBox="0 0 20 20"><path d="M4 3 L4 17 L9 12 L12 17 L14 16 L11 11 L16 11 Z" fill="currentColor"/></svg>
-                    </button>
-                    <button class="tool-btn" data-tool="hand" title="Hand/Pan (H)">
-                        <i class="fas fa-hand-paper"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div class="toolbar-divider"></div>
-
-            <!-- Shape Tools -->
-            <div class="toolbar-section">
-                <div class="section-label">Shapes</div>
-                <div class="section-content">
-                    <button class="tool-btn" data-tool="rectangle" title="Rectangle (R)">
-                        <svg width="20" height="20" viewBox="0 0 20 20"><rect x="3" y="3" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"/></svg>
-                    </button>
-                    <button class="tool-btn" data-tool="circle" title="Circle (C)">
-                        <svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-width="2"/></svg>
-                    </button>
-                </div>
-            </div>
-
-            <div class="toolbar-divider"></div>
-
-            <!-- Connector Tools -->
-            <div class="toolbar-section">
-                <div class="section-label">Connect</div>
-                <div class="section-content">
-                    <button class="tool-btn" data-tool="line" title="Line (L)">
-                        <svg width="20" height="20" viewBox="0 0 20 20"><line x1="3" y1="17" x2="17" y2="3" stroke="currentColor" stroke-width="2"/></svg>
-                    </button>
-                    <button class="tool-btn" data-tool="arrow" title="Arrow (A)">
-                        <svg width="20" height="20" viewBox="0 0 20 20"><path d="M3 17 L17 3 M17 3 L12 3 M17 3 L17 8" fill="none" stroke="currentColor" stroke-width="2"/></svg>
-                    </button>
-                </div>
-            </div>
-
-            <div class="toolbar-divider"></div>
-
-            <!-- Draw/Type Tools -->
-            <div class="toolbar-section">
-                <div class="section-label">Draw</div>
-                <div class="section-content">
-                    <button class="tool-btn" data-tool="pen" title="Pen (P)">
-                        <svg width="20" height="20" viewBox="0 0 20 20"><path d="M3 17 Q 7 10, 10 10 T 17 3" fill="none" stroke="currentColor" stroke-width="2"/></svg>
-                    </button>
-                    <button class="tool-btn" data-tool="text" title="Text (T)">
-                        <svg width="20" height="20" viewBox="0 0 20 20"><text x="10" y="15" text-anchor="middle" font-size="14" fill="currentColor">T</text></svg>
-                    </button>
-                </div>
-            </div>
-
-            <div class="toolbar-divider"></div>
-
-            <!-- Style Controls -->
-            <div class="toolbar-section">
-                <div class="section-label">Style</div>
-                <div class="section-content">
-                    <label title="Border/Stroke Color">
-                        <span>Border:</span>
-                        <input type="color" id="strokeColor" value="#2C3E50">
-                    </label>
-                    <label title="Fill Color">
-                        <span>Fill:</span>
-                        <input type="color" id="fillColor" value="#ECF0F1">
-                    </label>
-                    <label>
-                        <input type="checkbox" id="fillEnabled"> Fill
-                    </label>
-                    <div class="style-preset-container">
+            <button class="tool-btn active" data-tool="select" title="Selection (V)">
+                <svg width="20" height="20" viewBox="0 0 20 20"><path d="M4 3 L4 17 L9 12 L12 17 L14 16 L11 11 L16 11 Z" fill="currentColor"/></svg>
+            </button>
+            <button class="tool-btn" data-tool="hand" title="Hand/Pan (H)">
+                <i class="fas fa-hand-paper"></i>
+            </button>
+            <div class="divider"></div>
+            <button class="tool-btn" data-tool="rectangle" title="Rectangle (R)">
+                <svg width="20" height="20" viewBox="0 0 20 20"><rect x="3" y="3" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            </button>
+            <button class="tool-btn" data-tool="circle" title="Circle (C)">
+                <svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            </button>
+            <div class="divider"></div>
+            <button class="tool-btn" data-tool="line" title="Line (L)">
+                <svg width="20" height="20" viewBox="0 0 20 20"><line x1="3" y1="17" x2="17" y2="3" stroke="currentColor" stroke-width="2"/></svg>
+            </button>
+            <button class="tool-btn" data-tool="arrow" title="Arrow (A)">
+                <svg width="20" height="20" viewBox="0 0 20 20"><path d="M3 17 L17 3 M17 3 L12 3 M17 3 L17 8" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            </button>
+            <div class="divider"></div>
+            <button class="tool-btn" data-tool="pen" title="Pen (P)">
+                <svg width="20" height="20" viewBox="0 0 20 20"><path d="M3 17 Q 7 10, 10 10 T 17 3" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            </button>
+            <button class="tool-btn" data-tool="text" title="Text (T)">
+                <svg width="20" height="20" viewBox="0 0 20 20"><text x="10" y="15" text-anchor="middle" font-size="14" fill="currentColor">T</text></svg>
+            </button>
+            <label title="Border/Stroke Color">
+                <span>Border:</span>
+                <input type="color" id="strokeColor" value="#2C3E50">
+            </label>
+            <label title="Fill Color">
+                <span>Fill:</span>
+                <input type="color" id="fillColor" value="#ECF0F1">
+            </label>
+            <label>
+                <input type="checkbox" id="fillEnabled"> Fill
+            </label>
+            <div class="style-preset-container">
                 <button class="style-preset-btn" id="stylePresetBtn" title="Style Presets">
                     <i class="fas fa-palette"></i> Style
                 </button>
@@ -150,17 +113,10 @@
                         <div class="preset-swatch" style="border-color: #7D6B7D; background: #F0E6EF;"></div>
                         <span>Mauve</span>
                     </button>
-                    </div>
                 </div>
             </div>
-
-            <div class="toolbar-divider"></div>
-
-            <!-- Format Controls -->
-            <div class="toolbar-section">
-                <div class="section-label">Format</div>
-                <div class="section-content">
-                    <select id="fontSelect" title="Font Family">
+            <div class="divider"></div>
+            <select id="fontSelect" title="Font Family">
                         <option value="Comic Sans MS, cursive">Handwritten</option>
                         <option value="Arial, sans-serif">Arial</option>
                         <option value="Helvetica, sans-serif">Helvetica</option>
@@ -185,60 +141,39 @@
                         <option value="straight">Straight</option>
                         <option value="stepped">Stepped</option>
                     </select>
-                    <label title="Background Color">
-                        <span>BG:</span>
-                        <input type="color" id="bgColor" value="#FFFEF9">
-                    </label>
-                </div>
-            </div>
-
+            <label title="Background Color">
+                <span>BG:</span>
+                <input type="color" id="bgColor" value="#FFFEF9">
+            </label>
             <div class="toolbar-spacer"></div>
-
-            <!-- Actions -->
-            <div class="toolbar-section">
-                <div class="section-content">
-                    <button class="action-btn" id="undoBtn" title="Undo (Ctrl+Z)">
-                        <i class="fas fa-undo"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div class="toolbar-divider"></div>
-
-            <div class="toolbar-section">
-                <div class="section-content">
-                    <button class="action-btn" id="layoutHorizontalBtn" title="Layout Horizontally">
-                        <i class="fas fa-arrows-alt-h"></i>
-                    </button>
-                    <button class="action-btn" id="layoutVerticalBtn" title="Layout Vertically">
-                        <i class="fas fa-arrows-alt-v"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div class="toolbar-divider"></div>
-
-            <div class="toolbar-section">
-                <div class="section-content">
-                    <select id="exportFormatSelect" title="Export Format">
-                        <option value="png">PNG</option>
-                        <option value="jpg">JPG</option>
-                        <option value="svg">SVG</option>
-                    </select>
-                    <button class="action-btn" id="exportImage" title="Export as Image">
-                        Export
-                    </button>
-                    <button class="action-btn" id="exportJSON" title="Save as JSON">
-                        Save
-                    </button>
-                    <button class="action-btn" id="importJSON" title="Load from JSON">
-                        Load
-                    </button>
-                    <button class="action-btn" id="clearBtn" title="Clear Canvas">
-                        Clear
-                    </button>
-                </div>
-            </div>
+            <button class="action-btn" id="undoBtn" title="Undo (Ctrl+Z)">
+                <i class="fas fa-undo"></i>
+            </button>
+            <div class="divider"></div>
+            <button class="action-btn" id="layoutHorizontalBtn" title="Layout Horizontally">
+                <i class="fas fa-arrows-alt-h"></i>
+            </button>
+            <button class="action-btn" id="layoutVerticalBtn" title="Layout Vertically">
+                <i class="fas fa-arrows-alt-v"></i>
+            </button>
+            <div class="divider"></div>
+            <select id="exportFormatSelect" title="Export Format">
+                <option value="png">PNG</option>
+                <option value="jpg">JPG</option>
+                <option value="svg">SVG</option>
+            </select>
+            <button class="action-btn" id="exportImage" title="Export as Image">
+                Export
+            </button>
+            <button class="action-btn" id="exportJSON" title="Save as JSON">
+                Save
+            </button>
+            <button class="action-btn" id="importJSON" title="Load from JSON">
+                Load
+            </button>
+            <button class="action-btn" id="clearBtn" title="Clear Canvas">
+                Clear
+            </button>
             <input type="file" id="fileInput" accept=".json" style="display: none;">
         </div>
         <div class="main-content">
