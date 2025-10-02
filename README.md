@@ -12,7 +12,7 @@ A local drawing app inspired by Excalidraw with hand-drawn aesthetic.
 - **Templates**: Collapsible categories with visual previews
   - **Flowchart**: Process, Decision, Data, Terminator, Document
   - **UML**: Class, Actor, Package
-  - **Cloud/AWS**: Server, Database, Cloud, Lambda, Storage, Queue
+  - **Cloud**: Server, Database, Cloud, Lambda, Storage, Queue
   - **AWS**: EC2, S3, RDS, DynamoDB, Athena, Redshift, SQS, SNS, API Gateway, CloudFront, Route 53, ECS, EKS, ELB, CloudWatch
   - **Shapes**: Hexagon, Triangle, Star, Note, Cylinder
   - **Network**: Router, Firewall, Switch

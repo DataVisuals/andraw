@@ -215,16 +215,25 @@ document.querySelectorAll('.template-btn').forEach(btn => {
             const containerTemplates = ['process', 'decision', 'data', 'terminator', 'document',
                                        'class', 'package', 'server', 'database', 'cloud', 'lambda',
                                        'storage', 'queue', 'hexagon', 'note', 'cylinder',
-                                       'router', 'firewall', 'switch',
-                                       'ec2', 's3', 'rds', 'dynamodb', 'athena', 'redshift',
-                                       'sqs', 'sns', 'api-gateway', 'cloudfront', 'route53',
-                                       'ecs', 'eks', 'elb', 'cloudwatch'];
+                                       'router', 'firewall', 'switch'];
+            const awsTemplates = ['ec2', 's3', 'rds', 'dynamodb', 'athena', 'redshift',
+                                 'sqs', 'sns', 'api-gateway', 'cloudfront', 'route53',
+                                 'ecs', 'eks', 'elb', 'cloudwatch'];
+
             if (containerTemplates.includes(templateName)) {
                 const shapeCenterX = centerX + template.width / 2;
                 const shapeCenterY = centerY + template.height / 2;
 
                 setTimeout(() => {
                     createTextInputForShape(shapeCenterX, shapeCenterY, element);
+                }, 10);
+            } else if (awsTemplates.includes(templateName)) {
+                // For AWS templates, position text below the icon
+                const shapeCenterX = centerX + template.width / 2;
+                const shapeBottomY = centerY + template.height + 20; // 20px below the box
+
+                setTimeout(() => {
+                    createTextInputBelowShape(shapeCenterX, shapeBottomY, element);
                 }, 10);
             }
         }
@@ -1729,6 +1738,58 @@ function createTextInputForShape(centerX, centerY, shape) {
                 type: 'text',
                 x: centerX - textWidth / 2,
                 y: centerY - 8, // Adjust for vertical centering
+                text: text,
+                strokeColor: strokeColorInput.value,
+                fontFamily: fontSelect.value
+            });
+            redraw();
+        }
+        input.remove();
+    };
+
+    // Add blur listener with a slight delay to prevent race conditions
+    setTimeout(() => {
+        input.addEventListener('blur', finishText);
+    }, 100);
+
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            finishText();
+        } else if (e.key === 'Escape') {
+            input.remove();
+        }
+    });
+}
+
+// Text input for shapes (positioned below)
+function createTextInputBelowShape(centerX, bottomY, shape) {
+    const input = document.createElement('textarea');
+    input.className = 'text-input';
+    input.style.textAlign = 'center';
+    const rect = canvas.getBoundingClientRect();
+    input.style.left = (rect.left + centerX - 50) + 'px'; // Offset to center the input box
+    input.style.top = (rect.top + bottomY - 12) + 'px';
+    input.style.fontFamily = fontSelect.value;
+    input.style.width = '100px';
+    input.rows = 1;
+    document.body.appendChild(input);
+
+    // Focus after a brief delay to prevent immediate blur
+    setTimeout(() => input.focus(), 10);
+
+    const finishText = () => {
+        const text = input.value.trim();
+        if (text) {
+            // Measure text to center it below the shape
+            ctx.font = `16px ${fontSelect.value}`;
+            const metrics = ctx.measureText(text);
+            const textWidth = metrics.width;
+
+            elements.push({
+                type: 'text',
+                x: centerX - textWidth / 2,
+                y: bottomY - 8, // Position below shape
                 text: text,
                 strokeColor: strokeColorInput.value,
                 fontFamily: fontSelect.value
