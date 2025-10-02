@@ -42,8 +42,10 @@ const fontSelect = document.getElementById('fontSelect');
 const bgColorInput = document.getElementById('bgColor');
 const lineStyleSelect = document.getElementById('lineStyleSelect');
 const lineRoutingSelect = document.getElementById('lineRoutingSelect');
-const stylePresetBtn = document.getElementById('stylePresetBtn');
-const stylePresetDropdown = document.getElementById('stylePresetDropdown');
+const rectangleBtn = document.getElementById('rectangleBtn');
+const rectangleDropdown = document.getElementById('rectangleDropdown');
+const circleBtn = document.getElementById('circleBtn');
+const circleDropdown = document.getElementById('circleDropdown');
 
 // Style presets - tasteful, muted color combinations
 const stylePresets = {
@@ -267,36 +269,65 @@ bgColorInput.addEventListener('input', (e) => {
     redraw();
 });
 
-// Style preset dropdown toggle
-stylePresetBtn.addEventListener('click', (e) => {
+// Shape dropdown toggle for rectangle
+rectangleBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    stylePresetDropdown.classList.toggle('active');
+    rectangleDropdown.classList.toggle('active');
+    circleDropdown.classList.remove('active');
 });
 
-// Close dropdown when clicking outside
+// Shape dropdown toggle for circle
+circleBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    circleDropdown.classList.toggle('active');
+    rectangleDropdown.classList.remove('active');
+});
+
+// Close dropdowns when clicking outside
 document.addEventListener('click', (e) => {
-    if (!stylePresetBtn.contains(e.target) && !stylePresetDropdown.contains(e.target)) {
-        stylePresetDropdown.classList.remove('active');
+    if (!rectangleBtn.contains(e.target) && !rectangleDropdown.contains(e.target)) {
+        rectangleDropdown.classList.remove('active');
+    }
+    if (!circleBtn.contains(e.target) && !circleDropdown.contains(e.target)) {
+        circleDropdown.classList.remove('active');
     }
 });
 
-// Style preset selection
-stylePresetDropdown.querySelectorAll('.preset-item').forEach(item => {
+// Shape selection with preset styling
+document.querySelectorAll('.shape-item').forEach(item => {
     item.addEventListener('click', (e) => {
+        const shape = e.currentTarget.dataset.shape;
         const preset = e.currentTarget.dataset.preset;
-        if (preset && stylePresets[preset]) {
+
+        if (shape && preset && stylePresets[preset]) {
+            // Set the tool
+            currentTool = shape;
+
+            // Update tool button active state
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            if (shape === 'rectangle') {
+                rectangleBtn.classList.add('active');
+            } else if (shape === 'circle') {
+                circleBtn.classList.add('active');
+            }
+
+            // Set colors from preset
             strokeColorInput.value = stylePresets[preset].stroke;
             fillColorInput.value = stylePresets[preset].fill;
             fillEnabledInput.checked = true;
 
-            // Update selected element if any
-            if (selectedElement && currentTool === 'select') {
-                selectedElement.strokeColor = stylePresets[preset].stroke;
-                selectedElement.fillColor = stylePresets[preset].fill;
-                redraw();
-            }
+            // Set cursor
+            canvas.style.cursor = 'crosshair';
 
-            stylePresetDropdown.classList.remove('active');
+            // Clear selection
+            selectedElement = null;
+            selectedElements = [];
+
+            // Close dropdowns
+            rectangleDropdown.classList.remove('active');
+            circleDropdown.classList.remove('active');
+
+            redraw();
         }
     });
 });
@@ -430,8 +461,15 @@ document.addEventListener('keydown', (e) => {
         'l': 'line', 'a': 'arrow', 'p': 'pen', 't': 'text', 'h': 'hand'
     };
     if (toolMap[key]) {
-        const btn = document.querySelector(`[data-tool="${toolMap[key]}"]`);
-        if (btn) btn.click();
+        // Handle rectangle and circle with dropdown buttons
+        if (key === 'r') {
+            rectangleBtn.click();
+        } else if (key === 'c') {
+            circleBtn.click();
+        } else {
+            const btn = document.querySelector(`[data-tool="${toolMap[key]}"]`);
+            if (btn) btn.click();
+        }
     }
     if ((e.ctrlKey || e.metaKey) && key === 'z') {
         undo();

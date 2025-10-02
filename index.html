@@ -29,12 +29,62 @@
                 <i class="fas fa-hand-paper"></i>
             </button>
             <div class="divider"></div>
-            <button class="tool-btn" data-tool="rectangle" title="Rectangle (R)">
-                <svg width="20" height="20" viewBox="0 0 20 20"><rect x="3" y="3" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"/></svg>
-            </button>
-            <button class="tool-btn" data-tool="circle" title="Circle (C)">
-                <svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-width="2"/></svg>
-            </button>
+            <div class="shape-dropdown-container">
+                <button class="tool-btn" id="rectangleBtn" title="Rectangle (R)">
+                    <svg width="20" height="20" viewBox="0 0 20 20"><rect x="3" y="3" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                    <i class="fas fa-caret-down" style="font-size: 10px; margin-left: 2px;"></i>
+                </button>
+                <div class="shape-dropdown" id="rectangleDropdown">
+                    <button class="shape-item" data-shape="rectangle" data-preset="slate">
+                        <svg width="24" height="24" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2" fill="#ECF0F1" stroke="#2C3E50" stroke-width="2"/></svg>
+                        <span>Slate</span>
+                    </button>
+                    <button class="shape-item" data-shape="rectangle" data-preset="sage">
+                        <svg width="24" height="24" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2" fill="#D8E4BC" stroke="#556B2F" stroke-width="2"/></svg>
+                        <span>Sage</span>
+                    </button>
+                    <button class="shape-item" data-shape="rectangle" data-preset="terracotta">
+                        <svg width="24" height="24" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2" fill="#F4DCC4" stroke="#A0522D" stroke-width="2"/></svg>
+                        <span>Terracotta</span>
+                    </button>
+                    <button class="shape-item" data-shape="rectangle" data-preset="ocean">
+                        <svg width="24" height="24" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2" fill="#B8D4E8" stroke="#2C5F7F" stroke-width="2"/></svg>
+                        <span>Ocean</span>
+                    </button>
+                    <button class="shape-item" data-shape="rectangle" data-preset="plum">
+                        <svg width="24" height="24" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2" fill="#E6D9ED" stroke="#6B4C7A" stroke-width="2"/></svg>
+                        <span>Plum</span>
+                    </button>
+                </div>
+            </div>
+            <div class="shape-dropdown-container">
+                <button class="tool-btn" id="circleBtn" title="Circle (C)">
+                    <svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                    <i class="fas fa-caret-down" style="font-size: 10px; margin-left: 2px;"></i>
+                </button>
+                <div class="shape-dropdown" id="circleDropdown">
+                    <button class="shape-item" data-shape="circle" data-preset="slate">
+                        <svg width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#ECF0F1" stroke="#2C3E50" stroke-width="2"/></svg>
+                        <span>Slate</span>
+                    </button>
+                    <button class="shape-item" data-shape="circle" data-preset="sage">
+                        <svg width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#D8E4BC" stroke="#556B2F" stroke-width="2"/></svg>
+                        <span>Sage</span>
+                    </button>
+                    <button class="shape-item" data-shape="circle" data-preset="terracotta">
+                        <svg width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#F4DCC4" stroke="#A0522D" stroke-width="2"/></svg>
+                        <span>Terracotta</span>
+                    </button>
+                    <button class="shape-item" data-shape="circle" data-preset="ocean">
+                        <svg width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#B8D4E8" stroke="#2C5F7F" stroke-width="2"/></svg>
+                        <span>Ocean</span>
+                    </button>
+                    <button class="shape-item" data-shape="circle" data-preset="plum">
+                        <svg width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#E6D9ED" stroke="#6B4C7A" stroke-width="2"/></svg>
+                        <span>Plum</span>
+                    </button>
+                </div>
+            </div>
             <div class="divider"></div>
             <button class="tool-btn" data-tool="line" title="Line (L)">
                 <svg width="20" height="20" viewBox="0 0 20 20"><line x1="3" y1="17" x2="17" y2="3" stroke="currentColor" stroke-width="2"/></svg>
@@ -50,73 +100,6 @@
                 <svg width="20" height="20" viewBox="0 0 20 20"><text x="10" y="15" text-anchor="middle" font-size="14" fill="currentColor">T</text></svg>
             </button>
             <div class="divider"></div>
-            <div class="style-preset-container">
-                <button class="style-preset-btn" id="stylePresetBtn" title="Style Presets">
-                    <i class="fas fa-palette"></i> Style
-                </button>
-                <div class="style-preset-dropdown" id="stylePresetDropdown">
-                    <button class="preset-item" data-preset="slate">
-                        <div class="preset-swatch" style="border-color: #2C3E50; background: #ECF0F1;"></div>
-                        <span>Slate</span>
-                    </button>
-                    <button class="preset-item" data-preset="sage">
-                        <div class="preset-swatch" style="border-color: #556B2F; background: #D8E4BC;"></div>
-                        <span>Sage</span>
-                    </button>
-                    <button class="preset-item" data-preset="terracotta">
-                        <div class="preset-swatch" style="border-color: #A0522D; background: #F4DCC4;"></div>
-                        <span>Terracotta</span>
-                    </button>
-                    <button class="preset-item" data-preset="ocean">
-                        <div class="preset-swatch" style="border-color: #2C5F7F; background: #B8D4E8;"></div>
-                        <span>Ocean</span>
-                    </button>
-                    <button class="preset-item" data-preset="plum">
-                        <div class="preset-swatch" style="border-color: #6B4C7A; background: #E6D9ED;"></div>
-                        <span>Plum</span>
-                    </button>
-                    <button class="preset-item" data-preset="charcoal">
-                        <div class="preset-swatch" style="border-color: #3D3D3D; background: #E8E6E3;"></div>
-                        <span>Charcoal</span>
-                    </button>
-                    <button class="preset-item" data-preset="forest">
-                        <div class="preset-swatch" style="border-color: #2D5016; background: #C8E6C9;"></div>
-                        <span>Forest</span>
-                    </button>
-                    <button class="preset-item" data-preset="burgundy">
-                        <div class="preset-swatch" style="border-color: #6B2737; background: #F8E1E7;"></div>
-                        <span>Burgundy</span>
-                    </button>
-                    <button class="preset-item" data-preset="navy">
-                        <div class="preset-swatch" style="border-color: #1A3A52; background: #D1E7F0;"></div>
-                        <span>Navy</span>
-                    </button>
-                    <button class="preset-item" data-preset="copper">
-                        <div class="preset-swatch" style="border-color: #8B4513; background: #F5DEB3;"></div>
-                        <span>Copper</span>
-                    </button>
-                    <button class="preset-item" data-preset="moss">
-                        <div class="preset-swatch" style="border-color: #4A5D23; background: #E3EAC2;"></div>
-                        <span>Moss</span>
-                    </button>
-                    <button class="preset-item" data-preset="ink">
-                        <div class="preset-swatch" style="border-color: #1C2833; background: #F4F6F7;"></div>
-                        <span>Ink</span>
-                    </button>
-                    <button class="preset-item" data-preset="clay">
-                        <div class="preset-swatch" style="border-color: #8B4726; background: #DEB887;"></div>
-                        <span>Clay</span>
-                    </button>
-                    <button class="preset-item" data-preset="storm">
-                        <div class="preset-swatch" style="border-color: #34495E; background: #D5DBDB;"></div>
-                        <span>Storm</span>
-                    </button>
-                    <button class="preset-item" data-preset="mauve">
-                        <div class="preset-swatch" style="border-color: #7D6B7D; background: #F0E6EF;"></div>
-                        <span>Mauve</span>
-                    </button>
-                </div>
-            </div>
             <label title="Border/Stroke Color">
                 <span>Border:</span>
                 <input type="color" id="strokeColor" value="#2C3E50">

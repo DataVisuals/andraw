@@ -150,35 +150,12 @@ label span {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.style-preset-container {
+.shape-dropdown-container {
     position: relative;
     display: inline-block;
 }
 
-.style-preset-btn {
-    padding: 0 10px;
-    height: 36px;
-    border: 1px solid #d0d0d0;
-    border-radius: 6px;
-    background: white;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    transition: all 0.15s ease;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-}
-
-.style-preset-btn:hover {
-    border-color: #999;
-    background: #f8f8f8;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.style-preset-dropdown {
+.shape-dropdown {
     display: none;
     position: absolute;
     top: 100%;
@@ -189,11 +166,43 @@ label span {
     border-radius: 8px;
     box-shadow: 0 8px 24px rgba(0,0,0,0.15);
     z-index: 1000;
-    min-width: 160px;
+    min-width: 140px;
 }
 
-.style-preset-dropdown.active {
+.shape-dropdown.active {
     display: block;
+}
+
+.shape-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    width: 100%;
+    border: none;
+    background: white;
+    cursor: pointer;
+    text-align: left;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    transition: all 0.15s ease;
+}
+
+.shape-item:first-child {
+    border-radius: 8px 8px 0 0;
+}
+
+.shape-item:last-child {
+    border-radius: 0 0 8px 8px;
+}
+
+.shape-item:hover {
+    background: #f8f8f8;
+}
+
+.shape-item svg {
+    flex-shrink: 0;
 }
 
 .preset-item {
