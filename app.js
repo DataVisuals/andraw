@@ -3045,8 +3045,60 @@ document.getElementById('exportImage').addEventListener('click', () => {
         link.download = 'drawing.jpg';
         link.href = canvas.toDataURL('image/jpeg', 0.95);
         link.click();
+    } else if (format === 'pptx') {
+        exportAsPowerPoint();
     }
 });
+
+function exportAsPowerPoint() {
+    // Create a new PowerPoint presentation
+    const pres = new PptxGenJS();
+
+    // Add a slide
+    const slide = pres.addSlide();
+
+    // Get canvas as image data URL
+    const imageData = canvas.toDataURL('image/png');
+
+    // Calculate dimensions to fit slide (standard 10" x 7.5" slide)
+    // Convert canvas dimensions to inches (assuming 96 DPI)
+    const canvasWidthInches = canvas.width / 96;
+    const canvasHeightInches = canvas.height / 96;
+
+    // Scale to fit within slide (max 9.5" x 7" to leave margins)
+    const maxWidth = 9.5;
+    const maxHeight = 7;
+    let width = canvasWidthInches;
+    let height = canvasHeightInches;
+
+    if (width > maxWidth) {
+        const scale = maxWidth / width;
+        width = maxWidth;
+        height = height * scale;
+    }
+
+    if (height > maxHeight) {
+        const scale = maxHeight / height;
+        height = maxHeight;
+        width = width * scale;
+    }
+
+    // Center the image on the slide
+    const x = (10 - width) / 2;
+    const y = (7.5 - height) / 2;
+
+    // Add image to slide
+    slide.addImage({
+        data: imageData,
+        x: x,
+        y: y,
+        w: width,
+        h: height
+    });
+
+    // Save the presentation
+    pres.writeFile({ fileName: 'drawing.pptx' });
+}
 
 document.getElementById('exportJSON').addEventListener('click', () => {
     const data = {
