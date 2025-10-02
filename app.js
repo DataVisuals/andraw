@@ -2241,9 +2241,9 @@ function layoutHorizontal() {
     const maxWidth = canvas.width - margin * 2;
     const availableHeight = canvas.height - margin * 2;
 
-    // Sort elements by their current Y position, then X position (exclude connectors)
+    // Sort elements by their current Y position, then X position (exclude connectors and text)
     const sortedElements = [...elements]
-        .filter(el => el.type !== 'line' && el.type !== 'arrow')
+        .filter(el => el.type !== 'line' && el.type !== 'arrow' && el.type !== 'text')
         .sort((a, b) => {
             const ay = a.y || 0;
             const by = b.y || 0;
@@ -2333,9 +2333,9 @@ function layoutVertical() {
     const maxHeight = canvas.height - margin * 2;
     const availableWidth = canvas.width - margin * 2;
 
-    // Sort elements by their current X position, then Y position (exclude connectors)
+    // Sort elements by their current X position, then Y position (exclude connectors and text)
     const sortedElements = [...elements]
-        .filter(el => el.type !== 'line' && el.type !== 'arrow')
+        .filter(el => el.type !== 'line' && el.type !== 'arrow' && el.type !== 'text')
         .sort((a, b) => {
             const ax = a.x || 0;
             const bx = b.x || 0;
