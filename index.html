@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excalidraw Clone</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="toolbar">
+            <button class="tool-btn active" data-tool="select" title="Selection (V)">
+                <svg width="20" height="20" viewBox="0 0 20 20"><path d="M4 3 L4 17 L9 12 L12 17 L14 16 L11 11 L16 11 Z" fill="currentColor"/></svg>
+            </button>
+            <button class="tool-btn" data-tool="rectangle" title="Rectangle (R)">
+                <svg width="20" height="20" viewBox="0 0 20 20"><rect x="3" y="3" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            </button>
+            <button class="tool-btn" data-tool="circle" title="Circle (C)">
+                <svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            </button>
+            <button class="tool-btn" data-tool="line" title="Line (L)">
+                <svg width="20" height="20" viewBox="0 0 20 20"><line x1="3" y1="17" x2="17" y2="3" stroke="currentColor" stroke-width="2"/></svg>
+            </button>
+            <button class="tool-btn" data-tool="arrow" title="Arrow (A)">
+                <svg width="20" height="20" viewBox="0 0 20 20"><path d="M3 17 L17 3 M17 3 L12 3 M17 3 L17 8" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            </button>
+            <button class="tool-btn" data-tool="pen" title="Pen (P)">
+                <svg width="20" height="20" viewBox="0 0 20 20"><path d="M3 17 Q 7 10, 10 10 T 17 3" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            </button>
+            <button class="tool-btn" data-tool="text" title="Text (T)">
+                <svg width="20" height="20" viewBox="0 0 20 20"><text x="10" y="15" text-anchor="middle" font-size="14" fill="currentColor">T</text></svg>
+            </button>
+            <div class="divider"></div>
+            <input type="color" id="strokeColor" value="#000000" title="Stroke Color">
+            <input type="color" id="fillColor" value="#FFFEF9" title="Fill Color">
+            <label>
+                <input type="checkbox" id="fillEnabled" checked> Fill
+            </label>
+            <div class="divider"></div>
+            <label title="Background Color">
+                <span>BG:</span>
+                <input type="color" id="bgColor" value="#FFFEF9">
+            </label>
+            <div class="divider"></div>
+            <select id="fontSelect" title="Font Family">
+                <option value="Comic Sans MS, cursive">Handwritten</option>
+                <option value="Arial, sans-serif">Arial</option>
+                <option value="Helvetica, sans-serif">Helvetica</option>
+                <option value="Verdana, sans-serif">Verdana</option>
+                <option value="Trebuchet MS, sans-serif">Trebuchet</option>
+                <option value="Georgia, serif">Georgia</option>
+                <option value="Times New Roman, serif">Times</option>
+                <option value="Palatino, serif">Palatino</option>
+                <option value="Courier New, monospace">Courier</option>
+                <option value="Monaco, monospace">Monaco</option>
+                <option value="Consolas, monospace">Consolas</option>
+                <option value="Impact, fantasy">Impact</option>
+                <option value="Brush Script MT, cursive">Brush Script</option>
+                <option value="Lucida Console, monospace">Lucida Console</option>
+            </select>
+            <div class="divider"></div>
+            <select id="lineStyleSelect" title="Line Style">
+                <option value="solid">Solid</option>
+                <option value="dashed">Dashed</option>
+                <option value="dotted">Dotted</option>
+            </select>
+            <div class="divider"></div>
+            <button class="action-btn" id="clearBtn" title="Clear Canvas">
+                Clear
+            </button>
+            <button class="action-btn" id="exportImage" title="Export as Image">
+                Image
+            </button>
+            <button class="action-btn" id="exportJSON" title="Save as JSON">
+                Save
+            </button>
+            <button class="action-btn" id="importJSON" title="Load from JSON">
+                Load
+            </button>
+            <input type="file" id="fileInput" accept=".json" style="display: none;">
+        </div>
+        <div class="main-content">
+            <div class="templates-panel">
+                <h3>Templates</h3>
+
+                <div class="template-category">
+                    <div class="category-header" data-category="flowchart">
+                        <i class="fas fa-project-diagram"></i>
+                        <span>Flowchart</span>
+                        <i class="fas fa-chevron-down toggle-icon"></i>
+                    </div>
+                    <div class="template-items active">
+                        <button class="template-btn" data-template="process">
+                            <i class="far fa-square"></i>Process
+                        </button>
+                        <button class="template-btn" data-template="decision">
+                            <i class="fas fa-gem"></i>Decision
+                        </button>
+                        <button class="template-btn" data-template="data">
+                            <i class="fas fa-align-justify"></i>Data
+                        </button>
+                        <button class="template-btn" data-template="terminator">
+                            <i class="fas fa-capsules"></i>Terminator
+                        </button>
+                        <button class="template-btn" data-template="document">
+                            <i class="far fa-file-alt"></i>Document
+                        </button>
+                    </div>
+                </div>
+
+                <div class="template-category">
+                    <div class="category-header" data-category="uml">
+                        <i class="fas fa-sitemap"></i>
+                        <span>UML</span>
+                        <i class="fas fa-chevron-down toggle-icon"></i>
+                    </div>
+                    <div class="template-items">
+                        <button class="template-btn" data-template="class">
+                            <i class="fas fa-square"></i>Class
+                        </button>
+                        <button class="template-btn" data-template="actor">
+                            <i class="fas fa-user"></i>Actor
+                        </button>
+                        <button class="template-btn" data-template="package">
+                            <i class="fas fa-box"></i>Package
+                        </button>
+                    </div>
+                </div>
+
+                <div class="template-category">
+                    <div class="category-header" data-category="cloud">
+                        <i class="fas fa-cloud"></i>
+                        <span>Cloud/AWS</span>
+                        <i class="fas fa-chevron-down toggle-icon"></i>
+                    </div>
+                    <div class="template-items">
+                        <button class="template-btn" data-template="server">
+                            <i class="fas fa-server"></i>Server
+                        </button>
+                        <button class="template-btn" data-template="database">
+                            <i class="fas fa-database"></i>Database
+                        </button>
+                        <button class="template-btn" data-template="cloud">
+                            <i class="fas fa-cloud"></i>Cloud
+                        </button>
+                        <button class="template-btn" data-template="lambda">
+                            <i class="fas fa-code"></i>Lambda
+                        </button>
+                        <button class="template-btn" data-template="storage">
+                            <i class="fas fa-hdd"></i>Storage
+                        </button>
+                        <button class="template-btn" data-template="queue">
+                            <i class="fas fa-stream"></i>Queue
+                        </button>
+                    </div>
+                </div>
+
+                <div class="template-category">
+                    <div class="category-header" data-category="aws">
+                        <i class="fab fa-aws"></i>
+                        <span>AWS</span>
+                        <i class="fas fa-chevron-down toggle-icon"></i>
+                    </div>
+                    <div class="template-items">
+                        <button class="template-btn" data-template="ec2">
+                            <i class="fas fa-server"></i>EC2
+                        </button>
+                        <button class="template-btn" data-template="s3">
+                            <i class="fas fa-box"></i>S3
+                        </button>
+                        <button class="template-btn" data-template="rds">
+                            <i class="fas fa-database"></i>RDS
+                        </button>
+                        <button class="template-btn" data-template="dynamodb">
+                            <i class="fas fa-table"></i>DynamoDB
+                        </button>
+                        <button class="template-btn" data-template="athena">
+                            <i class="fas fa-search"></i>Athena
+                        </button>
+                        <button class="template-btn" data-template="redshift">
+                            <i class="fas fa-warehouse"></i>Redshift
+                        </button>
+                        <button class="template-btn" data-template="sqs">
+                            <i class="fas fa-stream"></i>SQS
+                        </button>
+                        <button class="template-btn" data-template="sns">
+                            <i class="fas fa-bell"></i>SNS
+                        </button>
+                        <button class="template-btn" data-template="api-gateway">
+                            <i class="fas fa-plug"></i>API Gateway
+                        </button>
+                        <button class="template-btn" data-template="cloudfront">
+                            <i class="fas fa-globe"></i>CloudFront
+                        </button>
+                        <button class="template-btn" data-template="route53">
+                            <i class="fas fa-network-wired"></i>Route 53
+                        </button>
+                        <button class="template-btn" data-template="ecs">
+                            <i class="fas fa-box-open"></i>ECS
+                        </button>
+                        <button class="template-btn" data-template="eks">
+                            <i class="fas fa-cubes"></i>EKS
+                        </button>
+                        <button class="template-btn" data-template="elb">
+                            <i class="fas fa-balance-scale"></i>ELB
+                        </button>
+                        <button class="template-btn" data-template="cloudwatch">
+                            <i class="fas fa-chart-line"></i>CloudWatch
+                        </button>
+                    </div>
+                </div>
+
+                <div class="template-category">
+                    <div class="category-header" data-category="shapes">
+                        <i class="fas fa-shapes"></i>
+                        <span>Shapes</span>
+                        <i class="fas fa-chevron-down toggle-icon"></i>
+                    </div>
+                    <div class="template-items">
+                        <button class="template-btn" data-template="hexagon">
+                            <i class="fas fa-stop"></i>Hexagon
+                        </button>
+                        <button class="template-btn" data-template="triangle">
+                            <i class="fas fa-caret-up"></i>Triangle
+                        </button>
+                        <button class="template-btn" data-template="star">
+                            <i class="fas fa-star"></i>Star
+                        </button>
+                        <button class="template-btn" data-template="note">
+                            <i class="fas fa-sticky-note"></i>Note
+                        </button>
+                        <button class="template-btn" data-template="cylinder">
+                            <i class="fas fa-drum"></i>Cylinder
+                        </button>
+                    </div>
+                </div>
+
+                <div class="template-category">
+                    <div class="category-header" data-category="network">
+                        <i class="fas fa-network-wired"></i>
+                        <span>Network</span>
+                        <i class="fas fa-chevron-down toggle-icon"></i>
+                    </div>
+                    <div class="template-items">
+                        <button class="template-btn" data-template="router">
+                            <i class="fas fa-wifi"></i>Router
+                        </button>
+                        <button class="template-btn" data-template="firewall">
+                            <i class="fas fa-shield-alt"></i>Firewall
+                        </button>
+                        <button class="template-btn" data-template="switch">
+                            <i class="fas fa-ethernet"></i>Switch
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <canvas id="canvas"></canvas>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
