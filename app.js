@@ -786,28 +786,28 @@ function drawRoughLine(x1, y1, x2, y2, color, lineStyle = 'solid') {
 }
 
 function drawRoughRect(x, y, w, h, strokeColor, fillColor, lineStyle = 'solid') {
-    // Draw fill first
+    const radius = Math.min(10, Math.abs(w) / 4, Math.abs(h) / 4);
+
+    // Draw fill first with rounded corners
     if (fillColor) {
         ctx.fillStyle = fillColor;
-        ctx.fillRect(x, y, w, h);
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, radius);
+        ctx.fill();
     }
 
-    // Draw rough outline
+    // Draw rough outline with rounded corners
     ctx.strokeStyle = strokeColor;
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     applyLineStyle(lineStyle);
 
-    // Draw slightly wavy lines
+    // Draw slightly wavy rounded rectangle
     for (let i = 0; i < 2; i++) {
         ctx.beginPath();
         const offset = (Math.random() - 0.5) * 1;
-        ctx.moveTo(x + offset, y + offset);
-        ctx.lineTo(x + w + offset, y + offset);
-        ctx.lineTo(x + w + offset, y + h + offset);
-        ctx.lineTo(x + offset, y + h + offset);
-        ctx.closePath();
+        ctx.roundRect(x + offset, y + offset, w, h, radius);
         ctx.stroke();
     }
     ctx.setLineDash([]);
@@ -2737,7 +2737,8 @@ function elementToSVG(element) {
             const ry = Math.min(element.y, element.y + element.height);
             const rw = Math.abs(element.width);
             const rh = Math.abs(element.height);
-            return `<rect x="${rx}" y="${ry}" width="${rw}" height="${rh}" stroke="${stroke}" fill="${fill}" stroke-width="2" ${dashArray}/>`;
+            const radius = Math.min(10, rw / 4, rh / 4);
+            return `<rect x="${rx}" y="${ry}" width="${rw}" height="${rh}" rx="${radius}" ry="${radius}" stroke="${stroke}" fill="${fill}" stroke-width="2" ${dashArray}/>`;
 
         case 'circle':
             const cx = element.x + element.width / 2;
