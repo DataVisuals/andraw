@@ -37,17 +37,7 @@
             <button class="tool-btn" data-tool="text" title="Text (T)">
                 <svg width="20" height="20" viewBox="0 0 20 20"><text x="10" y="15" text-anchor="middle" font-size="14" fill="currentColor">T</text></svg>
             </button>
-            <label title="Border/Stroke Color">
-                <span>Border:</span>
-                <input type="color" id="strokeColor" value="#2C3E50">
-            </label>
-            <label title="Fill Color">
-                <span>Fill:</span>
-                <input type="color" id="fillColor" value="#ECF0F1">
-            </label>
-            <label>
-                <input type="checkbox" id="fillEnabled"> Fill
-            </label>
+            <div class="divider"></div>
             <div class="style-preset-container">
                 <button class="style-preset-btn" id="stylePresetBtn" title="Style Presets">
                     <i class="fas fa-palette"></i> Style
@@ -115,6 +105,17 @@
                     </button>
                 </div>
             </div>
+            <label title="Border/Stroke Color">
+                <span>Border:</span>
+                <input type="color" id="strokeColor" value="#2C3E50">
+            </label>
+            <label title="Fill Color">
+                <span>Fill:</span>
+                <input type="color" id="fillColor" value="#ECF0F1">
+            </label>
+            <label>
+                <input type="checkbox" id="fillEnabled"> Fill
+            </label>
             <div class="divider"></div>
             <select id="fontSelect" title="Font Family">
                         <option value="Comic Sans MS, cursive">Handwritten</option>
@@ -142,7 +143,7 @@
                         <option value="stepped">Stepped</option>
                     </select>
             <label title="Background Color">
-                <span>BG:</span>
+                <span>Background:</span>
                 <input type="color" id="bgColor" value="#FFFEF9">
             </label>
             <div class="toolbar-spacer"></div>
