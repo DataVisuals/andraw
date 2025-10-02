@@ -2000,6 +2000,143 @@ function undo() {
     }
 }
 
+// Layout functions
+function layoutHorizontal() {
+    if (elements.length === 0) return;
+
+    const spacing = 20;
+    const margin = 50;
+    const maxWidth = canvas.width - margin * 2;
+
+    // Sort elements by their current Y position, then X position
+    const sortedElements = [...elements].sort((a, b) => {
+        const ay = a.y || 0;
+        const by = b.y || 0;
+        if (Math.abs(ay - by) < 50) {
+            return (a.x || 0) - (b.x || 0);
+        }
+        return ay - by;
+    });
+
+    let currentX = margin;
+    let currentY = margin;
+    let rowHeight = 0;
+    const rows = [];
+    let currentRow = [];
+
+    // Group elements into rows
+    sortedElements.forEach(element => {
+        const elementWidth = Math.abs(element.width || 100);
+        const elementHeight = Math.abs(element.height || 100);
+
+        if (currentX + elementWidth > maxWidth && currentRow.length > 0) {
+            rows.push({ elements: currentRow, height: rowHeight });
+            currentRow = [];
+            currentX = margin;
+            currentY += rowHeight + spacing;
+            rowHeight = 0;
+        }
+
+        currentRow.push(element);
+        rowHeight = Math.max(rowHeight, elementHeight);
+        currentX += elementWidth + spacing;
+    });
+
+    if (currentRow.length > 0) {
+        rows.push({ elements: currentRow, height: rowHeight });
+    }
+
+    // Calculate total height
+    const totalHeight = rows.reduce((sum, row, i) => sum + row.height + (i > 0 ? spacing : 0), 0);
+    let startY = (canvas.height - totalHeight) / 2;
+
+    // Position elements
+    rows.forEach(row => {
+        const rowWidth = row.elements.reduce((sum, el, i) =>
+            sum + Math.abs(el.width || 100) + (i > 0 ? spacing : 0), 0);
+        let x = (canvas.width - rowWidth) / 2;
+
+        row.elements.forEach(element => {
+            element.x = x;
+            element.y = startY + (row.height - Math.abs(element.height || 100)) / 2;
+            x += Math.abs(element.width || 100) + spacing;
+        });
+
+        startY += row.height + spacing;
+    });
+
+    saveHistory();
+    redraw();
+}
+
+function layoutVertical() {
+    if (elements.length === 0) return;
+
+    const spacing = 20;
+    const margin = 50;
+    const maxHeight = canvas.height - margin * 2;
+
+    // Sort elements by their current X position, then Y position
+    const sortedElements = [...elements].sort((a, b) => {
+        const ax = a.x || 0;
+        const bx = b.x || 0;
+        if (Math.abs(ax - bx) < 50) {
+            return (a.y || 0) - (b.y || 0);
+        }
+        return ax - bx;
+    });
+
+    let currentX = margin;
+    let currentY = margin;
+    let columnWidth = 0;
+    const columns = [];
+    let currentColumn = [];
+
+    // Group elements into columns
+    sortedElements.forEach(element => {
+        const elementWidth = Math.abs(element.width || 100);
+        const elementHeight = Math.abs(element.height || 100);
+
+        if (currentY + elementHeight > maxHeight && currentColumn.length > 0) {
+            columns.push({ elements: currentColumn, width: columnWidth });
+            currentColumn = [];
+            currentY = margin;
+            currentX += columnWidth + spacing;
+            columnWidth = 0;
+        }
+
+        currentColumn.push(element);
+        columnWidth = Math.max(columnWidth, elementWidth);
+        currentY += elementHeight + spacing;
+    });
+
+    if (currentColumn.length > 0) {
+        columns.push({ elements: currentColumn, width: columnWidth });
+    }
+
+    // Calculate total width
+    const totalWidth = columns.reduce((sum, col, i) => sum + col.width + (i > 0 ? spacing : 0), 0);
+    let startX = (canvas.width - totalWidth) / 2;
+
+    // Position elements
+    columns.forEach(column => {
+        const columnHeight = column.elements.reduce((sum, el, i) =>
+            sum + Math.abs(el.height || 100) + (i > 0 ? spacing : 0), 0);
+        let y = (canvas.height - columnHeight) / 2;
+
+        column.elements.forEach(element => {
+            element.x = startX + (column.width - Math.abs(element.width || 100)) / 2;
+            element.y = y;
+            y += Math.abs(element.height || 100) + spacing;
+        });
+
+        startX += column.width + spacing;
+    });
+
+    saveHistory();
+    redraw();
+}
+
 function redraw() {
     // Fill background
     ctx.fillStyle = backgroundColor;
@@ -2439,6 +2576,15 @@ function escapeXML(text) {
 // Undo button
 document.getElementById('undoBtn').addEventListener('click', () => {
     undo();
+});
+
+// Layout buttons
+document.getElementById('layoutHorizontalBtn').addEventListener('click', () => {
+    layoutHorizontal();
+});
+
+document.getElementById('layoutVerticalBtn').addEventListener('click', () => {
+    layoutVertical();
 });
 
 // Export/Import
