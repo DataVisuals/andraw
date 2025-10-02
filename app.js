@@ -31,6 +31,60 @@ const lineStyleSelect = document.getElementById('lineStyleSelect');
 // Background color state
 let backgroundColor = '#FFFEF9';
 
+// AWS Icon Loading System
+const awsIconCache = {};
+const awsIconURLs = {
+    ec2: 'https://cdn.jsdelivr.net/npm/aws-icons@latest/icons/architecture-service/AmazonEC2.svg',
+    s3: 'https://cdn.jsdelivr.net/npm/aws-icons@latest/icons/architecture-service/AmazonS3.svg',
+    rds: 'https://cdn.jsdelivr.net/npm/aws-icons@latest/icons/architecture-service/AmazonRDS.svg',
+    dynamodb: 'https://cdn.jsdelivr.net/npm/aws-icons@latest/icons/architecture-service/AmazonDynamoDB.svg',
+    athena: 'https://cdn.jsdelivr.net/npm/aws-icons@latest/icons/architecture-service/AmazonAthena.svg',
+    redshift: 'https://cdn.jsdelivr.net/npm/aws-icons@latest/icons/architecture-service/AmazonRedshift.svg',
+    sqs: 'https://cdn.jsdelivr.net/npm/aws-icons@latest/icons/architecture-service/AmazonSQS.svg',
+    sns: 'https://cdn.jsdelivr.net/npm/aws-icons@latest/icons/architecture-service/AmazonSNS.svg',
+    apiGateway: 'https://cdn.jsdelivr.net/npm/aws-icons@latest/icons/architecture-service/AmazonAPIGateway.svg',
+    cloudfront: 'https://cdn.jsdelivr.net/npm/aws-icons@latest/icons/architecture-service/AmazonCloudFront.svg',
+    route53: 'https://cdn.jsdelivr.net/npm/aws-icons@latest/icons/architecture-service/AmazonRoute53.svg',
+    ecs: 'https://cdn.jsdelivr.net/npm/aws-icons@latest/icons/architecture-service/AmazonECS.svg',
+    eks: 'https://cdn.jsdelivr.net/npm/aws-icons@latest/icons/architecture-service/AmazonEKS.svg',
+    elb: 'https://cdn.jsdelivr.net/npm/aws-icons@latest/icons/architecture-service/ElasticLoadBalancing.svg',
+    cloudwatch: 'https://cdn.jsdelivr.net/npm/aws-icons@latest/icons/architecture-service/AmazonCloudWatch.svg'
+};
+
+// Preload AWS icons
+function loadAWSIcon(serviceName, url) {
+    if (awsIconCache[serviceName]) {
+        return awsIconCache[serviceName];
+    }
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = url;
+
+    awsIconCache[serviceName] = {
+        image: img,
+        loaded: false,
+        error: false
+    };
+
+    img.onload = () => {
+        awsIconCache[serviceName].loaded = true;
+        redraw();
+    };
+
+    img.onerror = () => {
+        awsIconCache[serviceName].error = true;
+        console.warn(`Failed to load AWS icon: ${serviceName}`);
+    };
+
+    return awsIconCache[serviceName];
+}
+
+// Preload all AWS icons on startup
+Object.keys(awsIconURLs).forEach(service => {
+    loadAWSIcon(service, awsIconURLs[service]);
+});
+
 // Template definitions
 const templates = {
     // Flowchart
@@ -1173,476 +1227,106 @@ function drawSwitch(x, y, w, h, strokeColor, fillColor) {
     }
 }
 
-// AWS Service Drawing Functions
-function drawEC2(x, y, w, h, strokeColor, fillColor) {
-    // EC2 instance - server with AWS branding
+// Generic AWS Service Drawing Function
+function drawAWSService(x, y, w, h, strokeColor, fillColor, serviceName, fallbackDrawFn) {
+    // Draw background
     if (fillColor) {
         ctx.fillStyle = fillColor;
         ctx.fillRect(x, y, w, h);
     }
 
+    // Draw border
     ctx.strokeStyle = strokeColor;
     ctx.lineWidth = 2;
     ctx.strokeRect(x, y, w, h);
 
-    // Draw "EC2" text
-    ctx.font = 'bold 16px Arial';
-    ctx.fillStyle = strokeColor;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('EC2', x + w/2, y + h/2);
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
+    // Try to draw official AWS icon
+    const iconData = awsIconCache[serviceName];
+    if (iconData && iconData.loaded && !iconData.error) {
+        // Calculate icon size (80% of container, centered)
+        const iconSize = Math.min(w, h) * 0.8;
+        const iconX = x + (w - iconSize) / 2;
+        const iconY = y + (h - iconSize) / 2;
+
+        try {
+            ctx.drawImage(iconData.image, iconX, iconY, iconSize, iconSize);
+        } catch (e) {
+            // If drawing fails, use fallback
+            if (fallbackDrawFn) fallbackDrawFn(x, y, w, h, strokeColor, fillColor);
+        }
+    } else if (iconData && iconData.error && fallbackDrawFn) {
+        // Icon failed to load, use fallback
+        fallbackDrawFn(x, y, w, h, strokeColor, fillColor);
+    }
+}
+
+// AWS Service Drawing Functions
+function drawEC2(x, y, w, h, strokeColor, fillColor) {
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'ec2', (x, y, w, h, strokeColor) => {
+        ctx.font = 'bold 16px Arial';
+        ctx.fillStyle = strokeColor;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('EC2', x + w/2, y + h/2);
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+    });
 }
 
 function drawS3(x, y, w, h, strokeColor, fillColor) {
-    // S3 bucket - distinctive bucket shape
-    const bucketTop = y + h * 0.3;
-
-    if (fillColor) {
-        ctx.fillStyle = fillColor;
-        ctx.beginPath();
-        ctx.moveTo(x + w * 0.2, bucketTop);
-        ctx.lineTo(x, y + h);
-        ctx.lineTo(x + w, y + h);
-        ctx.lineTo(x + w * 0.8, bucketTop);
-        ctx.closePath();
-        ctx.fill();
-    }
-
-    ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(x + w * 0.2, bucketTop);
-    ctx.lineTo(x, y + h);
-    ctx.lineTo(x + w, y + h);
-    ctx.lineTo(x + w * 0.8, bucketTop);
-    ctx.closePath();
-    ctx.stroke();
-
-    // Top ellipse
-    ctx.beginPath();
-    ctx.ellipse(x + w/2, bucketTop, w * 0.3, h * 0.1, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    if (fillColor) ctx.fill();
-
-    // S3 label
-    ctx.font = 'bold 12px Arial';
-    ctx.fillStyle = strokeColor;
-    ctx.textAlign = 'center';
-    ctx.fillText('S3', x + w/2, y + h * 0.7);
-    ctx.textAlign = 'left';
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 's3');
 }
 
 function drawRDS(x, y, w, h, strokeColor, fillColor) {
-    // RDS - cylinder database
-    drawDatabase(x, y, w, h, strokeColor, fillColor);
-
-    // Add RDS label
-    ctx.font = 'bold 12px Arial';
-    ctx.fillStyle = strokeColor;
-    ctx.textAlign = 'center';
-    ctx.fillText('RDS', x + w/2, y + h/2);
-    ctx.textAlign = 'left';
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'rds');
 }
 
 function drawDynamoDB(x, y, w, h, strokeColor, fillColor) {
-    // DynamoDB - stacked tables
-    const layers = 3;
-    const layerH = h / (layers + 1);
-
-    for (let i = 0; i < layers; i++) {
-        const yPos = y + h - (i + 1) * layerH;
-        const offset = i * 5;
-
-        if (fillColor) {
-            ctx.fillStyle = fillColor;
-            ctx.fillRect(x + offset, yPos, w - offset * 2, layerH * 0.8);
-        }
-
-        ctx.strokeStyle = strokeColor;
-        ctx.lineWidth = 2;
-        ctx.strokeRect(x + offset, yPos, w - offset * 2, layerH * 0.8);
-    }
-
-    // Label
-    ctx.font = 'bold 10px Arial';
-    ctx.fillStyle = strokeColor;
-    ctx.textAlign = 'center';
-    ctx.fillText('Dynamo', x + w/2, y + h * 0.2);
-    ctx.textAlign = 'left';
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'dynamodb');
 }
 
 function drawAthena(x, y, w, h, strokeColor, fillColor) {
-    // Athena - query/search icon
-    if (fillColor) {
-        ctx.fillStyle = fillColor;
-        ctx.fillRect(x, y, w, h);
-    }
-
-    ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x, y, w, h);
-
-    // Magnifying glass
-    const centerX = x + w/2;
-    const centerY = y + h/2;
-    const radius = Math.min(w, h) * 0.25;
-
-    ctx.beginPath();
-    ctx.arc(centerX - 5, centerY - 5, radius, 0, Math.PI * 2);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(centerX + radius * 0.5, centerY + radius * 0.5);
-    ctx.lineTo(centerX + radius * 1.2, centerY + radius * 1.2);
-    ctx.stroke();
-
-    // Label
-    ctx.font = 'bold 10px Arial';
-    ctx.fillStyle = strokeColor;
-    ctx.textAlign = 'center';
-    ctx.fillText('Athena', x + w/2, y + h - 10);
-    ctx.textAlign = 'left';
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'athena');
 }
 
 function drawRedshift(x, y, w, h, strokeColor, fillColor) {
-    // Redshift - data warehouse
-    if (fillColor) {
-        ctx.fillStyle = fillColor;
-        ctx.fillRect(x, y, w, h);
-    }
-
-    ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x, y, w, h);
-
-    // Grid pattern for warehouse
-    const cols = 3;
-    const rows = 3;
-    for (let i = 1; i < cols; i++) {
-        ctx.beginPath();
-        ctx.moveTo(x + (w/cols) * i, y + h * 0.25);
-        ctx.lineTo(x + (w/cols) * i, y + h * 0.75);
-        ctx.stroke();
-    }
-    for (let i = 1; i < rows; i++) {
-        ctx.beginPath();
-        ctx.moveTo(x + w * 0.15, y + h * 0.25 + (h * 0.5/rows) * i);
-        ctx.lineTo(x + w * 0.85, y + h * 0.25 + (h * 0.5/rows) * i);
-        ctx.stroke();
-    }
-
-    // Label
-    ctx.font = 'bold 10px Arial';
-    ctx.fillStyle = strokeColor;
-    ctx.textAlign = 'center';
-    ctx.fillText('Redshift', x + w/2, y + h - 10);
-    ctx.textAlign = 'left';
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'redshift');
 }
 
 function drawSQS(x, y, w, h, strokeColor, fillColor) {
-    // SQS - message queue (similar to existing queue but with label)
-    drawQueue(x, y, w, h, strokeColor, fillColor);
-
-    // Label
-    ctx.font = 'bold 10px Arial';
-    ctx.fillStyle = strokeColor;
-    ctx.textAlign = 'center';
-    ctx.fillText('SQS', x + w/2, y + h - 5);
-    ctx.textAlign = 'left';
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'sqs');
 }
 
 function drawSNS(x, y, w, h, strokeColor, fillColor) {
-    // SNS - notification/broadcast
-    if (fillColor) {
-        ctx.fillStyle = fillColor;
-        ctx.fillRect(x, y, w, h);
-    }
-
-    ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x, y, w, h);
-
-    // Bell icon
-    const centerX = x + w/2;
-    const centerY = y + h/2;
-    const bellW = w * 0.3;
-    const bellH = h * 0.3;
-
-    ctx.beginPath();
-    ctx.moveTo(centerX - bellW/2, centerY);
-    ctx.quadraticCurveTo(centerX - bellW/2, centerY - bellH, centerX, centerY - bellH);
-    ctx.quadraticCurveTo(centerX + bellW/2, centerY - bellH, centerX + bellW/2, centerY);
-    ctx.lineTo(centerX - bellW/2, centerY);
-    ctx.stroke();
-
-    // Label
-    ctx.font = 'bold 10px Arial';
-    ctx.fillStyle = strokeColor;
-    ctx.textAlign = 'center';
-    ctx.fillText('SNS', x + w/2, y + h - 10);
-    ctx.textAlign = 'left';
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'sns');
 }
 
 function drawAPIGateway(x, y, w, h, strokeColor, fillColor) {
-    // API Gateway - gateway/door icon
-    if (fillColor) {
-        ctx.fillStyle = fillColor;
-        ctx.fillRect(x, y, w, h);
-    }
-
-    ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x, y, w, h);
-
-    // Gateway arch
-    const archX = x + w * 0.25;
-    const archW = w * 0.5;
-    const archH = h * 0.5;
-    const archY = y + h * 0.2;
-
-    ctx.beginPath();
-    ctx.moveTo(archX, archY + archH);
-    ctx.lineTo(archX, archY + archH * 0.3);
-    ctx.quadraticCurveTo(archX, archY, archX + archW/2, archY);
-    ctx.quadraticCurveTo(archX + archW, archY, archX + archW, archY + archH * 0.3);
-    ctx.lineTo(archX + archW, archY + archH);
-    ctx.stroke();
-
-    // Label
-    ctx.font = 'bold 9px Arial';
-    ctx.fillStyle = strokeColor;
-    ctx.textAlign = 'center';
-    ctx.fillText('API GW', x + w/2, y + h - 10);
-    ctx.textAlign = 'left';
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'apiGateway');
 }
 
 function drawCloudFront(x, y, w, h, strokeColor, fillColor) {
-    // CloudFront - CDN/globe
-    if (fillColor) {
-        ctx.fillStyle = fillColor;
-        ctx.fillRect(x, y, w, h);
-    }
-
-    ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x, y, w, h);
-
-    // Globe
-    const centerX = x + w/2;
-    const centerY = y + h/2 - 5;
-    const radius = Math.min(w, h) * 0.25;
-
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Latitude lines
-    ctx.beginPath();
-    ctx.ellipse(centerX, centerY, radius, radius * 0.5, 0, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Longitude line
-    ctx.beginPath();
-    ctx.ellipse(centerX, centerY, radius * 0.4, radius, 0, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Label
-    ctx.font = 'bold 9px Arial';
-    ctx.fillStyle = strokeColor;
-    ctx.textAlign = 'center';
-    ctx.fillText('CloudFront', x + w/2, y + h - 5);
-    ctx.textAlign = 'left';
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'cloudfront');
 }
 
 function drawRoute53(x, y, w, h, strokeColor, fillColor) {
-    // Route 53 - DNS routing
-    if (fillColor) {
-        ctx.fillStyle = fillColor;
-        ctx.fillRect(x, y, w, h);
-    }
-
-    ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x, y, w, h);
-
-    // Network routing diagram
-    const centerX = x + w/2;
-    const centerY = y + h/2;
-
-    // Central node
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, 8, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Connected nodes
-    const nodePositions = [
-        {x: centerX - w * 0.25, y: centerY - h * 0.2},
-        {x: centerX + w * 0.25, y: centerY - h * 0.2},
-        {x: centerX, y: centerY + h * 0.25}
-    ];
-
-    nodePositions.forEach(pos => {
-        ctx.beginPath();
-        ctx.arc(pos.x, pos.y, 5, 0, Math.PI * 2);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(centerX, centerY);
-        ctx.lineTo(pos.x, pos.y);
-        ctx.stroke();
-    });
-
-    // Label
-    ctx.font = 'bold 9px Arial';
-    ctx.fillStyle = strokeColor;
-    ctx.textAlign = 'center';
-    ctx.fillText('Route 53', x + w/2, y + h - 5);
-    ctx.textAlign = 'left';
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'route53');
 }
 
 function drawECS(x, y, w, h, strokeColor, fillColor) {
-    // ECS - container service
-    const containerCount = 3;
-    const containerW = w / containerCount - 5;
-    const containerH = h * 0.6;
-    const containerY = y + h * 0.2;
-
-    for (let i = 0; i < containerCount; i++) {
-        const containerX = x + 5 + i * (containerW + 5);
-
-        if (fillColor) {
-            ctx.fillStyle = fillColor;
-            ctx.fillRect(containerX, containerY, containerW, containerH);
-        }
-
-        ctx.strokeStyle = strokeColor;
-        ctx.lineWidth = 2;
-        ctx.strokeRect(containerX, containerY, containerW, containerH);
-    }
-
-    // Label
-    ctx.font = 'bold 10px Arial';
-    ctx.fillStyle = strokeColor;
-    ctx.textAlign = 'center';
-    ctx.fillText('ECS', x + w/2, y + h - 5);
-    ctx.textAlign = 'left';
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'ecs');
 }
 
 function drawEKS(x, y, w, h, strokeColor, fillColor) {
-    // EKS - Kubernetes hexagons
-    if (fillColor) {
-        ctx.fillStyle = fillColor;
-        ctx.fillRect(x, y, w, h);
-    }
-
-    ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x, y, w, h);
-
-    // Small hexagons representing K8s
-    const hexCenters = [
-        {x: x + w * 0.3, y: y + h * 0.35},
-        {x: x + w * 0.7, y: y + h * 0.35},
-        {x: x + w * 0.5, y: y + h * 0.6}
-    ];
-
-    hexCenters.forEach(center => {
-        const hexSize = w * 0.12;
-        ctx.beginPath();
-        for (let i = 0; i < 6; i++) {
-            const angle = (Math.PI / 3) * i;
-            const hx = center.x + hexSize * Math.cos(angle);
-            const hy = center.y + hexSize * Math.sin(angle);
-            if (i === 0) ctx.moveTo(hx, hy);
-            else ctx.lineTo(hx, hy);
-        }
-        ctx.closePath();
-        ctx.stroke();
-    });
-
-    // Label
-    ctx.font = 'bold 10px Arial';
-    ctx.fillStyle = strokeColor;
-    ctx.textAlign = 'center';
-    ctx.fillText('EKS', x + w/2, y + h - 5);
-    ctx.textAlign = 'left';
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'eks');
 }
 
 function drawELB(x, y, w, h, strokeColor, fillColor) {
-    // ELB - load balancer
-    if (fillColor) {
-        ctx.fillStyle = fillColor;
-        ctx.fillRect(x, y, w, h);
-    }
-
-    ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x, y, w, h);
-
-    // Balance/distribution diagram
-    const topX = x + w/2;
-    const topY = y + h * 0.25;
-
-    // Top node (load balancer)
-    ctx.beginPath();
-    ctx.arc(topX, topY, 8, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Bottom nodes (targets)
-    const bottomY = y + h * 0.65;
-    const positions = [x + w * 0.25, x + w * 0.5, x + w * 0.75];
-
-    positions.forEach(posX => {
-        ctx.beginPath();
-        ctx.arc(posX, bottomY, 6, 0, Math.PI * 2);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(topX, topY);
-        ctx.lineTo(posX, bottomY);
-        ctx.stroke();
-    });
-
-    // Label
-    ctx.font = 'bold 10px Arial';
-    ctx.fillStyle = strokeColor;
-    ctx.textAlign = 'center';
-    ctx.fillText('ELB', x + w/2, y + h - 5);
-    ctx.textAlign = 'left';
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'elb');
 }
 
 function drawCloudWatch(x, y, w, h, strokeColor, fillColor) {
-    // CloudWatch - monitoring/chart
-    if (fillColor) {
-        ctx.fillStyle = fillColor;
-        ctx.fillRect(x, y, w, h);
-    }
-
-    ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x, y, w, h);
-
-    // Line chart
-    const chartY = y + h * 0.5;
-    const chartX1 = x + w * 0.2;
-    const chartX2 = x + w * 0.8;
-
-    ctx.beginPath();
-    ctx.moveTo(chartX1, chartY);
-    ctx.lineTo(x + w * 0.35, chartY - h * 0.2);
-    ctx.lineTo(x + w * 0.5, chartY - h * 0.1);
-    ctx.lineTo(x + w * 0.65, chartY - h * 0.25);
-    ctx.lineTo(chartX2, chartY - h * 0.15);
-    ctx.stroke();
-
-    // Label
-    ctx.font = 'bold 9px Arial';
-    ctx.fillStyle = strokeColor;
-    ctx.textAlign = 'center';
-    ctx.fillText('CloudWatch', x + w/2, y + h - 5);
-    ctx.textAlign = 'left';
+    drawAWSService(x, y, w, h, strokeColor, fillColor, 'cloudwatch');
 }
 
 function drawElement(element) {
