@@ -39,6 +39,7 @@ const strokeColorInput = document.getElementById('strokeColor');
 const fillColorInput = document.getElementById('fillColor');
 const fillEnabledInput = document.getElementById('fillEnabled');
 const fontSelect = document.getElementById('fontSelect');
+const fontSizeSelect = document.getElementById('fontSizeSelect');
 const bgColorInput = document.getElementById('bgColor');
 const lineStyleSelect = document.getElementById('lineStyleSelect');
 const lineRoutingSelect = document.getElementById('lineRoutingSelect');
@@ -1082,7 +1083,8 @@ function drawPen(points, color, lineStyle = 'solid') {
 
 function drawText(element) {
     const fontFamily = element.fontFamily || 'Comic Sans MS, cursive';
-    ctx.font = `16px ${fontFamily}`;
+    const fontSize = element.fontSize || 16;
+    ctx.font = `${fontSize}px ${fontFamily}`;
     ctx.fillStyle = element.strokeColor;
     ctx.textBaseline = 'top';
     ctx.fillText(element.text, element.x, element.y);
@@ -2609,13 +2611,14 @@ function getElementBounds(element) {
             };
         case 'text':
             const fontFamily = element.fontFamily || 'Comic Sans MS, cursive';
-            ctx.font = `16px ${fontFamily}`;
+            const fontSize = element.fontSize || 16;
+            ctx.font = `${fontSize}px ${fontFamily}`;
             const metrics = ctx.measureText(element.text);
             return {
                 x: element.x,
                 y: element.y,
                 width: metrics.width,
-                height: 20
+                height: fontSize * 1.2
             };
         default:
             return {
@@ -2706,6 +2709,7 @@ function createTextInput(x, y) {
     input.style.left = (rect.left + panOffsetX + x * zoomLevel) + 'px';
     input.style.top = (rect.top + panOffsetY + y * zoomLevel) + 'px';
     input.style.fontFamily = fontSelect.value;
+    input.style.fontSize = fontSizeSelect.value + 'px';
     input.rows = 1;
     document.body.appendChild(input);
 
@@ -2721,7 +2725,8 @@ function createTextInput(x, y) {
                 y: y,
                 text: text,
                 strokeColor: strokeColorInput.value,
-                fontFamily: fontSelect.value
+                fontFamily: fontSelect.value,
+                fontSize: parseInt(fontSizeSelect.value)
             });
             redraw();
         }
@@ -2752,6 +2757,7 @@ function createTextInputForShape(centerX, centerY, shape) {
     input.style.left = (rect.left + panOffsetX + centerX * zoomLevel - 50) + 'px'; // Offset to center the input box
     input.style.top = (rect.top + panOffsetY + centerY * zoomLevel - 12) + 'px';
     input.style.fontFamily = fontSelect.value;
+    input.style.fontSize = fontSizeSelect.value + 'px';
     input.style.width = '100px';
     input.rows = 1;
     document.body.appendChild(input);
@@ -2763,17 +2769,19 @@ function createTextInputForShape(centerX, centerY, shape) {
         const text = input.value.trim();
         if (text) {
             // Measure text to center it properly
-            ctx.font = `16px ${fontSelect.value}`;
+            const fontSize = parseInt(fontSizeSelect.value);
+            ctx.font = `${fontSize}px ${fontSelect.value}`;
             const metrics = ctx.measureText(text);
             const textWidth = metrics.width;
 
             elements.push({
                 type: 'text',
                 x: centerX - textWidth / 2,
-                y: centerY - 8, // Adjust for vertical centering
+                y: centerY - fontSize / 2, // Adjust for vertical centering
                 text: text,
                 strokeColor: strokeColorInput.value,
-                fontFamily: fontSelect.value
+                fontFamily: fontSelect.value,
+                fontSize: fontSize
             });
             redraw();
         }
@@ -2804,6 +2812,7 @@ function createTextInputBelowShape(centerX, bottomY, shape) {
     input.style.left = (rect.left + panOffsetX + centerX * zoomLevel - 50) + 'px'; // Offset to center the input box
     input.style.top = (rect.top + panOffsetY + bottomY * zoomLevel - 12) + 'px';
     input.style.fontFamily = fontSelect.value;
+    input.style.fontSize = fontSizeSelect.value + 'px';
     input.style.width = '100px';
     input.rows = 1;
     document.body.appendChild(input);
@@ -2815,7 +2824,8 @@ function createTextInputBelowShape(centerX, bottomY, shape) {
         const text = input.value.trim();
         if (text) {
             // Measure text to center it below the shape
-            ctx.font = `16px ${fontSelect.value}`;
+            const fontSize = parseInt(fontSizeSelect.value);
+            ctx.font = `${fontSize}px ${fontSelect.value}`;
             const metrics = ctx.measureText(text);
             const textWidth = metrics.width;
 
@@ -2825,7 +2835,8 @@ function createTextInputBelowShape(centerX, bottomY, shape) {
                 y: bottomY - 8, // Position below shape
                 text: text,
                 strokeColor: strokeColorInput.value,
-                fontFamily: fontSelect.value
+                fontFamily: fontSelect.value,
+                fontSize: fontSize
             });
             redraw();
         }
@@ -2952,8 +2963,9 @@ function elementToSVG(element) {
             return `<path d="${pathData}" stroke="${stroke}" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ${dashArray}/>`;
 
         case 'text':
-            const fontFamily = element.fontFamily || 'Comic Sans MS, cursive';
-            return `<text x="${element.x}" y="${element.y + 16}" font-family="${fontFamily}" font-size="16" fill="${stroke}">${escapeXML(element.text)}</text>`;
+            const textFontFamily = element.fontFamily || 'Comic Sans MS, cursive';
+            const textFontSize = element.fontSize || 16;
+            return `<text x="${element.x}" y="${element.y + textFontSize}" font-family="${textFontFamily}" font-size="${textFontSize}" fill="${stroke}">${escapeXML(element.text)}</text>`;
 
         case 'diamond':
             const dcx = element.x + element.width / 2;
