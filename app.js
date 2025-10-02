@@ -48,7 +48,17 @@ const stylePresets = {
     sage: { stroke: '#556B2F', fill: '#D8E4BC' },       // Dark olive border, light sage fill
     terracotta: { stroke: '#A0522D', fill: '#F4DCC4' }, // Sienna border, light peach fill
     ocean: { stroke: '#2C5F7F', fill: '#B8D4E8' },      // Deep teal border, light blue fill
-    plum: { stroke: '#6B4C7A', fill: '#E6D9ED' }        // Deep purple border, light lavender fill
+    plum: { stroke: '#6B4C7A', fill: '#E6D9ED' },       // Deep purple border, light lavender fill
+    charcoal: { stroke: '#3D3D3D', fill: '#E8E6E3' },   // Dark grey border, warm light grey fill
+    forest: { stroke: '#2D5016', fill: '#C8E6C9' },     // Deep forest green border, light mint fill
+    burgundy: { stroke: '#6B2737', fill: '#F8E1E7' },   // Deep wine red border, light pink fill
+    navy: { stroke: '#1A3A52', fill: '#D1E7F0' },       // Navy blue border, light sky blue fill
+    copper: { stroke: '#8B4513', fill: '#F5DEB3' },     // Dark copper border, wheat fill
+    moss: { stroke: '#4A5D23', fill: '#E3EAC2' },       // Dark olive-green border, light yellow-green fill
+    ink: { stroke: '#1C2833', fill: '#F4F6F7' },        // Very dark blue-black border, off-white fill
+    clay: { stroke: '#8B4726', fill: '#DEB887' },       // Brown-red border, burlywood fill
+    storm: { stroke: '#34495E', fill: '#D5DBDB' },      // Dark slate blue border, light blue-grey fill
+    mauve: { stroke: '#7D6B7D', fill: '#F0E6EF' }       // Muted purple border, light rose fill
 };
 
 // Background color state
@@ -235,7 +245,13 @@ document.querySelectorAll('.tool-btn').forEach(btn => {
         document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         currentTool = btn.dataset.tool;
-        canvas.style.cursor = currentTool === 'select' ? 'default' : 'crosshair';
+        if (currentTool === 'select') {
+            canvas.style.cursor = 'default';
+        } else if (currentTool === 'hand') {
+            canvas.style.cursor = 'grab';
+        } else {
+            canvas.style.cursor = 'crosshair';
+        }
         selectedElement = null;
         redraw();
     });
@@ -399,7 +415,7 @@ document.addEventListener('keydown', (e) => {
     const key = e.key.toLowerCase();
     const toolMap = {
         'v': 'select', 'r': 'rectangle', 'c': 'circle',
-        'l': 'line', 'a': 'arrow', 'p': 'pen', 't': 'text'
+        'l': 'line', 'a': 'arrow', 'p': 'pen', 't': 'text', 'h': 'hand'
     };
     if (toolMap[key]) {
         const btn = document.querySelector(`[data-tool="${toolMap[key]}"]`);
@@ -435,7 +451,13 @@ document.addEventListener('keyup', (e) => {
     if (e.code === 'Space') {
         spacePressed = false;
         isPanning = false;
-        canvas.style.cursor = currentTool === 'select' ? 'default' : 'crosshair';
+        if (currentTool === 'select') {
+            canvas.style.cursor = 'default';
+        } else if (currentTool === 'hand') {
+            canvas.style.cursor = 'grab';
+        } else {
+            canvas.style.cursor = 'crosshair';
+        }
     }
 });
 
@@ -468,8 +490,8 @@ function handleWheel(e) {
 function handleMouseDown(e) {
     const rect = canvas.getBoundingClientRect();
 
-    // Handle panning with spacebar
-    if (spacePressed) {
+    // Handle panning with spacebar or hand tool
+    if (spacePressed || currentTool === 'hand') {
         isPanning = true;
         panStartX = e.clientX - panOffsetX;
         panStartY = e.clientY - panOffsetY;
@@ -587,7 +609,15 @@ function handleMouseUp(e) {
     // Handle panning end
     if (isPanning) {
         isPanning = false;
-        canvas.style.cursor = spacePressed ? 'grab' : (currentTool === 'select' ? 'default' : 'crosshair');
+        if (spacePressed) {
+            canvas.style.cursor = 'grab';
+        } else if (currentTool === 'hand') {
+            canvas.style.cursor = 'grab';
+        } else if (currentTool === 'select') {
+            canvas.style.cursor = 'default';
+        } else {
+            canvas.style.cursor = 'crosshair';
+        }
         return;
     }
 
