@@ -2004,9 +2004,11 @@ function undo() {
 function layoutHorizontal() {
     if (elements.length === 0) return;
 
-    const spacing = 20;
+    const minSpacing = 10;
+    const maxSpacing = 100;
     const margin = 50;
     const maxWidth = canvas.width - margin * 2;
+    const availableHeight = canvas.height - margin * 2;
 
     // Sort elements by their current Y position, then X position
     const sortedElements = [...elements].sort((a, b) => {
@@ -2018,13 +2020,12 @@ function layoutHorizontal() {
         return ay - by;
     });
 
-    let currentX = margin;
-    let currentY = margin;
+    // Group elements into rows with minimal spacing for grouping
+    let currentX = 0;
     let rowHeight = 0;
     const rows = [];
     let currentRow = [];
 
-    // Group elements into rows
     sortedElements.forEach(element => {
         const elementWidth = Math.abs(element.width || 100);
         const elementHeight = Math.abs(element.height || 100);
@@ -2032,37 +2033,52 @@ function layoutHorizontal() {
         if (currentX + elementWidth > maxWidth && currentRow.length > 0) {
             rows.push({ elements: currentRow, height: rowHeight });
             currentRow = [];
-            currentX = margin;
-            currentY += rowHeight + spacing;
+            currentX = 0;
             rowHeight = 0;
         }
 
         currentRow.push(element);
         rowHeight = Math.max(rowHeight, elementHeight);
-        currentX += elementWidth + spacing;
+        currentX += elementWidth + minSpacing;
     });
 
     if (currentRow.length > 0) {
         rows.push({ elements: currentRow, height: rowHeight });
     }
 
-    // Calculate total height
-    const totalHeight = rows.reduce((sum, row, i) => sum + row.height + (i > 0 ? spacing : 0), 0);
+    // Calculate vertical spacing between rows
+    const totalRowHeight = rows.reduce((sum, row) => sum + row.height, 0);
+    let verticalSpacing = minSpacing;
+    if (rows.length > 1) {
+        const spaceForVerticalGaps = availableHeight - totalRowHeight;
+        verticalSpacing = Math.min(maxSpacing, Math.max(minSpacing, spaceForVerticalGaps / (rows.length - 1)));
+    }
+
+    // Calculate total height with actual spacing
+    const totalHeight = rows.reduce((sum, row, i) => sum + row.height + (i > 0 ? verticalSpacing : 0), 0);
     let startY = (canvas.height - totalHeight) / 2;
 
     // Position elements
     rows.forEach(row => {
+        // Calculate horizontal spacing for this row
+        const totalElementWidth = row.elements.reduce((sum, el) => sum + Math.abs(el.width || 100), 0);
+        let horizontalSpacing = minSpacing;
+        if (row.elements.length > 1) {
+            const spaceForGaps = maxWidth - totalElementWidth;
+            horizontalSpacing = Math.min(maxSpacing, Math.max(minSpacing, spaceForGaps / (row.elements.length - 1)));
+        }
+
         const rowWidth = row.elements.reduce((sum, el, i) =>
-            sum + Math.abs(el.width || 100) + (i > 0 ? spacing : 0), 0);
+            sum + Math.abs(el.width || 100) + (i > 0 ? horizontalSpacing : 0), 0);
         let x = (canvas.width - rowWidth) / 2;
 
         row.elements.forEach(element => {
             element.x = x;
             element.y = startY + (row.height - Math.abs(element.height || 100)) / 2;
-            x += Math.abs(element.width || 100) + spacing;
+            x += Math.abs(element.width || 100) + horizontalSpacing;
         });
 
-        startY += row.height + spacing;
+        startY += row.height + verticalSpacing;
     });
 
     saveHistory();
@@ -2072,9 +2088,11 @@ function layoutHorizontal() {
 function layoutVertical() {
     if (elements.length === 0) return;
 
-    const spacing = 20;
+    const minSpacing = 10;
+    const maxSpacing = 100;
     const margin = 50;
     const maxHeight = canvas.height - margin * 2;
+    const availableWidth = canvas.width - margin * 2;
 
     // Sort elements by their current X position, then Y position
     const sortedElements = [...elements].sort((a, b) => {
@@ -2086,13 +2104,12 @@ function layoutVertical() {
         return ax - bx;
     });
 
-    let currentX = margin;
-    let currentY = margin;
+    // Group elements into columns with minimal spacing for grouping
+    let currentY = 0;
     let columnWidth = 0;
     const columns = [];
     let currentColumn = [];
 
-    // Group elements into columns
     sortedElements.forEach(element => {
         const elementWidth = Math.abs(element.width || 100);
         const elementHeight = Math.abs(element.height || 100);
@@ -2100,37 +2117,52 @@ function layoutVertical() {
         if (currentY + elementHeight > maxHeight && currentColumn.length > 0) {
             columns.push({ elements: currentColumn, width: columnWidth });
             currentColumn = [];
-            currentY = margin;
-            currentX += columnWidth + spacing;
+            currentY = 0;
             columnWidth = 0;
         }
 
         currentColumn.push(element);
         columnWidth = Math.max(columnWidth, elementWidth);
-        currentY += elementHeight + spacing;
+        currentY += elementHeight + minSpacing;
     });
 
     if (currentColumn.length > 0) {
         columns.push({ elements: currentColumn, width: columnWidth });
     }
 
-    // Calculate total width
-    const totalWidth = columns.reduce((sum, col, i) => sum + col.width + (i > 0 ? spacing : 0), 0);
+    // Calculate horizontal spacing between columns
+    const totalColumnWidth = columns.reduce((sum, col) => sum + col.width, 0);
+    let horizontalSpacing = minSpacing;
+    if (columns.length > 1) {
+        const spaceForHorizontalGaps = availableWidth - totalColumnWidth;
+        horizontalSpacing = Math.min(maxSpacing, Math.max(minSpacing, spaceForHorizontalGaps / (columns.length - 1)));
+    }
+
+    // Calculate total width with actual spacing
+    const totalWidth = columns.reduce((sum, col, i) => sum + col.width + (i > 0 ? horizontalSpacing : 0), 0);
     let startX = (canvas.width - totalWidth) / 2;
 
     // Position elements
     columns.forEach(column => {
+        // Calculate vertical spacing for this column
+        const totalElementHeight = column.elements.reduce((sum, el) => sum + Math.abs(el.height || 100), 0);
+        let verticalSpacing = minSpacing;
+        if (column.elements.length > 1) {
+            const spaceForGaps = maxHeight - totalElementHeight;
+            verticalSpacing = Math.min(maxSpacing, Math.max(minSpacing, spaceForGaps / (column.elements.length - 1)));
+        }
+
         const columnHeight = column.elements.reduce((sum, el, i) =>
-            sum + Math.abs(el.height || 100) + (i > 0 ? spacing : 0), 0);
+            sum + Math.abs(el.height || 100) + (i > 0 ? verticalSpacing : 0), 0);
         let y = (canvas.height - columnHeight) / 2;
 
         column.elements.forEach(element => {
             element.x = startX + (column.width - Math.abs(element.width || 100)) / 2;
             element.y = y;
-            y += Math.abs(element.height || 100) + spacing;
+            y += Math.abs(element.height || 100) + verticalSpacing;
         });
 
-        startX += column.width + spacing;
+        startX += column.width + horizontalSpacing;
     });
 
     saveHistory();
