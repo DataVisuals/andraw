@@ -13,6 +13,8 @@ window.addEventListener('resize', resizeCanvas);
 
 // State
 let elements = [];
+let history = [];
+let historyStep = -1;
 let currentTool = 'select';
 let isDrawing = false;
 let startX, startY;
@@ -300,6 +302,7 @@ document.querySelectorAll('.template-btn').forEach(btn => {
                 lineStyle: lineStyleSelect.value
             };
             elements.push(element);
+            saveHistory();
             redraw();
 
             // Auto-create text input for container template shapes
@@ -349,10 +352,15 @@ document.addEventListener('keydown', (e) => {
         const btn = document.querySelector(`[data-tool="${toolMap[key]}"]`);
         if (btn) btn.click();
     }
+    if ((e.ctrlKey || e.metaKey) && key === 'z') {
+        undo();
+        e.preventDefault();
+    }
     if (key === 'delete' || key === 'backspace') {
         if (selectedElement) {
             elements = elements.filter(el => el !== selectedElement);
             selectedElement = null;
+            saveHistory();
             redraw();
             e.preventDefault();
         }
@@ -495,6 +503,7 @@ function handleMouseUp(e) {
                 lineRouting: (currentTool === 'line' || currentTool === 'arrow') ? lineRoutingSelect.value : undefined
             };
             elements.push(element);
+            saveHistory();
 
             // Auto-create text input for container shapes
             const containerShapes = ['rectangle', 'circle', 'diamond', 'parallelogram', 'roundRect'];
@@ -508,6 +517,16 @@ function handleMouseUp(e) {
                 }, 10);
             }
         }
+    }
+
+    // Save history after move/resize operations
+    if (dragMode === 'move' || dragMode === 'resize') {
+        saveHistory();
+    }
+
+    // Save history after pen tool finishes drawing
+    if (currentTool === 'pen' && isDrawing) {
+        saveHistory();
     }
 
     isDrawing = false;
@@ -1954,6 +1973,33 @@ function drawPreview(x, y) {
     ctx.restore();
 }
 
+// Undo/Redo functionality
+function saveHistory() {
+    // Remove any redo states if we're not at the end
+    if (historyStep < history.length - 1) {
+        history = history.slice(0, historyStep + 1);
+    }
+
+    // Deep copy the current elements state
+    history.push(JSON.parse(JSON.stringify(elements)));
+    historyStep++;
+
+    // Limit history to 50 steps
+    if (history.length > 50) {
+        history.shift();
+        historyStep--;
+    }
+}
+
+function undo() {
+    if (historyStep > 0) {
+        historyStep--;
+        elements = JSON.parse(JSON.stringify(history[historyStep]));
+        selectedElement = null;
+        redraw();
+    }
+}
+
 function redraw() {
     // Fill background
     ctx.fillStyle = backgroundColor;
@@ -2390,6 +2436,11 @@ function escapeXML(text) {
                .replace(/'/g, '&apos;');
 }
 
+// Undo button
+document.getElementById('undoBtn').addEventListener('click', () => {
+    undo();
+});
+
 // Export/Import
 document.getElementById('clearBtn').addEventListener('click', () => {
     if (confirm('Clear canvas?')) {
@@ -2467,3 +2518,6 @@ document.getElementById('fileInput').addEventListener('change', (e) => {
 
 // Initialize canvas
 resizeCanvas();
+
+// Initialize undo history with empty state
+saveHistory();
