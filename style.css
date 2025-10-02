@@ -58,6 +58,10 @@ body {
     margin: 0 2px;
 }
 
+.toolbar-spacer {
+    flex: 1;
+}
+
 #strokeColor, #fillColor, #bgColor {
     width: 32px;
     height: 28px;
@@ -74,7 +78,7 @@ label {
     cursor: pointer;
 }
 
-#fontSelect, #lineStyleSelect {
+#fontSelect, #lineStyleSelect, #lineRoutingSelect, #exportFormatSelect {
     padding: 4px 6px;
     border: 1px solid #ddd;
     border-radius: 4px;
@@ -84,7 +88,7 @@ label {
     outline: none;
 }
 
-#fontSelect:hover, #lineStyleSelect:hover {
+#fontSelect:hover, #lineStyleSelect:hover, #lineRoutingSelect:hover, #exportFormatSelect:hover {
     border-color: #999;
 }
 
