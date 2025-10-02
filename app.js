@@ -412,6 +412,11 @@ document.querySelectorAll('.template-btn').forEach(btn => {
 
 // Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
+    // Ignore keyboard shortcuts when typing in text input
+    if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') {
+        return;
+    }
+
     const key = e.key.toLowerCase();
     const toolMap = {
         'v': 'select', 'r': 'rectangle', 'c': 'circle',
@@ -438,6 +443,11 @@ document.addEventListener('keydown', (e) => {
 
 // Keyboard events for panning
 document.addEventListener('keydown', (e) => {
+    // Ignore spacebar panning when typing in text input
+    if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') {
+        return;
+    }
+
     if (e.code === 'Space' && !e.repeat) {
         spacePressed = true;
         if (!isDrawing) {
@@ -448,6 +458,11 @@ document.addEventListener('keydown', (e) => {
 });
 
 document.addEventListener('keyup', (e) => {
+    // Ignore spacebar panning when typing in text input
+    if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') {
+        return;
+    }
+
     if (e.code === 'Space') {
         spacePressed = false;
         isPanning = false;
