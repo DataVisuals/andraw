@@ -67,6 +67,11 @@ body {
     box-shadow: 0 2px 4px rgba(33, 150, 243, 0.2);
 }
 
+#fontBtn {
+    min-width: 130px;
+    justify-content: space-between;
+}
+
 .logo {
     display: flex;
     align-items: center;
