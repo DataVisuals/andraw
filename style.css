@@ -179,8 +179,7 @@ label span {
 }
 
 .font-dropdown {
-    max-height: 400px;
-    overflow-y: auto;
+    min-width: 180px;
 }
 
 .shape-dropdown.active, .font-dropdown.active {
