@@ -26,6 +26,7 @@ let dragMode = null; // 'move' or 'resize'
 let resizeHandle = null;
 let thingCounter = 1; // Auto-incrementing counter for "Thing N"
 let isConnectMode = false; // For connecting selected elements
+let nextElementId = 1; // Unique ID for elements
 
 // Pan/Scroll state
 let panOffsetX = 0;
@@ -432,6 +433,7 @@ document.querySelectorAll('.template-btn').forEach(btn => {
             const centerY = viewportCenterWorldY - template.height / 2;
 
             const element = {
+                id: nextElementId++,
                 ...template,
                 x: centerX,
                 y: centerY,
@@ -842,6 +844,7 @@ function handleMouseUp(e) {
 
         if (Math.abs(width) > 5 || Math.abs(height) > 5) {
             const element = {
+                id: nextElementId++,
                 type: currentTool,
                 x: startX,
                 y: startY,
@@ -2869,6 +2872,16 @@ function moveElement(element, dx, dy) {
         element.x += dx;
         element.y += dy;
     }
+
+    // Also move any child text elements
+    if (element.id) {
+        elements.forEach(el => {
+            if (el.parentId === element.id && el.type === 'text') {
+                el.x += dx;
+                el.y += dy;
+            }
+        });
+    }
 }
 
 function resizeElement(element, x, y, handle) {
@@ -2979,7 +2992,9 @@ function createTextInputForShape(centerX, centerY, shape) {
             const textWidth = metrics.width;
 
             elements.push({
+                id: nextElementId++,
                 type: 'text',
+                parentId: shape.id, // Link text to parent shape
                 x: centerX - textWidth / 2,
                 y: centerY - fontSize / 2, // Adjust for vertical centering
                 text: text,
@@ -3034,7 +3049,9 @@ function createTextInputBelowShape(centerX, bottomY, shape) {
             const textWidth = metrics.width;
 
             elements.push({
+                id: nextElementId++,
                 type: 'text',
+                parentId: shape.id, // Link text to parent shape
                 x: centerX - textWidth / 2,
                 y: bottomY - 8, // Position below shape
                 text: text,
