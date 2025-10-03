@@ -167,6 +167,20 @@ Object.keys(awsIconURLs).forEach(service => {
     loadAWSIcon(service, awsIconURLs[service]);
 });
 
+// Ensure all elements have IDs
+function ensureElementIds() {
+    let fixed = 0;
+    elements.forEach(el => {
+        if (!el.id) {
+            el.id = nextElementId++;
+            fixed++;
+        }
+    });
+    if (fixed > 0) {
+        console.log(`Assigned IDs to ${fixed} existing elements`);
+    }
+}
+
 // Template definitions
 const templates = {
     // Flowchart
@@ -1015,6 +1029,14 @@ function getSideCenters(bounds, shapeType) {
             bottom: { x: centerX, y: centerY + ry },
             left: { x: centerX - rx, y: centerY },
             right: { x: centerX + rx, y: centerY }
+        };
+    } else if (shapeType === 'diamond') {
+        // For diamonds, the vertices are at the midpoints of the bounding box edges
+        return {
+            top: { x: centerX, y: bounds.y },
+            bottom: { x: centerX, y: bounds.y + bounds.height },
+            left: { x: bounds.x, y: centerY },
+            right: { x: bounds.x + bounds.width, y: centerY }
         };
     } else {
         // For rectangles and other shapes
@@ -2474,6 +2496,7 @@ function undo() {
     if (historyStep > 0) {
         historyStep--;
         elements = JSON.parse(JSON.stringify(history[historyStep]));
+        ensureElementIds(); // Ensure restored elements have IDs
         selectedElement = null;
         selectedElements = [];
         redraw();
@@ -3421,6 +3444,9 @@ document.getElementById('helpPanel').addEventListener('click', (e) => {
 
 // Initialize canvas
 resizeCanvas();
+
+// Ensure all elements have IDs (for backward compatibility)
+ensureElementIds();
 
 // Initialize undo history with empty state
 saveHistory();
