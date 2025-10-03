@@ -130,7 +130,7 @@ label span {
     white-space: nowrap;
 }
 
-#fontSelect, #fontSizeSelect, #lineStyleSelect, #lineRoutingSelect, #exportFormatSelect {
+#fontSizeSelect, #lineStyleSelect, #lineRoutingSelect, #exportFormatSelect {
     padding: 0 10px;
     height: 36px;
     border: 1px solid #d0d0d0;
@@ -145,13 +145,83 @@ label span {
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
+#fontSelect {
+    padding: 0 10px;
+    height: 36px;
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    background: white;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
 #fontSelect:hover, #fontSizeSelect:hover, #lineStyleSelect:hover, #lineRoutingSelect:hover, #exportFormatSelect:hover {
     border-color: #999;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-#fontSelect option, #fontSizeSelect option, #lineStyleSelect option, #lineRoutingSelect option, #exportFormatSelect option {
+#fontSizeSelect option, #lineStyleSelect option, #lineRoutingSelect option, #exportFormatSelect option {
     font-family: 'Lucida Grande', 'Lucida Sans Unicode', 'Lucida Sans', sans-serif;
+}
+
+#fontSelect option[value="Comic Sans MS, cursive"] {
+    font-family: 'Comic Sans MS', cursive;
+}
+
+#fontSelect option[value="Arial, sans-serif"] {
+    font-family: Arial, sans-serif;
+}
+
+#fontSelect option[value="Helvetica, sans-serif"] {
+    font-family: Helvetica, sans-serif;
+}
+
+#fontSelect option[value="Verdana, sans-serif"] {
+    font-family: Verdana, sans-serif;
+}
+
+#fontSelect option[value="Trebuchet MS, sans-serif"] {
+    font-family: 'Trebuchet MS', sans-serif;
+}
+
+#fontSelect option[value="Georgia, serif"] {
+    font-family: Georgia, serif;
+}
+
+#fontSelect option[value="Times New Roman, serif"] {
+    font-family: 'Times New Roman', serif;
+}
+
+#fontSelect option[value="Palatino, serif"] {
+    font-family: Palatino, serif;
+}
+
+#fontSelect option[value="Courier New, monospace"] {
+    font-family: 'Courier New', monospace;
+}
+
+#fontSelect option[value="Monaco, monospace"] {
+    font-family: Monaco, monospace;
+}
+
+#fontSelect option[value="Consolas, monospace"] {
+    font-family: Consolas, monospace;
+}
+
+#fontSelect option[value="Impact, fantasy"] {
+    font-family: Impact, fantasy;
+}
+
+#fontSelect option[value="Brush Script MT, cursive"] {
+    font-family: 'Brush Script MT', cursive;
+}
+
+#fontSelect option[value="Lucida Console, monospace"] {
+    font-family: 'Lucida Console', monospace;
 }
 
 .shape-dropdown-container {

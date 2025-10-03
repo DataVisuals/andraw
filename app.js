@@ -357,6 +357,13 @@ fillEnabledInput.addEventListener('change', (e) => {
     }
 });
 
+// Font selector - update to display in selected font
+fontSelect.addEventListener('change', (e) => {
+    fontSelect.style.fontFamily = e.target.value;
+});
+// Set initial font display
+fontSelect.style.fontFamily = fontSelect.value;
+
 // Template category collapse/expand
 document.querySelectorAll('.category-header').forEach(header => {
     header.addEventListener('click', () => {
