@@ -888,8 +888,15 @@ function applyLineStyle(lineStyle) {
 function connectSelectedElements() {
     if (selectedElements.length < 2) return;
 
-    // Get bounds for all selected elements
-    const elementBounds = selectedElements.map(el => ({
+    // Filter to only include shapes (exclude text, lines, arrows, pen)
+    const shapesOnly = selectedElements.filter(el => {
+        return el.type !== 'text' && el.type !== 'line' && el.type !== 'arrow' && el.type !== 'pen';
+    });
+
+    if (shapesOnly.length < 2) return;
+
+    // Get bounds for all selected shape elements
+    const elementBounds = shapesOnly.map(el => ({
         element: el,
         bounds: getElementBounds(el)
     }));
