@@ -433,14 +433,15 @@ document.querySelectorAll('.template-btn').forEach(btn => {
             const centerY = viewportCenterWorldY - template.height / 2;
 
             const element = {
-                id: nextElementId++,
                 ...template,
+                id: nextElementId++,
                 x: centerX,
                 y: centerY,
                 strokeColor: strokeColorInput.value,
                 fillColor: fillEnabledInput.checked ? fillColorInput.value : null,
                 lineStyle: lineStyleSelect.value
             };
+            console.log(`Created template element: type=${element.type}, id=${element.id}`);
             elements.push(element);
             saveHistory();
             redraw();
@@ -855,6 +856,7 @@ function handleMouseUp(e) {
                 lineStyle: lineStyleSelect.value,
                 lineRouting: (currentTool === 'line' || currentTool === 'arrow') ? lineRoutingSelect.value : undefined
             };
+            console.log(`Created drawn element: type=${element.type}, id=${element.id}`);
             elements.push(element);
             saveHistory();
 
@@ -2875,12 +2877,19 @@ function moveElement(element, dx, dy) {
 
     // Also move any child text elements
     if (element.id) {
+        const childrenMoved = [];
         elements.forEach(el => {
             if (el.parentId === element.id && el.type === 'text') {
                 el.x += dx;
                 el.y += dy;
+                childrenMoved.push(el.id);
             }
         });
+        if (childrenMoved.length > 0) {
+            console.log(`Moved ${childrenMoved.length} child text elements with parent ${element.id}:`, childrenMoved);
+        }
+    } else {
+        console.log('Element has no ID, cannot move children', element);
     }
 }
 
@@ -2991,17 +3000,26 @@ function createTextInputForShape(centerX, centerY, shape) {
             const metrics = ctx.measureText(text);
             const textWidth = metrics.width;
 
-            elements.push({
+            const textElement = {
                 id: nextElementId++,
                 type: 'text',
-                parentId: shape.id, // Link text to parent shape
                 x: centerX - textWidth / 2,
                 y: centerY - fontSize / 2, // Adjust for vertical centering
                 text: text,
                 strokeColor: strokeColorInput.value,
                 fontFamily: selectedFont,
                 fontSize: fontSize
-            });
+            };
+
+            // Link to parent shape if it has an ID
+            if (shape && shape.id) {
+                textElement.parentId = shape.id;
+                console.log(`Text element ${textElement.id} linked to parent shape ${shape.id}`);
+            } else {
+                console.warn(`Shape has no ID, text element ${textElement.id} not linked`, shape);
+            }
+
+            elements.push(textElement);
             redraw();
         }
         input.remove();
@@ -3048,17 +3066,26 @@ function createTextInputBelowShape(centerX, bottomY, shape) {
             const metrics = ctx.measureText(text);
             const textWidth = metrics.width;
 
-            elements.push({
+            const textElement = {
                 id: nextElementId++,
                 type: 'text',
-                parentId: shape.id, // Link text to parent shape
                 x: centerX - textWidth / 2,
                 y: bottomY - 8, // Position below shape
                 text: text,
                 strokeColor: strokeColorInput.value,
                 fontFamily: selectedFont,
                 fontSize: fontSize
-            });
+            };
+
+            // Link to parent shape if it has an ID
+            if (shape && shape.id) {
+                textElement.parentId = shape.id;
+                console.log(`Text element ${textElement.id} linked to parent shape ${shape.id}`);
+            } else {
+                console.warn(`Shape has no ID, text element ${textElement.id} not linked`, shape);
+            }
+
+            elements.push(textElement);
             redraw();
         }
         input.remove();
