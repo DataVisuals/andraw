@@ -930,21 +930,20 @@ function connectSelectedElements() {
         const from = sortedCenters[i];
         const to = sortedCenters[i + 1];
 
-        // Calculate edge points for arrow
+        // Calculate edge points for arrow - use center of closest sides
         const fromBounds = getElementBounds(from.element);
         const toBounds = getElementBounds(to.element);
 
-        // Find the best edge points
-        const fromEdge = getNearestEdgePoint(to.x, to.y, fromBounds, from.element.type);
-        const toEdge = getNearestEdgePoint(from.x, from.y, toBounds, to.element.type);
+        // Find the best edge points connecting side centers
+        const connectionPoints = getClosestSideCenters(fromBounds, from.element.type, toBounds, to.element.type);
 
-        if (fromEdge && toEdge) {
+        if (connectionPoints) {
             elements.push({
                 type: 'arrow',
-                x: fromEdge.x,
-                y: fromEdge.y,
-                width: toEdge.x - fromEdge.x,
-                height: toEdge.y - fromEdge.y,
+                x: connectionPoints.from.x,
+                y: connectionPoints.from.y,
+                width: connectionPoints.to.x - connectionPoints.from.x,
+                height: connectionPoints.to.y - connectionPoints.from.y,
                 strokeColor: strokeColorInput.value,
                 fillColor: null,
                 lineStyle: lineStyleSelect.value,
@@ -952,6 +951,61 @@ function connectSelectedElements() {
             });
         }
     }
+}
+
+// Get center points of all sides of a shape
+function getSideCenters(bounds, shapeType) {
+    const centerX = bounds.x + bounds.width / 2;
+    const centerY = bounds.y + bounds.height / 2;
+
+    if (shapeType === 'circle') {
+        // For circles, return points at cardinal directions
+        const rx = bounds.width / 2;
+        const ry = bounds.height / 2;
+        return {
+            top: { x: centerX, y: centerY - ry },
+            bottom: { x: centerX, y: centerY + ry },
+            left: { x: centerX - rx, y: centerY },
+            right: { x: centerX + rx, y: centerY }
+        };
+    } else {
+        // For rectangles and other shapes
+        return {
+            top: { x: centerX, y: bounds.y },
+            bottom: { x: centerX, y: bounds.y + bounds.height },
+            left: { x: bounds.x, y: centerY },
+            right: { x: bounds.x + bounds.width, y: centerY }
+        };
+    }
+}
+
+// Find the closest side centers between two shapes
+function getClosestSideCenters(boundsA, typeA, boundsB, typeB) {
+    const sidesA = getSideCenters(boundsA, typeA);
+    const sidesB = getSideCenters(boundsB, typeB);
+
+    let minDistance = Infinity;
+    let bestConnection = null;
+
+    // Check all combinations of sides
+    for (const [sideNameA, pointA] of Object.entries(sidesA)) {
+        for (const [sideNameB, pointB] of Object.entries(sidesB)) {
+            const distance = Math.sqrt(
+                Math.pow(pointB.x - pointA.x, 2) +
+                Math.pow(pointB.y - pointA.y, 2)
+            );
+
+            if (distance < minDistance) {
+                minDistance = distance;
+                bestConnection = {
+                    from: pointA,
+                    to: pointB
+                };
+            }
+        }
+    }
+
+    return bestConnection;
 }
 
 // Arrow snapping helpers
