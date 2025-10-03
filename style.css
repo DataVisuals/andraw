@@ -46,6 +46,12 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     font-size: 13px;
     font-weight: 500;
+    white-space: nowrap;
+}
+
+.action-btn {
+    min-width: 70px;
+    padding: 8px 16px;
 }
 
 .tool-btn:hover, .action-btn:hover {
