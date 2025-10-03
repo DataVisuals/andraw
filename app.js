@@ -38,7 +38,10 @@ let spacePressed = false;
 const strokeColorInput = document.getElementById('strokeColor');
 const fillColorInput = document.getElementById('fillColor');
 const fillEnabledInput = document.getElementById('fillEnabled');
-const fontSelect = document.getElementById('fontSelect');
+const fontBtn = document.getElementById('fontBtn');
+const fontBtnText = document.getElementById('fontBtnText');
+const fontDropdown = document.getElementById('fontDropdown');
+let selectedFont = 'Comic Sans MS, cursive'; // Default font
 const fontSizeSelect = document.getElementById('fontSizeSelect');
 const bgColorInput = document.getElementById('bgColor');
 const lineStyleSelect = document.getElementById('lineStyleSelect');
@@ -284,6 +287,14 @@ circleBtn.addEventListener('click', (e) => {
     rectangleDropdown.classList.remove('active');
 });
 
+// Font dropdown toggle
+fontBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    fontDropdown.classList.toggle('active');
+    rectangleDropdown.classList.remove('active');
+    circleDropdown.classList.remove('active');
+});
+
 // Close dropdowns when clicking outside
 document.addEventListener('click', (e) => {
     if (!rectangleBtn.contains(e.target) && !rectangleDropdown.contains(e.target)) {
@@ -291,6 +302,9 @@ document.addEventListener('click', (e) => {
     }
     if (!circleBtn.contains(e.target) && !circleDropdown.contains(e.target)) {
         circleDropdown.classList.remove('active');
+    }
+    if (!fontBtn.contains(e.target) && !fontDropdown.contains(e.target)) {
+        fontDropdown.classList.remove('active');
     }
 });
 
@@ -329,6 +343,20 @@ document.querySelectorAll('.shape-item').forEach(item => {
             circleDropdown.classList.remove('active');
 
             redraw();
+        }
+    });
+});
+
+// Font selection
+document.querySelectorAll('.font-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+        const font = e.currentTarget.dataset.font;
+        const name = e.currentTarget.dataset.name;
+
+        if (font) {
+            selectedFont = font;
+            fontBtnText.textContent = name;
+            fontDropdown.classList.remove('active');
         }
     });
 });
@@ -2708,7 +2736,7 @@ function createTextInput(x, y) {
     const rect = canvas.getBoundingClientRect();
     input.style.left = (rect.left + panOffsetX + x * zoomLevel) + 'px';
     input.style.top = (rect.top + panOffsetY + y * zoomLevel) + 'px';
-    input.style.fontFamily = fontSelect.value;
+    input.style.fontFamily = selectedFont;
     input.style.fontSize = fontSizeSelect.value + 'px';
     input.rows = 1;
     document.body.appendChild(input);
@@ -2725,7 +2753,7 @@ function createTextInput(x, y) {
                 y: y,
                 text: text,
                 strokeColor: strokeColorInput.value,
-                fontFamily: fontSelect.value,
+                fontFamily: selectedFont,
                 fontSize: parseInt(fontSizeSelect.value)
             });
             redraw();
@@ -2756,7 +2784,7 @@ function createTextInputForShape(centerX, centerY, shape) {
     const rect = canvas.getBoundingClientRect();
     input.style.left = (rect.left + panOffsetX + centerX * zoomLevel - 50) + 'px'; // Offset to center the input box
     input.style.top = (rect.top + panOffsetY + centerY * zoomLevel - 12) + 'px';
-    input.style.fontFamily = fontSelect.value;
+    input.style.fontFamily = selectedFont;
     input.style.fontSize = fontSizeSelect.value + 'px';
     input.style.width = '100px';
     input.rows = 1;
@@ -2770,7 +2798,7 @@ function createTextInputForShape(centerX, centerY, shape) {
         if (text) {
             // Measure text to center it properly
             const fontSize = parseInt(fontSizeSelect.value);
-            ctx.font = `${fontSize}px ${fontSelect.value}`;
+            ctx.font = `${fontSize}px ${selectedFont}`;
             const metrics = ctx.measureText(text);
             const textWidth = metrics.width;
 
@@ -2780,7 +2808,7 @@ function createTextInputForShape(centerX, centerY, shape) {
                 y: centerY - fontSize / 2, // Adjust for vertical centering
                 text: text,
                 strokeColor: strokeColorInput.value,
-                fontFamily: fontSelect.value,
+                fontFamily: selectedFont,
                 fontSize: fontSize
             });
             redraw();
@@ -2811,7 +2839,7 @@ function createTextInputBelowShape(centerX, bottomY, shape) {
     const rect = canvas.getBoundingClientRect();
     input.style.left = (rect.left + panOffsetX + centerX * zoomLevel - 50) + 'px'; // Offset to center the input box
     input.style.top = (rect.top + panOffsetY + bottomY * zoomLevel - 12) + 'px';
-    input.style.fontFamily = fontSelect.value;
+    input.style.fontFamily = selectedFont;
     input.style.fontSize = fontSizeSelect.value + 'px';
     input.style.width = '100px';
     input.rows = 1;
@@ -2825,7 +2853,7 @@ function createTextInputBelowShape(centerX, bottomY, shape) {
         if (text) {
             // Measure text to center it below the shape
             const fontSize = parseInt(fontSizeSelect.value);
-            ctx.font = `${fontSize}px ${fontSelect.value}`;
+            ctx.font = `${fontSize}px ${selectedFont}`;
             const metrics = ctx.measureText(text);
             const textWidth = metrics.width;
 
@@ -2835,7 +2863,7 @@ function createTextInputBelowShape(centerX, bottomY, shape) {
                 y: bottomY - 8, // Position below shape
                 text: text,
                 strokeColor: strokeColorInput.value,
-                fontFamily: fontSelect.value,
+                fontFamily: selectedFont,
                 fontSize: fontSize
             });
             redraw();

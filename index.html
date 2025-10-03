@@ -113,22 +113,56 @@
                 <input type="checkbox" id="fillEnabled"> Fill
             </label>
             <div class="divider"></div>
-            <select id="fontSelect" title="Font Family">
-                        <option value="Comic Sans MS, cursive">Handwritten</option>
-                        <option value="Arial, sans-serif">Arial</option>
-                        <option value="Helvetica, sans-serif">Helvetica</option>
-                        <option value="Verdana, sans-serif">Verdana</option>
-                        <option value="Trebuchet MS, sans-serif">Trebuchet</option>
-                        <option value="Georgia, serif">Georgia</option>
-                        <option value="Times New Roman, serif">Times</option>
-                        <option value="Palatino, serif">Palatino</option>
-                        <option value="Courier New, monospace">Courier</option>
-                        <option value="Monaco, monospace">Monaco</option>
-                        <option value="Consolas, monospace">Consolas</option>
-                        <option value="Impact, fantasy">Impact</option>
-                        <option value="Brush Script MT, cursive">Brush Script</option>
-                        <option value="Lucida Console, monospace">Lucida Console</option>
-                    </select>
+            <div class="font-dropdown-container">
+                <button class="tool-btn" id="fontBtn" title="Font Family">
+                    <span id="fontBtnText">Handwritten</span>
+                    <i class="fas fa-caret-down" style="font-size: 10px; margin-left: 4px;"></i>
+                </button>
+                <div class="font-dropdown" id="fontDropdown">
+                    <button class="font-item" data-font="Comic Sans MS, cursive" data-name="Handwritten">
+                        <span style="font-family: 'Comic Sans MS', cursive;">Handwritten</span>
+                    </button>
+                    <button class="font-item" data-font="Arial, sans-serif" data-name="Arial">
+                        <span style="font-family: Arial, sans-serif;">Arial</span>
+                    </button>
+                    <button class="font-item" data-font="Helvetica, sans-serif" data-name="Helvetica">
+                        <span style="font-family: Helvetica, sans-serif;">Helvetica</span>
+                    </button>
+                    <button class="font-item" data-font="Verdana, sans-serif" data-name="Verdana">
+                        <span style="font-family: Verdana, sans-serif;">Verdana</span>
+                    </button>
+                    <button class="font-item" data-font="Trebuchet MS, sans-serif" data-name="Trebuchet">
+                        <span style="font-family: 'Trebuchet MS', sans-serif;">Trebuchet</span>
+                    </button>
+                    <button class="font-item" data-font="Georgia, serif" data-name="Georgia">
+                        <span style="font-family: Georgia, serif;">Georgia</span>
+                    </button>
+                    <button class="font-item" data-font="Times New Roman, serif" data-name="Times">
+                        <span style="font-family: 'Times New Roman', serif;">Times</span>
+                    </button>
+                    <button class="font-item" data-font="Palatino, serif" data-name="Palatino">
+                        <span style="font-family: Palatino, serif;">Palatino</span>
+                    </button>
+                    <button class="font-item" data-font="Courier New, monospace" data-name="Courier">
+                        <span style="font-family: 'Courier New', monospace;">Courier</span>
+                    </button>
+                    <button class="font-item" data-font="Monaco, monospace" data-name="Monaco">
+                        <span style="font-family: Monaco, monospace;">Monaco</span>
+                    </button>
+                    <button class="font-item" data-font="Consolas, monospace" data-name="Consolas">
+                        <span style="font-family: Consolas, monospace;">Consolas</span>
+                    </button>
+                    <button class="font-item" data-font="Impact, fantasy" data-name="Impact">
+                        <span style="font-family: Impact, fantasy;">Impact</span>
+                    </button>
+                    <button class="font-item" data-font="Brush Script MT, cursive" data-name="Brush Script">
+                        <span style="font-family: 'Brush Script MT', cursive;">Brush Script</span>
+                    </button>
+                    <button class="font-item" data-font="Lucida Console, monospace" data-name="Lucida Console">
+                        <span style="font-family: 'Lucida Console', monospace;">Lucida Console</span>
+                    </button>
+                </div>
+            </div>
                     <select id="fontSizeSelect" title="Font Size">
                         <option value="10">10px</option>
                         <option value="12">12px</option>
