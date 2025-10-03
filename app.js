@@ -824,17 +824,27 @@ function handleMouseUp(e) {
         selectedElements = elements.filter(el => {
             const bounds = getElementBounds(el);
             // Check if element is within selection rectangle
-            return selX <= bounds.x + bounds.width &&
+            const inRect = selX <= bounds.x + bounds.width &&
                    selX + selW >= bounds.x &&
                    selY <= bounds.y + bounds.height &&
                    selY + selH >= bounds.y;
+
+            // In connect mode, exclude text elements from selection
+            if (isConnectMode && el.type === 'text') {
+                return false;
+            }
+
+            return inRect;
         });
+
+        console.log(`Rectangle selection: selected ${selectedElements.length} elements`, selectedElements.map(el => ({ type: el.type, id: el.id })));
 
         selectionRect = null;
         isDrawing = false;
 
         // Connect mode: draw arrows between selected elements
         if (isConnectMode && selectedElements.length > 1) {
+            console.log('Connecting elements in connect mode');
             connectSelectedElements();
             selectedElements = [];
             isConnectMode = false;
@@ -2891,6 +2901,8 @@ function getResizeHandle(x, y) {
 }
 
 function moveElement(element, dx, dy) {
+    console.log(`moveElement called: type=${element.type}, id=${element.id}, dx=${dx.toFixed(2)}, dy=${dy.toFixed(2)}`);
+
     if (element.type === 'pen') {
         element.points = element.points.map(p => ({x: p.x + dx, y: p.y + dy}));
     } else {
@@ -2901,18 +2913,25 @@ function moveElement(element, dx, dy) {
     // Also move any child text elements
     if (element.id) {
         const childrenMoved = [];
+        const childrenFound = [];
         elements.forEach(el => {
+            if (el.type === 'text' && el.parentId) {
+                childrenFound.push({ id: el.id, parentId: el.parentId, text: el.text });
+            }
             if (el.parentId === element.id && el.type === 'text') {
+                console.log(`  Found child text: id=${el.id}, parentId=${el.parentId}, text="${el.text}"`);
                 el.x += dx;
                 el.y += dy;
                 childrenMoved.push(el.id);
             }
         });
         if (childrenMoved.length > 0) {
-            console.log(`Moved ${childrenMoved.length} child text elements with parent ${element.id}:`, childrenMoved);
+            console.log(`  Moved ${childrenMoved.length} child text elements with parent ${element.id}`);
+        } else {
+            console.log(`  No child text found for parent ${element.id}. All text elements with parents:`, childrenFound);
         }
     } else {
-        console.log('Element has no ID, cannot move children', element);
+        console.warn(`  Element has no ID, cannot move children`, element);
     }
 }
 
@@ -2994,6 +3013,8 @@ function createTextInput(x, y) {
 
 // Text input for shapes (centered)
 function createTextInputForShape(centerX, centerY, shape) {
+    console.log(`createTextInputForShape called: shape.type=${shape?.type}, shape.id=${shape?.id}`);
+
     const input = document.createElement('textarea');
     input.className = 'text-input';
     input.style.textAlign = 'center';
@@ -3065,6 +3086,8 @@ function createTextInputForShape(centerX, centerY, shape) {
 
 // Text input for shapes (positioned below)
 function createTextInputBelowShape(centerX, bottomY, shape) {
+    console.log(`createTextInputBelowShape called: shape.type=${shape?.type}, shape.id=${shape?.id}`);
+
     const input = document.createElement('textarea');
     input.className = 'text-input';
     input.style.textAlign = 'center';
