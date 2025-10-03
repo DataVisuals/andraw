@@ -488,6 +488,23 @@ document.addEventListener('keydown', (e) => {
 
     const key = e.key.toLowerCase();
 
+    // '?' key toggles help panel
+    if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+        toggleHelpPanel();
+        e.preventDefault();
+        return;
+    }
+
+    // Escape key closes help panel
+    if (e.key === 'Escape') {
+        const helpPanel = document.getElementById('helpPanel');
+        if (helpPanel.classList.contains('active')) {
+            helpPanel.classList.remove('active');
+            e.preventDefault();
+            return;
+        }
+    }
+
     // 'c' key enters connect mode for drawing arrows between selected elements
     if (key === 'c') {
         isConnectMode = true;
@@ -3342,6 +3359,19 @@ document.getElementById('fileInput').addEventListener('change', (e) => {
             }
         };
         reader.readAsText(file);
+    }
+});
+
+// Help panel toggle
+function toggleHelpPanel() {
+    const helpPanel = document.getElementById('helpPanel');
+    helpPanel.classList.toggle('active');
+}
+
+// Close help panel when clicking outside the content
+document.getElementById('helpPanel').addEventListener('click', (e) => {
+    if (e.target.id === 'helpPanel') {
+        e.target.classList.remove('active');
     }
 });
 
