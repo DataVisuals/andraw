@@ -6,8 +6,9 @@ A local drawing app with hand-drawn aesthetic and comprehensive AWS architecture
 
 - **Drawing Tools**: Rectangle, Circle, Line, Arrow, Pen, Text
 - **Hand-drawn Style**: Rough, sketchy aesthetic like Excalidraw
-- **Auto Text**: Drawing shapes automatically prompts for centered text
+- **Auto Text**: Drawing shapes automatically prompts for centered text with auto-incrementing labels ("Thing 1", "Thing 2", etc.)
 - **Selection & Manipulation**: Select, move, and resize elements
+- **Connect Mode**: Press 'C' to enter connect mode - drag a rectangle to select multiple elements and automatically connect them with arrows (left-to-right or top-to-bottom based on layout)
 - **Customization**: Stroke color, fill color, fill toggle, background color, font selector (14 fonts), line styles (solid, dashed, dotted), and line routing (straight, stepped). Selected elements can be recolored in real-time.
 - **Templates**: Collapsible categories with visual previews
   - **Flowchart**: Process, Decision, Data, Terminator, Document
@@ -19,13 +20,14 @@ A local drawing app with hand-drawn aesthetic and comprehensive AWS architecture
 - **Export/Import**: Save as PNG, JPG, or SVG images, or save/load as JSON
 - **Keyboard Shortcuts**:
   - `V` - Selection tool
-  - `R` - Rectangle
-  - `C` - Circle
+  - `R` - Rectangle (opens dropdown)
+  - `C` - Connect mode (drag to select elements and auto-connect with arrows)
   - `L` - Line
   - `A` - Arrow
   - `P` - Pen
   - `T` - Text
-  - `Delete/Backspace` - Delete selected element
+  - `H` - Hand/Pan tool
+  - `Delete/Backspace` - Delete selected element(s)
 
 ## Usage
 
@@ -39,10 +41,11 @@ A local drawing app with hand-drawn aesthetic and comprehensive AWS architecture
 
 - **Draw**: Click and drag to create shapes
 - **Templates**: Click any template button to add it to the center of the canvas. Click category headers to collapse/expand sections
-- **Text**: Click to place text, type, and press Enter
+- **Text**: Click to place text, type, and press Enter. Shapes auto-prompt with "Thing 1", "Thing 2", etc.
 - **Move**: Select an element and drag it
 - **Resize**: Select an element and drag the corner handles
 - **Delete**: Select an element and press Delete/Backspace
+- **Connect**: Press `C`, then drag a rectangle around multiple elements to auto-connect them with arrows
 
 ## Development History
 
