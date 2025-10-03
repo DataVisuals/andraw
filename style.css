@@ -150,6 +150,10 @@ label span {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
+#fontSelect option, #fontSizeSelect option, #lineStyleSelect option, #lineRoutingSelect option, #exportFormatSelect option {
+    font-family: 'Lucida Grande', 'Lucida Sans Unicode', 'Lucida Sans', sans-serif;
+}
+
 .shape-dropdown-container {
     position: relative;
     display: inline-block;
@@ -183,7 +187,7 @@ label span {
     background: white;
     cursor: pointer;
     text-align: left;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    font-family: 'Lucida Grande', 'Lucida Sans Unicode', 'Lucida Sans', sans-serif;
     font-size: 12px;
     font-weight: 500;
     transition: all 0.15s ease;
