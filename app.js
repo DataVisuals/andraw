@@ -24,6 +24,8 @@ let isRectangleSelecting = false;
 let selectionRect = null;
 let dragMode = null; // 'move' or 'resize'
 let resizeHandle = null;
+let thingCounter = 1; // Auto-incrementing counter for "Thing N"
+let isConnectMode = false; // For connecting selected elements
 
 // Pan/Scroll state
 let panOffsetX = 0;
@@ -485,16 +487,26 @@ document.addEventListener('keydown', (e) => {
     }
 
     const key = e.key.toLowerCase();
+
+    // 'c' key enters connect mode for drawing arrows between selected elements
+    if (key === 'c') {
+        isConnectMode = true;
+        currentTool = 'select';
+        isRectangleSelecting = false;
+        selectionRect = null;
+        canvas.style.cursor = 'crosshair';
+        redraw();
+        return;
+    }
+
     const toolMap = {
-        'v': 'select', 'r': 'rectangle', 'c': 'circle',
+        'v': 'select', 'r': 'rectangle',
         'l': 'line', 'a': 'arrow', 'p': 'pen', 't': 'text', 'h': 'hand'
     };
     if (toolMap[key]) {
-        // Handle rectangle and circle with dropdown buttons
+        // Handle rectangle dropdown button
         if (key === 'r') {
             rectangleBtn.click();
-        } else if (key === 'c') {
-            circleBtn.click();
         } else {
             const btn = document.querySelector(`[data-tool="${toolMap[key]}"]`);
             if (btn) btn.click();
@@ -611,6 +623,17 @@ function handleMouseDown(e) {
     startY = y;
 
     if (currentTool === 'select') {
+        // In connect mode, always start rectangle selection
+        if (isConnectMode) {
+            selectedElement = null;
+            selectedElements = [];
+            isRectangleSelecting = true;
+            isDrawing = true;
+            selectionRect = { x: startX, y: startY, width: 0, height: 0 };
+            redraw();
+            return;
+        }
+
         // Check if clicking on resize handle
         const handle = getResizeHandle(startX, startY);
         if (handle) {
@@ -775,6 +798,16 @@ function handleMouseUp(e) {
 
         selectionRect = null;
         isDrawing = false;
+
+        // Connect mode: draw arrows between selected elements
+        if (isConnectMode && selectedElements.length > 1) {
+            connectSelectedElements();
+            selectedElements = [];
+            isConnectMode = false;
+            canvas.style.cursor = 'default';
+            saveHistory();
+        }
+
         redraw();
         return;
     }
@@ -848,6 +881,69 @@ function applyLineStyle(lineStyle) {
         default:
             ctx.setLineDash([]);
             break;
+    }
+}
+
+// Connect selected elements with arrows
+function connectSelectedElements() {
+    if (selectedElements.length < 2) return;
+
+    // Get bounds for all selected elements
+    const elementBounds = selectedElements.map(el => ({
+        element: el,
+        bounds: getElementBounds(el)
+    }));
+
+    // Calculate centers
+    const centers = elementBounds.map(eb => ({
+        element: eb.element,
+        x: eb.bounds.x + eb.bounds.width / 2,
+        y: eb.bounds.y + eb.bounds.height / 2
+    }));
+
+    // Determine if we should connect left-to-right or top-to-bottom
+    // Based on which dimension has more variation
+    const xPositions = centers.map(c => c.x);
+    const yPositions = centers.map(c => c.y);
+    const xRange = Math.max(...xPositions) - Math.min(...xPositions);
+    const yRange = Math.max(...yPositions) - Math.min(...yPositions);
+
+    // Sort elements by position
+    let sortedCenters;
+    if (xRange > yRange) {
+        // Connect left to right
+        sortedCenters = centers.sort((a, b) => a.x - b.x);
+    } else {
+        // Connect top to bottom
+        sortedCenters = centers.sort((a, b) => a.y - b.y);
+    }
+
+    // Create arrows between consecutive elements
+    for (let i = 0; i < sortedCenters.length - 1; i++) {
+        const from = sortedCenters[i];
+        const to = sortedCenters[i + 1];
+
+        // Calculate edge points for arrow
+        const fromBounds = getElementBounds(from.element);
+        const toBounds = getElementBounds(to.element);
+
+        // Find the best edge points
+        const fromEdge = getNearestEdgePoint(to.x, to.y, fromBounds, from.element.type);
+        const toEdge = getNearestEdgePoint(from.x, from.y, toBounds, to.element.type);
+
+        if (fromEdge && toEdge) {
+            elements.push({
+                type: 'arrow',
+                x: fromEdge.x,
+                y: fromEdge.y,
+                width: toEdge.x - fromEdge.x,
+                height: toEdge.y - fromEdge.y,
+                strokeColor: strokeColorInput.value,
+                fillColor: null,
+                lineStyle: lineStyleSelect.value,
+                lineRouting: lineRoutingSelect.value
+            });
+        }
     }
 }
 
@@ -2781,6 +2877,8 @@ function createTextInputForShape(centerX, centerY, shape) {
     const input = document.createElement('textarea');
     input.className = 'text-input';
     input.style.textAlign = 'center';
+    input.value = `Thing ${thingCounter}`; // Pre-fill with "Thing N"
+    thingCounter++; // Increment counter for next shape
     const rect = canvas.getBoundingClientRect();
     input.style.left = (rect.left + panOffsetX + centerX * zoomLevel - 50) + 'px'; // Offset to center the input box
     input.style.top = (rect.top + panOffsetY + centerY * zoomLevel - 12) + 'px';
@@ -2790,8 +2888,11 @@ function createTextInputForShape(centerX, centerY, shape) {
     input.rows = 1;
     document.body.appendChild(input);
 
-    // Focus after a brief delay to prevent immediate blur
-    setTimeout(() => input.focus(), 10);
+    // Focus and select all text after a brief delay
+    setTimeout(() => {
+        input.focus();
+        input.select();
+    }, 10);
 
     const finishText = () => {
         const text = input.value.trim();
