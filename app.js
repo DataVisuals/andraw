@@ -926,16 +926,22 @@ function connectSelectedElements() {
     }
 
     // Create arrows between consecutive elements
+    const isHorizontal = xRange > yRange;
+
     for (let i = 0; i < sortedCenters.length - 1; i++) {
         const from = sortedCenters[i];
         const to = sortedCenters[i + 1];
 
-        // Calculate edge points for arrow - use center of closest sides
+        // Calculate edge points for arrow - use appropriate side centers based on flow direction
         const fromBounds = getElementBounds(from.element);
         const toBounds = getElementBounds(to.element);
 
-        // Find the best edge points connecting side centers
-        const connectionPoints = getClosestSideCenters(fromBounds, from.element.type, toBounds, to.element.type);
+        // Get the appropriate connection points based on flow direction
+        const connectionPoints = getDirectionalConnection(
+            fromBounds, from.element.type,
+            toBounds, to.element.type,
+            isHorizontal
+        );
 
         if (connectionPoints) {
             elements.push({
@@ -950,6 +956,26 @@ function connectSelectedElements() {
                 lineRouting: lineRoutingSelect.value
             });
         }
+    }
+}
+
+// Get directional connection points based on flow (horizontal or vertical)
+function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal) {
+    const sidesA = getSideCenters(boundsA, typeA);
+    const sidesB = getSideCenters(boundsB, typeB);
+
+    if (isHorizontal) {
+        // For horizontal flow: connect right side of A to left side of B
+        return {
+            from: sidesA.right,
+            to: sidesB.left
+        };
+    } else {
+        // For vertical flow: connect bottom side of A to top side of B
+        return {
+            from: sidesA.bottom,
+            to: sidesB.top
+        };
     }
 }
 
@@ -977,35 +1003,6 @@ function getSideCenters(bounds, shapeType) {
             right: { x: bounds.x + bounds.width, y: centerY }
         };
     }
-}
-
-// Find the closest side centers between two shapes
-function getClosestSideCenters(boundsA, typeA, boundsB, typeB) {
-    const sidesA = getSideCenters(boundsA, typeA);
-    const sidesB = getSideCenters(boundsB, typeB);
-
-    let minDistance = Infinity;
-    let bestConnection = null;
-
-    // Check all combinations of sides
-    for (const [sideNameA, pointA] of Object.entries(sidesA)) {
-        for (const [sideNameB, pointB] of Object.entries(sidesB)) {
-            const distance = Math.sqrt(
-                Math.pow(pointB.x - pointA.x, 2) +
-                Math.pow(pointB.y - pointA.y, 2)
-            );
-
-            if (distance < minDistance) {
-                minDistance = distance;
-                bestConnection = {
-                    from: pointA,
-                    to: pointB
-                };
-            }
-        }
-    }
-
-    return bestConnection;
 }
 
 // Arrow snapping helpers
