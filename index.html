@@ -13,14 +13,16 @@
         <div class="toolbar">
             <div class="logo">
                 <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Stylized "A" with pencil/brush stroke aesthetic -->
-                    <path d="M16 4 L24 26 L20 26 L18 20 L14 20 L12 26 L8 26 L16 4 Z M15 16 L17 16 L16 12 Z"
-                          fill="#2196f3" stroke="#1976d2" stroke-width="0.5" stroke-linejoin="round"/>
-                    <!-- Hand-drawn wavy underline -->
-                    <path d="M8 28 Q12 27.5, 16 28 T24 28"
-                          stroke="#2196f3" stroke-width="2" fill="none" stroke-linecap="round"/>
+                    <!-- Fountain pen nib -->
+                    <!-- Nib body -->
+                    <path d="M16 28 L12 12 Q12 8, 16 4 Q20 8, 20 12 L16 28 Z" fill="#1A3A52" stroke="#1A3A52" stroke-width="1.5" stroke-linejoin="round"/>
+                    <!-- Center slit -->
+                    <line x1="16" y1="28" x2="16" y2="14" stroke="#FFFEF9" stroke-width="1.5"/>
+                    <!-- Breather hole -->
+                    <circle cx="16" cy="14" r="1.5" fill="#FFFEF9"/>
+                    <!-- Nib shoulders (lighter accent) -->
+                    <path d="M12 12 Q14 10, 16 9 Q18 10, 20 12" stroke="#2C5F7F" stroke-width="1.5" fill="none" stroke-linecap="round"/>
                 </svg>
-                <span class="logo-text">Andraw</span>
             </div>
             <div class="divider"></div>
             <button class="tool-btn active" data-tool="select" title="Selection (V)">
@@ -149,14 +151,18 @@
                 <svg width="20" height="20" viewBox="0 0 20 20"><text x="10" y="15" text-anchor="middle" font-size="14" fill="currentColor">T</text></svg>
             </button>
             <div class="divider"></div>
-            <label title="Border/Stroke Color">
-                <span>Border:</span>
+            <div class="color-picker-wrapper" title="Border/Stroke Color">
                 <input type="color" id="strokeColor" value="#2C3E50">
-            </label>
-            <label title="Fill Color">
-                <span>Fill:</span>
+                <div class="color-label" id="strokeLabel">Border</div>
+            </div>
+            <div class="color-picker-wrapper" title="Fill Color">
                 <input type="color" id="fillColor" value="#ECF0F1">
-            </label>
+                <div class="color-label" id="fillLabel">Fill</div>
+            </div>
+            <div class="color-picker-wrapper" title="Background Color">
+                <input type="color" id="bgColor" value="#FFFEF9">
+                <div class="color-label" id="bgLabel">Background</div>
+            </div>
             <label>
                 <input type="checkbox" id="fillEnabled"> Fill
             </label>
@@ -234,11 +240,11 @@
                         <option value="straight">Straight</option>
                         <option value="stepped">Stepped</option>
                     </select>
-            <label title="Background Color">
-                <span>Background:</span>
-                <input type="color" id="bgColor" value="#FFFEF9">
-            </label>
             <div class="toolbar-spacer"></div>
+            <button class="action-btn" id="modeToggleBtn" title="Toggle Mode: Infinite Canvas / Storybook">
+                <i class="fas fa-expand-arrows-alt"></i>
+            </button>
+            <div class="divider"></div>
             <button class="action-btn" id="undoBtn" title="Undo (Ctrl+Z)">
                 <i class="fas fa-undo"></i>
             </button>
@@ -280,7 +286,7 @@
                         <span>Flowchart</span>
                         <i class="fas fa-chevron-down toggle-icon"></i>
                     </div>
-                    <div class="template-items active">
+                    <div class="template-items">
                         <button class="template-btn" data-template="process">
                             <i class="far fa-square"></i>Process
                         </button>
@@ -352,7 +358,7 @@
                         <span>AWS</span>
                         <i class="fas fa-chevron-down toggle-icon"></i>
                     </div>
-                    <div class="template-items active">
+                    <div class="template-items">
                         <div class="template-subcategory">
                             <div class="subcategory-header" data-category="aws-compute">
                                 <i class="fas fa-microchip"></i>
@@ -620,8 +626,108 @@
                         </button>
                     </div>
                 </div>
+
+                <div class="template-category">
+                    <div class="category-header" data-category="business">
+                        <i class="fas fa-briefcase"></i>
+                        <span>Business</span>
+                        <i class="fas fa-chevron-down toggle-icon"></i>
+                    </div>
+                    <div class="template-items">
+                        <button class="template-btn" data-template="user">
+                            <i class="fas fa-user"></i>User
+                        </button>
+                        <button class="template-btn" data-template="users">
+                            <i class="fas fa-users"></i>Users
+                        </button>
+                        <button class="template-btn" data-template="folder">
+                            <i class="fas fa-folder"></i>Folder
+                        </button>
+                        <button class="template-btn" data-template="file">
+                            <i class="fas fa-file"></i>File
+                        </button>
+                        <button class="template-btn" data-template="envelope">
+                            <i class="fas fa-envelope"></i>Email
+                        </button>
+                        <button class="template-btn" data-template="calendar">
+                            <i class="fas fa-calendar"></i>Calendar
+                        </button>
+                    </div>
+                </div>
+
+                <div class="template-category">
+                    <div class="category-header" data-category="devices">
+                        <i class="fas fa-laptop"></i>
+                        <span>Devices</span>
+                        <i class="fas fa-chevron-down toggle-icon"></i>
+                    </div>
+                    <div class="template-items">
+                        <button class="template-btn" data-template="desktop">
+                            <i class="fas fa-desktop"></i>Desktop
+                        </button>
+                        <button class="template-btn" data-template="laptop">
+                            <i class="fas fa-laptop"></i>Laptop
+                        </button>
+                        <button class="template-btn" data-template="mobile">
+                            <i class="fas fa-mobile-alt"></i>Mobile
+                        </button>
+                        <button class="template-btn" data-template="tablet">
+                            <i class="fas fa-tablet-alt"></i>Tablet
+                        </button>
+                    </div>
+                </div>
+
+                <div class="template-category">
+                    <div class="category-header" data-category="symbols">
+                        <i class="fas fa-icons"></i>
+                        <span>Symbols</span>
+                        <i class="fas fa-chevron-down toggle-icon"></i>
+                    </div>
+                    <div class="template-items">
+                        <button class="template-btn" data-template="gear">
+                            <i class="fas fa-cog"></i>Settings
+                        </button>
+                        <button class="template-btn" data-template="lock">
+                            <i class="fas fa-lock"></i>Lock
+                        </button>
+                        <button class="template-btn" data-template="shield">
+                            <i class="fas fa-shield-alt"></i>Shield
+                        </button>
+                        <button class="template-btn" data-template="key">
+                            <i class="fas fa-key"></i>Key
+                        </button>
+                        <button class="template-btn" data-template="bell">
+                            <i class="fas fa-bell"></i>Notification
+                        </button>
+                        <button class="template-btn" data-template="check">
+                            <i class="fas fa-check-circle"></i>Success
+                        </button>
+                        <button class="template-btn" data-template="warning">
+                            <i class="fas fa-exclamation-triangle"></i>Warning
+                        </button>
+                        <button class="template-btn" data-template="clock">
+                            <i class="fas fa-clock"></i>Clock
+                        </button>
+                    </div>
+                </div>
             </div>
             <canvas id="canvas"></canvas>
+
+            <!-- Page Navigation Controls -->
+            <div id="pageNavigation" class="page-navigation">
+                <button id="prevPage" class="page-nav-btn" title="Previous Page">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <div class="page-info">
+                    <span id="pageCounter">Page 1 of 1</span>
+                </div>
+                <button id="nextPage" class="page-nav-btn" title="Next Page">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                <button id="addPage" class="page-nav-btn page-add-btn" title="Add New Page (Clone Current)">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
         </div>
 
         <!-- Keyboard Shortcuts Help Panel -->
@@ -642,6 +748,7 @@
                     <div class="help-section">
                         <h3>Actions</h3>
                         <div class="shortcut"><kbd>C</kbd><span>Connect Mode</span></div>
+                        <div class="shortcut"><kbd>M</kbd><span>Duplicate Last Shape</span></div>
                         <div class="shortcut"><kbd>Ctrl</kbd> + <kbd>Z</kbd><span>Undo</span></div>
                         <div class="shortcut"><kbd>Del</kbd><span>Delete Selected</span></div>
                         <div class="shortcut"><kbd>Space</kbd><span>Pan Canvas</span></div>
@@ -651,6 +758,11 @@
                         <h3>Connect Mode</h3>
                         <p>Press <kbd>C</kbd>, then drag a rectangle around shapes to auto-connect them with arrows.</p>
                         <p>Arrows connect left-to-right or top-to-bottom based on layout.</p>
+                    </div>
+                    <div class="help-section">
+                        <h3>Duplicate (M)</h3>
+                        <p>Press <kbd>M</kbd> after creating a shape to duplicate it. Placement is vertical if centered near top, horizontal otherwise.</p>
+                        <p>Text is auto-incremented (Thing 1, Thing 2, etc.).</p>
                     </div>
                 </div>
                 <div class="help-footer">

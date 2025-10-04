@@ -20,8 +20,8 @@ body {
 .toolbar {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
+    gap: 4px;
+    padding: 4px 8px;
     background: linear-gradient(180deg, #fafafa 0%, #f5f5f5 100%);
     border-bottom: 2px solid #d0d0d0;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
@@ -31,27 +31,27 @@ body {
 }
 
 .tool-btn, .action-btn {
-    padding: 8px 12px;
+    padding: 6px 8px;
     border: 1px solid #d0d0d0;
     background: white;
-    border-radius: 6px;
+    border-radius: 5px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.15s ease;
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    min-width: 36px;
-    min-height: 36px;
+    min-width: 32px;
+    min-height: 32px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
     white-space: nowrap;
 }
 
 .action-btn {
-    min-width: 70px;
-    padding: 8px 16px;
+    min-width: 32px;
+    padding: 6px 10px;
 }
 
 .tool-btn:hover, .action-btn:hover {
@@ -74,81 +74,116 @@ body {
 }
 
 #fontBtn {
-    min-width: 155px;
+    min-width: 100px;
     justify-content: space-between;
+    font-size: 11px;
 }
 
 .logo {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 0 8px;
+    gap: 6px;
+    padding: 0 4px;
     user-select: none;
 }
 
 .logo svg {
     flex-shrink: 0;
+    width: 28px;
+    height: 28px;
 }
 
 .logo-text {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 700;
-    color: #2196f3;
+    background: linear-gradient(135deg, #5B4E93 0%, #7B68B8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
     letter-spacing: -0.5px;
 }
 
 .divider {
     width: 1px;
-    height: 20px;
+    height: 18px;
     background: #ddd;
-    margin: 0 2px;
+    margin: 0 1px;
 }
 
 .toolbar-spacer {
     flex: 1;
-    min-width: 20px;
+    min-width: 10px;
+}
+
+.color-picker-wrapper {
+    position: relative;
+    width: 68px;
+    height: 32px;
+    border-radius: 5px;
+    overflow: hidden;
+    border: 1px solid #d0d0d0;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    transition: all 0.15s ease;
+    cursor: pointer;
+}
+
+.color-picker-wrapper:hover {
+    border-color: #999;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 #strokeColor, #fillColor, #bgColor {
-    width: 36px;
-    height: 36px;
-    border: 1px solid #d0d0d0;
-    border-radius: 6px;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border: none;
     cursor: pointer;
-    transition: all 0.15s ease;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    opacity: 0;
 }
 
-#strokeColor:hover, #fillColor:hover, #bgColor:hover {
-    border-color: #999;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+.color-label {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    font-size: 8px;
+    font-weight: 700;
+    pointer-events: none;
+    text-transform: uppercase;
+    letter-spacing: -0.2px;
 }
 
 label {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 500;
     color: #555;
     cursor: pointer;
-    height: 36px;
+    height: 32px;
 }
 
 label span {
     white-space: nowrap;
+    display: none; /* Hide label text to save space */
 }
 
 #fontSizeSelect, #lineStyleSelect, #lineRoutingSelect, #exportFormatSelect {
-    padding: 0 10px;
-    height: 36px;
+    padding: 0 6px;
+    height: 32px;
     border: 1px solid #d0d0d0;
-    border-radius: 6px;
+    border-radius: 5px;
     background: white;
     font-family: 'Lucida Grande', 'Lucida Sans Unicode', 'Lucida Sans', sans-serif;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 500;
     cursor: pointer;
     outline: none;
@@ -582,4 +617,91 @@ label span {
     border-top: 1px solid #e0e0e0;
     font-size: 14px;
     color: #999;
+}
+
+/* Page Navigation */
+.page-navigation {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8f8f8 100%);
+    padding: 8px 16px;
+    border-radius: 24px;
+    border: 1px solid #d0d0d0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 100;
+}
+
+.page-nav-btn {
+    width: 32px;
+    height: 32px;
+    border: 1px solid #d0d0d0;
+    background: white;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    color: #555;
+}
+
+.page-nav-btn:hover {
+    background: #f0f0f0;
+    border-color: #999;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.page-nav-btn:active {
+    transform: translateY(0);
+}
+
+.page-nav-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.page-nav-btn:disabled:hover {
+    background: white;
+    border-color: #d0d0d0;
+    transform: none;
+}
+
+.page-add-btn {
+    background: linear-gradient(135deg, #5B4E93 0%, #7B68B8 100%);
+    color: white;
+    border-color: #5B4E93;
+}
+
+.page-add-btn:hover {
+    background: linear-gradient(135deg, #FF5722 0%, #3DBCB2 100%);
+    border-color: #FF5722;
+}
+
+.page-info {
+    padding: 0 12px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: #555;
+    min-width: 100px;
+    text-align: center;
+}
+
+/* Mode toggle button active state */
+#modeToggleBtn.storybook-mode {
+    background: linear-gradient(135deg, #5B4E93 0%, #7B68B8 100%);
+    color: white;
+    border-color: #5B4E93;
+}
+
+#modeToggleBtn.storybook-mode:hover {
+    background: linear-gradient(135deg, #FF5722 0%, #3DBCB2 100%);
+    border-color: #FF5722;
 }

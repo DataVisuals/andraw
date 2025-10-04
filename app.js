@@ -5,7 +5,7 @@ const ctx = canvas.getContext('2d');
 // Resize canvas to fill window
 function resizeCanvas() {
     canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight - 60; // Account for toolbar
+    canvas.height = window.innerHeight - 50; // Account for toolbar
     if (typeof redraw === 'function') redraw();
 }
 window.addEventListener('resize', resizeCanvas);
@@ -24,9 +24,18 @@ let isRectangleSelecting = false;
 let selectionRect = null;
 let dragMode = null; // 'move' or 'resize'
 let resizeHandle = null;
+let lastCreatedShape = null; // Track last created shape for 'M' key duplication
+let duplicationDirection = null; // Track direction for consistent duplication chain ('vertical' or 'horizontal')
 let thingCounter = 1; // Auto-incrementing counter for "Thing N"
 let isConnectMode = false; // For connecting selected elements
 let nextElementId = 1; // Unique ID for elements
+
+// Canvas mode ('infinite' or 'storybook')
+let canvasMode = 'infinite'; // Default to infinite canvas
+
+// Storybook mode state
+let pages = []; // Array of pages, each contains {elements, backgroundColor}
+let currentPageIndex = 0; // Current page being viewed
 
 // Pan/Scroll state
 let panOffsetX = 0;
@@ -262,12 +271,36 @@ const templates = {
     sagemaker: { type: 'sagemaker', width: 100, height: 100 },
     glue: { type: 'glue', width: 100, height: 100 },
     // AWS Management
-    cloudwatch: { type: 'cloudwatch', width: 100, height: 100 }
+    cloudwatch: { type: 'cloudwatch', width: 100, height: 100 },
+    // Business
+    user: { type: 'user', width: 60, height: 80 },
+    users: { type: 'users', width: 100, height: 80 },
+    folder: { type: 'folder', width: 100, height: 80 },
+    file: { type: 'file', width: 70, height: 90 },
+    envelope: { type: 'envelope', width: 100, height: 70 },
+    calendar: { type: 'calendar', width: 90, height: 90 },
+    // Devices
+    desktop: { type: 'desktop', width: 100, height: 80 },
+    laptop: { type: 'laptop', width: 100, height: 70 },
+    mobile: { type: 'mobile', width: 50, height: 90 },
+    tablet: { type: 'tablet', width: 70, height: 90 },
+    // Symbols
+    gear: { type: 'gear', width: 80, height: 80 },
+    lock: { type: 'lock', width: 70, height: 90 },
+    shield: { type: 'shield', width: 80, height: 90 },
+    key: { type: 'key', width: 90, height: 50 },
+    bell: { type: 'bell', width: 70, height: 80 },
+    check: { type: 'check', width: 80, height: 80 },
+    warning: { type: 'warning', width: 80, height: 80 },
+    clock: { type: 'clock', width: 80, height: 80 }
 };
 
 // Tool selection
 document.querySelectorAll('.tool-btn').forEach(btn => {
     btn.addEventListener('click', () => {
+        // Only handle as tool selection if button has data-tool attribute
+        if (!btn.dataset.tool) return;
+
         document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         currentTool = btn.dataset.tool;
@@ -284,9 +317,38 @@ document.querySelectorAll('.tool-btn').forEach(btn => {
     });
 });
 
+// Helper function to calculate contrasting text color
+function getContrastColor(hexColor) {
+    // Convert hex to RGB
+    const r = parseInt(hexColor.substr(1, 2), 16);
+    const g = parseInt(hexColor.substr(3, 2), 16);
+    const b = parseInt(hexColor.substr(5, 2), 16);
+
+    // Calculate relative luminance
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+    // Return black or white based on luminance
+    return luminance > 0.5 ? '#000000' : '#FFFFFF';
+}
+
+// Update color label backgrounds and text colors
+function updateColorLabel(inputId, labelId) {
+    const input = document.getElementById(inputId);
+    const label = document.getElementById(labelId);
+    const color = input.value;
+    label.style.backgroundColor = color;
+    label.style.color = getContrastColor(color);
+}
+
+// Initialize color labels
+updateColorLabel('strokeColor', 'strokeLabel');
+updateColorLabel('fillColor', 'fillLabel');
+updateColorLabel('bgColor', 'bgLabel');
+
 // Background color change
 bgColorInput.addEventListener('input', (e) => {
     backgroundColor = e.target.value;
+    updateColorLabel('bgColor', 'bgLabel');
     redraw();
 });
 
@@ -332,28 +394,45 @@ document.querySelectorAll('.shape-item').forEach(item => {
         const preset = e.currentTarget.dataset.preset;
 
         if (shape && preset && stylePresets[preset]) {
-            // Set the tool
-            currentTool = shape;
-
-            // Update tool button active state
-            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-            if (shape === 'rectangle') {
-                rectangleBtn.classList.add('active');
-            } else if (shape === 'circle') {
-                circleBtn.classList.add('active');
-            }
-
             // Set colors from preset
             strokeColorInput.value = stylePresets[preset].stroke;
             fillColorInput.value = stylePresets[preset].fill;
             fillEnabledInput.checked = true;
 
-            // Set cursor
-            canvas.style.cursor = 'crosshair';
+            // Update color labels
+            updateColorLabel('strokeColor', 'strokeLabel');
+            updateColorLabel('fillColor', 'fillLabel');
 
-            // Clear selection
-            selectedElement = null;
-            selectedElements = [];
+            // If there are selected elements, apply the preset to them
+            if (selectedElements.length > 0) {
+                selectedElements.forEach(el => {
+                    el.strokeColor = stylePresets[preset].stroke;
+                    el.fillColor = stylePresets[preset].fill;
+                });
+                saveHistory();
+            } else if (selectedElement) {
+                selectedElement.strokeColor = stylePresets[preset].stroke;
+                selectedElement.fillColor = stylePresets[preset].fill;
+                saveHistory();
+            } else {
+                // No selection - set the tool for drawing new shapes
+                currentTool = shape;
+
+                // Update tool button active state
+                document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                if (shape === 'rectangle') {
+                    rectangleBtn.classList.add('active');
+                } else if (shape === 'circle') {
+                    circleBtn.classList.add('active');
+                }
+
+                // Set cursor
+                canvas.style.cursor = 'crosshair';
+
+                // Clear selection
+                selectedElement = null;
+                selectedElements = [];
+            }
 
             // Close dropdowns
             rectangleDropdown.classList.remove('active');
@@ -374,30 +453,114 @@ document.querySelectorAll('.font-item').forEach(item => {
             selectedFont = font;
             fontBtnText.textContent = name;
             fontDropdown.classList.remove('active');
+
+            // Apply to selected text elements and child text elements of selected shapes
+            const elementsToUpdate = selectedElements.length > 0 ? selectedElements : (selectedElement ? [selectedElement] : []);
+            if (elementsToUpdate.length > 0) {
+                elementsToUpdate.forEach(el => {
+                    if (el.type === 'text') {
+                        el.fontFamily = font;
+                    }
+                    // Also update child text elements
+                    elements.forEach(child => {
+                        if (child.type === 'text' && child.parentId === el.id) {
+                            child.fontFamily = font;
+                        }
+                    });
+                });
+                saveHistory();
+                redraw();
+            }
         }
     });
 });
 
 // Fill color change - update selected element
 fillColorInput.addEventListener('input', (e) => {
-    if (selectedElement && fillEnabledInput.checked) {
-        selectedElement.fillColor = e.target.value;
+    updateColorLabel('fillColor', 'fillLabel');
+    const elementsToUpdate = selectedElements.length > 0 ? selectedElements : (selectedElement ? [selectedElement] : []);
+    if (elementsToUpdate.length > 0 && fillEnabledInput.checked) {
+        elementsToUpdate.forEach(el => {
+            if (el.type !== 'line' && el.type !== 'arrow' && el.type !== 'pen') {
+                el.fillColor = e.target.value;
+            }
+        });
+        saveHistory();
         redraw();
     }
 });
 
 // Stroke color change - update selected element
 strokeColorInput.addEventListener('input', (e) => {
-    if (selectedElement) {
-        selectedElement.strokeColor = e.target.value;
+    updateColorLabel('strokeColor', 'strokeLabel');
+    const elementsToUpdate = selectedElements.length > 0 ? selectedElements : (selectedElement ? [selectedElement] : []);
+    if (elementsToUpdate.length > 0) {
+        elementsToUpdate.forEach(el => {
+            el.strokeColor = e.target.value;
+        });
+        saveHistory();
         redraw();
     }
 });
 
 // Fill enabled toggle - update selected element
 fillEnabledInput.addEventListener('change', (e) => {
-    if (selectedElement) {
-        selectedElement.fillColor = e.target.checked ? fillColorInput.value : null;
+    const elementsToUpdate = selectedElements.length > 0 ? selectedElements : (selectedElement ? [selectedElement] : []);
+    if (elementsToUpdate.length > 0) {
+        elementsToUpdate.forEach(el => {
+            if (el.type !== 'line' && el.type !== 'arrow' && el.type !== 'pen') {
+                el.fillColor = e.target.checked ? fillColorInput.value : null;
+            }
+        });
+        saveHistory();
+        redraw();
+    }
+});
+
+// Font size change - update selected text elements
+fontSizeSelect.addEventListener('change', (e) => {
+    const elementsToUpdate = selectedElements.length > 0 ? selectedElements : (selectedElement ? [selectedElement] : []);
+    if (elementsToUpdate.length > 0) {
+        elementsToUpdate.forEach(el => {
+            if (el.type === 'text') {
+                el.fontSize = parseInt(e.target.value);
+            }
+            // Also update child text elements
+            elements.forEach(child => {
+                if (child.type === 'text' && child.parentId === el.id) {
+                    child.fontSize = parseInt(e.target.value);
+                }
+            });
+        });
+        saveHistory();
+        redraw();
+    }
+});
+
+// Line style change - update selected line/arrow elements
+lineStyleSelect.addEventListener('change', (e) => {
+    const elementsToUpdate = selectedElements.length > 0 ? selectedElements : (selectedElement ? [selectedElement] : []);
+    if (elementsToUpdate.length > 0) {
+        elementsToUpdate.forEach(el => {
+            if (el.type === 'line' || el.type === 'arrow' || el.type === 'pen' || el.type === 'rectangle' || el.type === 'circle') {
+                el.lineStyle = e.target.value;
+            }
+        });
+        saveHistory();
+        redraw();
+    }
+});
+
+// Line routing change - update selected line/arrow elements
+lineRoutingSelect.addEventListener('change', (e) => {
+    const elementsToUpdate = selectedElements.length > 0 ? selectedElements : (selectedElement ? [selectedElement] : []);
+    if (elementsToUpdate.length > 0) {
+        elementsToUpdate.forEach(el => {
+            if (el.type === 'line' || el.type === 'arrow') {
+                el.lineRouting = e.target.value;
+            }
+        });
+        saveHistory();
         redraw();
     }
 });
@@ -457,6 +620,8 @@ document.querySelectorAll('.template-btn').forEach(btn => {
             };
             console.log(`Created template element: type=${element.type}, id=${element.id}`);
             elements.push(element);
+            lastCreatedShape = element; // Track for 'M' key duplication
+            duplicationDirection = null; // Reset direction for new shape
             saveHistory();
             redraw();
 
@@ -550,6 +715,14 @@ document.addEventListener('keydown', (e) => {
         undo();
         e.preventDefault();
     }
+
+    // 'M' key duplicates the last created shape
+    if (key === 'm' && lastCreatedShape) {
+        duplicateLastShape();
+        e.preventDefault();
+        return;
+    }
+
     if (key === 'delete' || key === 'backspace') {
         if (selectedElements.length > 0) {
             // Delete all selected elements
@@ -569,6 +742,72 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
+
+// Function to duplicate the last created shape
+function duplicateLastShape() {
+    if (!lastCreatedShape) return;
+
+    // Find any text element associated with the last created shape
+    const associatedText = elements.find(el =>
+        el.type === 'text' && el.parentId === lastCreatedShape.id
+    );
+
+    // Determine direction only on first duplication, then keep consistent
+    if (!duplicationDirection) {
+        // Determine if shape is centered horizontally and near top
+        const shapeCenterX = lastCreatedShape.x + Math.abs(lastCreatedShape.width || 0) / 2;
+        const isCentered = Math.abs(shapeCenterX - canvas.width / 2) < canvas.width * 0.15; // Within 15% of center
+        const isNearTop = lastCreatedShape.y < canvas.height * 0.3; // In top 30%
+
+        duplicationDirection = (isCentered && isNearTop) ? 'vertical' : 'horizontal';
+        console.log(`Set duplication direction: ${duplicationDirection}`);
+    }
+
+    const shouldPlaceVertically = duplicationDirection === 'vertical';
+
+    // Calculate spacing based on shape size
+    const spacing = 20;
+
+    // Create duplicate shape
+    const newShape = {
+        ...lastCreatedShape,
+        id: nextElementId++
+    };
+
+    if (shouldPlaceVertically) {
+        // Place below
+        newShape.y = lastCreatedShape.y + Math.abs(lastCreatedShape.height || 100) + spacing;
+    } else {
+        // Place to the right
+        newShape.x = lastCreatedShape.x + Math.abs(lastCreatedShape.width || 100) + spacing;
+    }
+
+    console.log(`Duplicating shape ${lastCreatedShape.id}, placing ${shouldPlaceVertically ? 'vertically' : 'horizontally'}`);
+
+    elements.push(newShape);
+
+    // If there was associated text, duplicate it too
+    if (associatedText) {
+        const deltaX = newShape.x - lastCreatedShape.x;
+        const deltaY = newShape.y - lastCreatedShape.y;
+
+        const newText = {
+            ...associatedText,
+            id: nextElementId++,
+            parentId: newShape.id,
+            x: associatedText.x + deltaX,
+            y: associatedText.y + deltaY,
+            text: `Thing ${thingCounter++}` // Auto-increment text
+        };
+
+        elements.push(newText);
+        console.log(`Duplicated text element with new text: "${newText.text}"`);
+    }
+
+    lastCreatedShape = newShape; // Update to new shape for chaining
+    saveHistory();
+    redraw();
+}
 
 // Keyboard events for panning
 document.addEventListener('keydown', (e) => {
@@ -612,6 +851,9 @@ canvas.addEventListener('mouseup', handleMouseUp);
 canvas.addEventListener('wheel', handleWheel, { passive: false });
 
 function handleWheel(e) {
+    // Disable zoom in storybook mode
+    if (canvasMode === 'storybook') return;
+
     e.preventDefault();
 
     const rect = canvas.getBoundingClientRect();
@@ -634,8 +876,8 @@ function handleWheel(e) {
 function handleMouseDown(e) {
     const rect = canvas.getBoundingClientRect();
 
-    // Handle panning with spacebar or hand tool
-    if (spacePressed || currentTool === 'hand') {
+    // Handle panning with spacebar or hand tool (only in infinite canvas mode)
+    if (canvasMode === 'infinite' && (spacePressed || currentTool === 'hand')) {
         isPanning = true;
         panStartX = e.clientX - panOffsetX;
         panStartY = e.clientY - panOffsetY;
@@ -882,6 +1124,8 @@ function handleMouseUp(e) {
             };
             console.log(`Created drawn element: type=${element.type}, id=${element.id}`);
             elements.push(element);
+            lastCreatedShape = element; // Track for 'M' key duplication
+            duplicationDirection = null; // Reset direction for new shape
             saveHistory();
 
             // Auto-create text input for container shapes
@@ -1938,6 +2182,503 @@ function drawSwitch(x, y, w, h, strokeColor, fillColor) {
     }
 }
 
+// Business Icons
+function drawUser(x, y, w, h, strokeColor, fillColor) {
+    const cx = x + w / 2;
+    const headRadius = w / 3;
+    const headY = y + headRadius + h * 0.15;
+
+    // Head
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, headY, headRadius, 0, Math.PI * 2);
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+    }
+    ctx.stroke();
+
+    // Body (shoulders)
+    const bodyY = headY + headRadius;
+    ctx.beginPath();
+    ctx.arc(cx, bodyY + headRadius * 1.5, headRadius * 1.3, Math.PI * 1.2, Math.PI * 1.8);
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+    }
+    ctx.stroke();
+}
+
+function drawUsers(x, y, w, h, strokeColor, fillColor) {
+    // Draw three overlapping user silhouettes
+    const userW = w / 2.5;
+    drawUser(x, y, userW, h * 0.8, strokeColor, fillColor);
+    drawUser(x + w / 3, y + h * 0.1, userW, h * 0.8, strokeColor, fillColor);
+    drawUser(x + w / 1.6, y, userW, h * 0.8, strokeColor, fillColor);
+}
+
+function drawFolder(x, y, w, h, strokeColor, fillColor) {
+    const tabW = w * 0.4;
+    const tabH = h * 0.2;
+
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fillRect(x, y + tabH, w, h - tabH);
+        ctx.fillRect(x, y, tabW, tabH);
+    }
+
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y + tabH, w, h - tabH);
+    ctx.strokeRect(x, y, tabW, tabH);
+}
+
+function drawFile(x, y, w, h, strokeColor, fillColor) {
+    const foldSize = w * 0.25;
+
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + w - foldSize, y);
+        ctx.lineTo(x + w, y + foldSize);
+        ctx.lineTo(x + w, y + h);
+        ctx.lineTo(x, y + h);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + w - foldSize, y);
+    ctx.lineTo(x + w, y + foldSize);
+    ctx.lineTo(x + w, y + h);
+    ctx.lineTo(x, y + h);
+    ctx.closePath();
+    ctx.stroke();
+
+    // Draw fold
+    ctx.beginPath();
+    ctx.moveTo(x + w - foldSize, y);
+    ctx.lineTo(x + w - foldSize, y + foldSize);
+    ctx.lineTo(x + w, y + foldSize);
+    ctx.stroke();
+}
+
+function drawEnvelope(x, y, w, h, strokeColor, fillColor) {
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fillRect(x, y, w, h);
+    }
+
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, w, h);
+
+    // Draw envelope flap
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + w / 2, y + h / 2);
+    ctx.lineTo(x + w, y);
+    ctx.stroke();
+}
+
+function drawCalendar(x, y, w, h, strokeColor, fillColor) {
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fillRect(x, y + h * 0.15, w, h * 0.85);
+    }
+
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y + h * 0.15, w, h * 0.85);
+
+    // Top binding
+    ctx.fillStyle = strokeColor;
+    ctx.fillRect(x, y, w, h * 0.15);
+
+    // Rings
+    const ringW = w * 0.1;
+    ctx.strokeStyle = fillColor || '#fff';
+    ctx.lineWidth = 3;
+    for (let i = 0; i < 3; i++) {
+        const ringX = x + w * (0.2 + i * 0.3);
+        ctx.beginPath();
+        ctx.moveTo(ringX, y);
+        ctx.lineTo(ringX, y + h * 0.15);
+        ctx.stroke();
+    }
+
+    // Grid
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 1;
+    for (let i = 1; i < 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo(x, y + h * 0.15 + i * h * 0.28);
+        ctx.lineTo(x + w, y + h * 0.15 + i * h * 0.28);
+        ctx.stroke();
+    }
+}
+
+// Device Icons
+function drawDesktop(x, y, w, h, strokeColor, fillColor) {
+    const monitorH = h * 0.7;
+    const standH = h * 0.15;
+    const baseH = h * 0.15;
+
+    // Monitor
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fillRect(x, y, w, monitorH);
+    }
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, w, monitorH);
+
+    // Stand
+    const standW = w * 0.2;
+    const standX = x + w / 2 - standW / 2;
+    ctx.strokeRect(standX, y + monitorH, standW, standH);
+
+    // Base
+    const baseW = w * 0.5;
+    const baseX = x + w / 2 - baseW / 2;
+    ctx.strokeRect(baseX, y + monitorH + standH, baseW, baseH);
+}
+
+function drawLaptop(x, y, w, h, strokeColor, fillColor) {
+    const screenH = h * 0.6;
+    const baseH = h * 0.4;
+
+    // Screen
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fillRect(x + w * 0.1, y, w * 0.8, screenH);
+    }
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x + w * 0.1, y, w * 0.8, screenH);
+
+    // Base (keyboard)
+    ctx.beginPath();
+    ctx.moveTo(x, y + screenH);
+    ctx.lineTo(x + w, y + screenH);
+    ctx.lineTo(x + w * 0.95, y + h);
+    ctx.lineTo(x + w * 0.05, y + h);
+    ctx.closePath();
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+    }
+    ctx.stroke();
+}
+
+function drawMobile(x, y, w, h, strokeColor, fillColor) {
+    const radius = w * 0.1;
+
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, radius);
+        ctx.fill();
+    }
+
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, radius);
+    ctx.stroke();
+
+    // Home button
+    ctx.beginPath();
+    ctx.arc(x + w / 2, y + h * 0.9, w * 0.1, 0, Math.PI * 2);
+    ctx.stroke();
+}
+
+function drawTablet(x, y, w, h, strokeColor, fillColor) {
+    const radius = w * 0.08;
+
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, radius);
+        ctx.fill();
+    }
+
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, radius);
+    ctx.stroke();
+
+    // Camera
+    ctx.beginPath();
+    ctx.arc(x + w / 2, y + h * 0.05, w * 0.05, 0, Math.PI * 2);
+    ctx.stroke();
+}
+
+// Symbol Icons
+function drawGear(x, y, w, h, strokeColor, fillColor) {
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+    const outerRadius = Math.min(w, h) / 2;
+    const innerRadius = outerRadius * 0.6;
+    const teethCount = 8;
+
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+
+    for (let i = 0; i < teethCount * 2; i++) {
+        const angle = (i * Math.PI) / teethCount;
+        const radius = i % 2 === 0 ? outerRadius : innerRadius * 1.2;
+        const px = cx + Math.cos(angle) * radius;
+        const py = cy + Math.sin(angle) * radius;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+    }
+    ctx.stroke();
+
+    // Center hole
+    ctx.beginPath();
+    ctx.arc(cx, cy, innerRadius * 0.5, 0, Math.PI * 2);
+    ctx.stroke();
+}
+
+function drawLock(x, y, w, h, strokeColor, fillColor) {
+    const bodyH = h * 0.6;
+    const shackleH = h * 0.4;
+    const shackleW = w * 0.6;
+
+    // Shackle
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x + w / 2, y + shackleH, shackleW / 2, Math.PI, 0, false);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(x + w / 2 - shackleW / 2, y + shackleH);
+    ctx.lineTo(x + w / 2 - shackleW / 2, y + shackleH * 1.2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(x + w / 2 + shackleW / 2, y + shackleH);
+    ctx.lineTo(x + w / 2 + shackleW / 2, y + shackleH * 1.2);
+    ctx.stroke();
+
+    // Body
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fillRect(x, y + h - bodyH, w, bodyH);
+    }
+    ctx.strokeRect(x, y + h - bodyH, w, bodyH);
+
+    // Keyhole
+    ctx.fillStyle = strokeColor;
+    ctx.beginPath();
+    ctx.arc(x + w / 2, y + h - bodyH * 0.6, w * 0.1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillRect(x + w / 2 - w * 0.05, y + h - bodyH * 0.5, w * 0.1, bodyH * 0.3);
+}
+
+function drawShield(x, y, w, h, strokeColor, fillColor) {
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x + w / 2, y);
+    ctx.lineTo(x + w, y + h * 0.3);
+    ctx.lineTo(x + w, y + h * 0.6);
+    ctx.lineTo(x + w / 2, y + h);
+    ctx.lineTo(x, y + h * 0.6);
+    ctx.lineTo(x, y + h * 0.3);
+    ctx.closePath();
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+    }
+    ctx.stroke();
+}
+
+function drawKey(x, y, w, h, strokeColor, fillColor) {
+    const headRadius = h * 0.4;
+    const shaftW = w * 0.6;
+    const shaftH = h * 0.25;
+
+    // Head
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x + headRadius, y + h / 2, headRadius, 0, Math.PI * 2);
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+    }
+    ctx.stroke();
+
+    // Inner circle
+    ctx.beginPath();
+    ctx.arc(x + headRadius, y + h / 2, headRadius * 0.4, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Shaft
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fillRect(x + headRadius * 1.5, y + h / 2 - shaftH / 2, shaftW, shaftH);
+    }
+    ctx.strokeRect(x + headRadius * 1.5, y + h / 2 - shaftH / 2, shaftW, shaftH);
+
+    // Teeth
+    const teethCount = 3;
+    const toothW = shaftW / (teethCount * 2);
+    for (let i = 0; i < teethCount; i++) {
+        const tx = x + headRadius * 1.5 + shaftW - i * toothW * 2 - toothW;
+        ctx.strokeRect(tx, y + h / 2 + shaftH / 2, toothW, shaftH * 0.6);
+    }
+}
+
+function drawBell(x, y, w, h, strokeColor, fillColor) {
+    const bellH = h * 0.75;
+    const cx = x + w / 2;
+
+    // Bell body
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx - w * 0.4, y + bellH);
+    ctx.quadraticCurveTo(cx - w * 0.45, y + bellH * 0.4, cx, y);
+    ctx.quadraticCurveTo(cx + w * 0.45, y + bellH * 0.4, cx + w * 0.4, y + bellH);
+    ctx.closePath();
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+    }
+    ctx.stroke();
+
+    // Clapper
+    ctx.beginPath();
+    ctx.arc(cx, y + bellH + h * 0.1, w * 0.1, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Bell rim
+    ctx.beginPath();
+    ctx.moveTo(cx - w * 0.45, y + bellH);
+    ctx.lineTo(cx + w * 0.45, y + bellH);
+    ctx.stroke();
+}
+
+function drawCheck(x, y, w, h, strokeColor, fillColor) {
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+    const radius = Math.min(w, h) / 2;
+
+    // Circle
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+    }
+    ctx.stroke();
+
+    // Check mark
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(cx - radius * 0.4, cy);
+    ctx.lineTo(cx - radius * 0.1, cy + radius * 0.3);
+    ctx.lineTo(cx + radius * 0.4, cy - radius * 0.3);
+    ctx.stroke();
+}
+
+function drawWarning(x, y, w, h, strokeColor, fillColor) {
+    const cx = x + w / 2;
+
+    // Triangle
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, y);
+    ctx.lineTo(x + w, y + h);
+    ctx.lineTo(x, y + h);
+    ctx.closePath();
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+    }
+    ctx.stroke();
+
+    // Exclamation mark
+    ctx.fillStyle = strokeColor;
+    ctx.fillRect(cx - w * 0.05, y + h * 0.25, w * 0.1, h * 0.4);
+    ctx.beginPath();
+    ctx.arc(cx, y + h * 0.75, w * 0.08, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+function drawClock(x, y, w, h, strokeColor, fillColor) {
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+    const radius = Math.min(w, h) / 2;
+
+    // Circle
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+    }
+    ctx.stroke();
+
+    // Hour markers
+    ctx.fillStyle = strokeColor;
+    for (let i = 0; i < 12; i++) {
+        const angle = (i * Math.PI) / 6;
+        const markerRadius = radius * 0.85;
+        const px = cx + Math.cos(angle - Math.PI / 2) * markerRadius;
+        const py = cy + Math.sin(angle - Math.PI / 2) * markerRadius;
+        ctx.beginPath();
+        ctx.arc(px, py, 2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Hour hand
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + radius * 0.3, cy - radius * 0.3);
+    ctx.stroke();
+
+    // Minute hand
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx, cy - radius * 0.6);
+    ctx.stroke();
+
+    // Center dot
+    ctx.fillStyle = strokeColor;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+    ctx.fill();
+}
+
 // Generic AWS Service Drawing Function
 function drawAWSService(x, y, w, h, strokeColor, fillColor, serviceName, fallbackDrawFn) {
     // Draw background
@@ -2457,6 +3198,81 @@ function drawElement(element) {
             drawGlue(element.x, element.y, element.width, element.height,
                     element.strokeColor, element.fillColor);
             break;
+        // Business Icons
+        case 'user':
+            drawUser(element.x, element.y, element.width, element.height,
+                    element.strokeColor, element.fillColor);
+            break;
+        case 'users':
+            drawUsers(element.x, element.y, element.width, element.height,
+                     element.strokeColor, element.fillColor);
+            break;
+        case 'folder':
+            drawFolder(element.x, element.y, element.width, element.height,
+                      element.strokeColor, element.fillColor);
+            break;
+        case 'file':
+            drawFile(element.x, element.y, element.width, element.height,
+                    element.strokeColor, element.fillColor);
+            break;
+        case 'envelope':
+            drawEnvelope(element.x, element.y, element.width, element.height,
+                        element.strokeColor, element.fillColor);
+            break;
+        case 'calendar':
+            drawCalendar(element.x, element.y, element.width, element.height,
+                        element.strokeColor, element.fillColor);
+            break;
+        // Device Icons
+        case 'desktop':
+            drawDesktop(element.x, element.y, element.width, element.height,
+                       element.strokeColor, element.fillColor);
+            break;
+        case 'laptop':
+            drawLaptop(element.x, element.y, element.width, element.height,
+                      element.strokeColor, element.fillColor);
+            break;
+        case 'mobile':
+            drawMobile(element.x, element.y, element.width, element.height,
+                      element.strokeColor, element.fillColor);
+            break;
+        case 'tablet':
+            drawTablet(element.x, element.y, element.width, element.height,
+                      element.strokeColor, element.fillColor);
+            break;
+        // Symbol Icons
+        case 'gear':
+            drawGear(element.x, element.y, element.width, element.height,
+                    element.strokeColor, element.fillColor);
+            break;
+        case 'lock':
+            drawLock(element.x, element.y, element.width, element.height,
+                    element.strokeColor, element.fillColor);
+            break;
+        case 'shield':
+            drawShield(element.x, element.y, element.width, element.height,
+                      element.strokeColor, element.fillColor);
+            break;
+        case 'key':
+            drawKey(element.x, element.y, element.width, element.height,
+                   element.strokeColor, element.fillColor);
+            break;
+        case 'bell':
+            drawBell(element.x, element.y, element.width, element.height,
+                    element.strokeColor, element.fillColor);
+            break;
+        case 'check':
+            drawCheck(element.x, element.y, element.width, element.height,
+                     element.strokeColor, element.fillColor);
+            break;
+        case 'warning':
+            drawWarning(element.x, element.y, element.width, element.height,
+                       element.strokeColor, element.fillColor);
+            break;
+        case 'clock':
+            drawClock(element.x, element.y, element.width, element.height,
+                     element.strokeColor, element.fillColor);
+            break;
     }
 }
 
@@ -2514,7 +3330,7 @@ function undo() {
 }
 
 // Helper function to find which element a point is closest to
-function findClosestElement(x, y, excludeTypes = ['line', 'arrow', 'pen']) {
+function findClosestElement(x, y, excludeTypes = ['line', 'arrow', 'pen', 'text']) {
     let closest = null;
     let minDistance = Infinity;
 
@@ -2671,8 +3487,32 @@ function layoutHorizontal() {
         let x = (canvas.width - rowWidth) / 2;
 
         row.elements.forEach(element => {
+            const oldX = element.x;
+            const oldY = element.y;
+            const oldCenterX = oldX + Math.abs(element.width || 100) / 2;
+            const oldCenterY = oldY + Math.abs(element.height || 100) / 2;
+
             element.x = x;
             element.y = startY + (row.height - Math.abs(element.height || 100)) / 2;
+
+            const newCenterX = element.x + Math.abs(element.width || 100) / 2;
+            const newCenterY = element.y + Math.abs(element.height || 100) / 2;
+            const deltaX = newCenterX - oldCenterX;
+            const deltaY = newCenterY - oldCenterY;
+
+            // Move child text elements with their parent shape
+            console.log(`layoutHorizontal: Moving shape ${element.id} (${element.type}), delta=(${deltaX.toFixed(2)}, ${deltaY.toFixed(2)})`);
+            let childrenMoved = 0;
+            elements.forEach(el => {
+                if (el.type === 'text' && el.parentId === element.id) {
+                    console.log(`  Moving child text ${el.id} with parent ${element.id}`);
+                    el.x += deltaX;
+                    el.y += deltaY;
+                    childrenMoved++;
+                }
+            });
+            console.log(`  Total children moved: ${childrenMoved}`);
+
             x += Math.abs(element.width || 100) + horizontalSpacing;
         });
 
@@ -2763,8 +3603,32 @@ function layoutVertical() {
         let y = (canvas.height - columnHeight) / 2;
 
         column.elements.forEach(element => {
+            const oldX = element.x;
+            const oldY = element.y;
+            const oldCenterX = oldX + Math.abs(element.width || 100) / 2;
+            const oldCenterY = oldY + Math.abs(element.height || 100) / 2;
+
             element.x = startX + (column.width - Math.abs(element.width || 100)) / 2;
             element.y = y;
+
+            const newCenterX = element.x + Math.abs(element.width || 100) / 2;
+            const newCenterY = element.y + Math.abs(element.height || 100) / 2;
+            const deltaX = newCenterX - oldCenterX;
+            const deltaY = newCenterY - oldCenterY;
+
+            // Move child text elements with their parent shape
+            console.log(`layoutVertical: Moving shape ${element.id} (${element.type}), delta=(${deltaX.toFixed(2)}, ${deltaY.toFixed(2)})`);
+            let childrenMoved = 0;
+            elements.forEach(el => {
+                if (el.type === 'text' && el.parentId === element.id) {
+                    console.log(`  Moving child text ${el.id} with parent ${element.id}`);
+                    el.x += deltaX;
+                    el.y += deltaY;
+                    childrenMoved++;
+                }
+            });
+            console.log(`  Total children moved: ${childrenMoved}`);
+
             y += Math.abs(element.height || 100) + verticalSpacing;
         });
 
@@ -3332,6 +4196,10 @@ document.getElementById('clearBtn').addEventListener('click', () => {
         selectedElement = null;
         backgroundColor = '#FFFEF9';
         bgColorInput.value = '#FFFEF9';
+        thingCounter = 1; // Reset the "Thing N" counter
+        pages = [{ elements: [], backgroundColor: '#FFFEF9' }]; // Reset to single empty page
+        currentPageIndex = 0;
+        updatePageCounter();
         redraw();
     }
 });
@@ -3407,7 +4275,14 @@ function exportAsPowerPoint() {
 }
 
 document.getElementById('exportJSON').addEventListener('click', () => {
+    // Save current page before exporting
+    saveCurrentPage();
+
     const data = {
+        version: 2, // Version 2 supports pages
+        pages: pages,
+        currentPageIndex: currentPageIndex,
+        // Legacy fields for backward compatibility
         backgroundColor: backgroundColor,
         elements: elements
     };
@@ -3431,18 +4306,31 @@ document.getElementById('fileInput').addEventListener('change', (e) => {
             try {
                 const data = JSON.parse(event.target.result);
 
-                // Support both old format (array) and new format (object with backgroundColor)
-                if (Array.isArray(data)) {
+                // Version 2: Multiple pages
+                if (data.version === 2 && data.pages) {
+                    pages = data.pages;
+                    currentPageIndex = data.currentPageIndex || 0;
+                    canvasMode = 'storybook'; // Switch to storybook mode
+                    loadPage(currentPageIndex);
+                    updateModeUI();
+                }
+                // Old format: single page (array or object)
+                else if (Array.isArray(data)) {
                     elements = data;
                     backgroundColor = '#FFFEF9';
                     bgColorInput.value = '#FFFEF9';
+                    pages = [{ elements: JSON.parse(JSON.stringify(elements)), backgroundColor }];
+                    currentPageIndex = 0;
                 } else {
                     elements = data.elements || [];
                     backgroundColor = data.backgroundColor || '#FFFEF9';
                     bgColorInput.value = backgroundColor;
+                    pages = [{ elements: JSON.parse(JSON.stringify(elements)), backgroundColor }];
+                    currentPageIndex = 0;
                 }
 
                 selectedElement = null;
+                updatePageCounter();
                 redraw();
             } catch (err) {
                 alert('Invalid JSON file');
@@ -3465,6 +4353,136 @@ document.getElementById('helpPanel').addEventListener('click', (e) => {
     }
 });
 
+// Warn user before leaving/refreshing if there are unsaved changes
+window.addEventListener('beforeunload', (e) => {
+    // Only show warning if there are elements on the canvas
+    if (elements.length > 0) {
+        e.preventDefault();
+        // Modern browsers require returnValue to be set
+        e.returnValue = 'You have unsaved changes. Do you want to leave without saving?';
+        return e.returnValue;
+    }
+});
+
+// Page Management Functions
+function initializePages() {
+    // Initialize with current canvas as first page
+    if (pages.length === 0) {
+        pages.push({
+            elements: JSON.parse(JSON.stringify(elements)),
+            backgroundColor: backgroundColor
+        });
+    }
+    updatePageCounter();
+}
+
+function updatePageCounter() {
+    const counter = document.getElementById('pageCounter');
+    const prevBtn = document.getElementById('prevPage');
+    const nextBtn = document.getElementById('nextPage');
+
+    counter.textContent = `Page ${currentPageIndex + 1} of ${pages.length}`;
+
+    prevBtn.disabled = currentPageIndex === 0;
+    nextBtn.disabled = currentPageIndex === pages.length - 1;
+}
+
+function saveCurrentPage() {
+    if (pages.length > 0) {
+        pages[currentPageIndex] = {
+            elements: JSON.parse(JSON.stringify(elements)),
+            backgroundColor: backgroundColor
+        };
+    }
+}
+
+function loadPage(index) {
+    if (index >= 0 && index < pages.length) {
+        // Save current page first
+        saveCurrentPage();
+
+        // Load the requested page
+        currentPageIndex = index;
+        const page = pages[currentPageIndex];
+        elements = JSON.parse(JSON.stringify(page.elements));
+        backgroundColor = page.backgroundColor;
+        bgColorInput.value = backgroundColor;
+        updateColorLabel('bgColor', 'bgLabel');
+
+        // Clear selection
+        selectedElement = null;
+        selectedElements = [];
+
+        updatePageCounter();
+        redraw();
+    }
+}
+
+function addNewPage() {
+    // Save current page
+    saveCurrentPage();
+
+    // Clone current page
+    const newPage = {
+        elements: JSON.parse(JSON.stringify(elements)),
+        backgroundColor: backgroundColor
+    };
+
+    // Add new page after current
+    pages.splice(currentPageIndex + 1, 0, newPage);
+
+    // Navigate to new page
+    loadPage(currentPageIndex + 1);
+}
+
+// Mode Toggle
+function updateModeUI() {
+    const pageNav = document.getElementById('pageNavigation');
+    const modeBtn = document.getElementById('modeToggleBtn');
+    const modeIcon = modeBtn.querySelector('i');
+
+    if (canvasMode === 'storybook') {
+        pageNav.style.display = 'flex';
+        modeIcon.className = 'fas fa-book';
+        modeBtn.title = 'Mode: Storybook (click for Infinite Canvas)';
+        modeBtn.classList.add('storybook-mode');
+        // Reset pan/zoom
+        panOffsetX = 0;
+        panOffsetY = 0;
+        zoomLevel = 1;
+    } else {
+        pageNav.style.display = 'none';
+        modeIcon.className = 'fas fa-expand-arrows-alt';
+        modeBtn.title = 'Mode: Infinite Canvas (click for Storybook)';
+        modeBtn.classList.remove('storybook-mode');
+    }
+    redraw();
+}
+
+document.getElementById('modeToggleBtn').addEventListener('click', () => {
+    canvasMode = canvasMode === 'infinite' ? 'storybook' : 'infinite';
+
+    // When switching to storybook, initialize pages if needed
+    if (canvasMode === 'storybook' && pages.length === 0) {
+        initializePages();
+    }
+
+    updateModeUI();
+});
+
+// Page Navigation Event Handlers
+document.getElementById('prevPage').addEventListener('click', () => {
+    loadPage(currentPageIndex - 1);
+});
+
+document.getElementById('nextPage').addEventListener('click', () => {
+    loadPage(currentPageIndex + 1);
+});
+
+document.getElementById('addPage').addEventListener('click', () => {
+    addNewPage();
+});
+
 // Initialize canvas
 resizeCanvas();
 
@@ -3473,3 +4491,6 @@ ensureElementIds();
 
 // Initialize undo history with empty state
 saveHistory();
+
+// Initialize mode UI (start in infinite canvas mode)
+updateModeUI();
