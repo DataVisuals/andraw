@@ -7358,9 +7358,15 @@ function drawGuides() {
 }
 
 function redraw() {
+    // Clear canvas completely first
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
     // Fill background
     ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
 
     // Apply pan and zoom transformations
     ctx.save();
