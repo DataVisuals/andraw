@@ -1939,7 +1939,9 @@ function editTextElement(textElement) {
     input.style.fontStyle = textElement.italic ? 'italic' : 'normal';
     input.style.color = textElement.textColor || textElement.strokeColor;
     input.value = textElement.text;
-    input.rows = 1;
+    input.rows = 3;
+    input.style.minWidth = '200px';
+    input.style.resize = 'both';
     document.body.appendChild(input);
 
     // Focus and select all text
@@ -2764,7 +2766,14 @@ function drawText(element) {
     ctx.font = `${italic}${bold}${fontSize}px ${fontFamily}`;
     ctx.fillStyle = element.textColor || element.strokeColor;
     ctx.textBaseline = 'top';
-    ctx.fillText(element.text, element.x, element.y);
+
+    // Handle multi-line text
+    const lines = element.text.split('\n');
+    const lineHeight = fontSize * 1.2;
+
+    lines.forEach((line, index) => {
+        ctx.fillText(line, element.x, element.y + (index * lineHeight));
+    });
 }
 
 // Template shape drawing functions
@@ -4994,12 +5003,22 @@ function getElementBounds(element) {
             const bold = element.bold ? 'bold ' : '';
             const italic = element.italic ? 'italic ' : '';
             ctx.font = `${italic}${bold}${fontSize}px ${fontFamily}`;
-            const metrics = ctx.measureText(element.text || '');
+
+            // Handle multi-line text
+            const lines = (element.text || '').split('\n');
+            const lineHeight = fontSize * 1.2;
+            let maxWidth = 20; // Minimum width for empty text
+
+            lines.forEach(line => {
+                const metrics = ctx.measureText(line);
+                maxWidth = Math.max(maxWidth, metrics.width);
+            });
+
             return {
                 x: element.x,
                 y: element.y,
-                width: Math.max(metrics.width, 20), // Minimum width for empty text
-                height: fontSize * 1.2
+                width: maxWidth,
+                height: lines.length * lineHeight
             };
         default:
             return {
@@ -5148,7 +5167,9 @@ function createTextInput(x, y) {
     input.style.fontWeight = isBold ? 'bold' : 'normal';
     input.style.fontStyle = isItalic ? 'italic' : 'normal';
     input.style.color = textColorInput.value;
-    input.rows = 1;
+    input.rows = 3;
+    input.style.minWidth = '200px';
+    input.style.resize = 'both';
     document.body.appendChild(input);
 
     // Focus after a brief delay to prevent immediate blur
@@ -5204,8 +5225,9 @@ function createTextInputForShape(centerX, centerY, shape) {
     input.style.fontWeight = isBold ? 'bold' : 'normal';
     input.style.fontStyle = isItalic ? 'italic' : 'normal';
     input.style.color = textColorInput.value;
-    input.style.width = '100px';
-    input.rows = 1;
+    input.style.width = '150px';
+    input.rows = 3;
+    input.style.resize = 'both';
     document.body.appendChild(input);
 
     // Focus and select all text after a brief delay
@@ -5217,11 +5239,12 @@ function createTextInputForShape(centerX, centerY, shape) {
     const finishText = () => {
         const text = input.value.trim();
         if (text) {
-            // Measure text to center it properly
+            // Measure text to center it properly (use longest line for centering)
             const fontSize = parseInt(fontSizeSelect.value);
             ctx.font = `${fontSize}px ${selectedFont}`;
-            const metrics = ctx.measureText(text);
-            const textWidth = metrics.width;
+            const lines = text.split('\n');
+            const lineWidths = lines.map(line => ctx.measureText(line).width);
+            const textWidth = Math.max(...lineWidths);
 
             const textElement = {
                 id: nextElementId++,
@@ -5276,8 +5299,9 @@ function createTextInputBelowShape(centerX, bottomY, shape) {
     input.style.fontWeight = isBold ? 'bold' : 'normal';
     input.style.fontStyle = isItalic ? 'italic' : 'normal';
     input.style.color = textColorInput.value;
-    input.style.width = '100px';
-    input.rows = 1;
+    input.style.width = '150px';
+    input.rows = 3;
+    input.style.resize = 'both';
     document.body.appendChild(input);
 
     // Focus after a brief delay to prevent immediate blur
@@ -5286,11 +5310,12 @@ function createTextInputBelowShape(centerX, bottomY, shape) {
     const finishText = () => {
         const text = input.value.trim();
         if (text) {
-            // Measure text to center it below the shape
+            // Measure text to center it below the shape (use longest line for centering)
             const fontSize = parseInt(fontSizeSelect.value);
             ctx.font = `${fontSize}px ${selectedFont}`;
-            const metrics = ctx.measureText(text);
-            const textWidth = metrics.width;
+            const lines = text.split('\n');
+            const lineWidths = lines.map(line => ctx.measureText(line).width);
+            const textWidth = Math.max(...lineWidths);
 
             const textElement = {
                 id: nextElementId++,
