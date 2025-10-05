@@ -73,8 +73,254 @@ let showGrid = false;
 let snapToGrid = false;
 const gridSize = 20;
 
+// Smart guides for alignment
+let smartGuides = []; // Array of {type: 'vertical'|'horizontal', position: number, label: string}
+const SNAP_THRESHOLD = 5; // Pixels threshold for snapping to guides
+
+// Last used styles per shape type (persisted across sessions)
+let lastUsedStyles = {
+    rectangle: { strokeColor: '#2C3E50', fillColor: '#ECF0F1', fillEnabled: false },
+    circle: { strokeColor: '#2C3E50', fillColor: '#ECF0F1', fillEnabled: false },
+    diamond: { strokeColor: '#2C3E50', fillColor: '#ECF0F1', fillEnabled: false },
+    parallelogram: { strokeColor: '#2C3E50', fillColor: '#ECF0F1', fillEnabled: false },
+    roundRect: { strokeColor: '#2C3E50', fillColor: '#ECF0F1', fillEnabled: false },
+    triangle: { strokeColor: '#2C3E50', fillColor: '#ECF0F1', fillEnabled: false },
+    hexagon: { strokeColor: '#2C3E50', fillColor: '#ECF0F1', fillEnabled: false },
+    line: { strokeColor: '#2C3E50', lineStyle: 'solid', lineRouting: 'straight', lineThickness: 2 },
+    arrow: { strokeColor: '#2C3E50', lineStyle: 'solid', lineRouting: 'straight', lineThickness: 2 },
+    text: { textColor: '#2C3E50', fontFamily: 'Comic Sans MS, cursive', fontSize: 16, bold: false, italic: false }
+};
+
+// Load last used styles from localStorage
+function loadLastUsedStyles() {
+    const saved = localStorage.getItem('andraw_lastUsedStyles');
+    if (saved) {
+        try {
+            lastUsedStyles = { ...lastUsedStyles, ...JSON.parse(saved) };
+        } catch (e) {
+            console.error('Failed to load last used styles:', e);
+        }
+    }
+}
+
+// Save last used styles to localStorage
+function saveLastUsedStyles() {
+    try {
+        localStorage.setItem('andraw_lastUsedStyles', JSON.stringify(lastUsedStyles));
+    } catch (e) {
+        console.error('Failed to save last used styles:', e);
+    }
+}
+
+// Update last used style for a shape type
+function updateLastUsedStyle(shapeType) {
+    if (shapeType === 'line' || shapeType === 'arrow') {
+        lastUsedStyles[shapeType] = {
+            strokeColor: strokeColorInput.value,
+            lineStyle: currentLineStyle,
+            lineRouting: currentLineRouting,
+            lineThickness: currentLineThickness
+        };
+    } else if (shapeType === 'text') {
+        lastUsedStyles[shapeType] = {
+            textColor: textColorInput.value,
+            fontFamily: selectedFont,
+            fontSize: parseInt(fontSizeSelect.value),
+            bold: isBold,
+            italic: isItalic
+        };
+    } else {
+        // Shape types: rectangle, circle, diamond, etc.
+        lastUsedStyles[shapeType] = {
+            strokeColor: strokeColorInput.value,
+            fillColor: fillColorInput.value,
+            fillEnabled: fillEnabledInput.checked
+        };
+    }
+    saveLastUsedStyles();
+}
+
+// Apply last used style for a shape type to UI
+function applyLastUsedStyle(shapeType) {
+    const style = lastUsedStyles[shapeType];
+    if (!style) return;
+
+    if (shapeType === 'line' || shapeType === 'arrow') {
+        strokeColorInput.value = style.strokeColor;
+        currentLineStyle = style.lineStyle;
+        currentLineRouting = style.lineRouting;
+        currentLineThickness = style.lineThickness;
+        updateStrokeIcon();
+    } else if (shapeType === 'text') {
+        textColorInput.value = style.textColor;
+        selectedFont = style.fontFamily;
+        fontSizeSelect.value = style.fontSize;
+        isBold = style.bold;
+        isItalic = style.italic;
+        updateTextColorIcon();
+        if (isBold) boldBtn.classList.add('active');
+        else boldBtn.classList.remove('active');
+        if (isItalic) italicBtn.classList.add('active');
+        else italicBtn.classList.remove('active');
+    } else {
+        strokeColorInput.value = style.strokeColor;
+        fillColorInput.value = style.fillColor;
+        fillEnabledInput.checked = style.fillEnabled;
+        updateStrokeIcon();
+        updateFillIcon();
+    }
+}
+
+// Find a non-overlapping position for a new element
+function findNonOverlappingPosition(desiredX, desiredY, width, height) {
+    const OFFSET_STEP = 30; // Pixels to offset each time
+    const MAX_ATTEMPTS = 10; // Maximum number of positions to try
+
+    // Helper to check if a rectangle overlaps with any existing element
+    function overlapsWithExisting(x, y, w, h) {
+        return elements.some(el => {
+            const bounds = getElementBounds(el);
+            // Check if rectangles overlap
+            return !(x + w < bounds.x ||
+                    x > bounds.x + bounds.width ||
+                    y + h < bounds.y ||
+                    y > bounds.y + bounds.height);
+        });
+    }
+
+    // Try the desired position first
+    if (!overlapsWithExisting(desiredX, desiredY, width, height)) {
+        return { x: desiredX, y: desiredY };
+    }
+
+    // Try offsets in a diagonal pattern (down-right)
+    for (let i = 1; i <= MAX_ATTEMPTS; i++) {
+        const offsetX = desiredX + (OFFSET_STEP * i);
+        const offsetY = desiredY + (OFFSET_STEP * i);
+
+        if (!overlapsWithExisting(offsetX, offsetY, width, height)) {
+            return { x: offsetX, y: offsetY };
+        }
+    }
+
+    // If all positions overlap, just use the last offset position
+    return {
+        x: desiredX + (OFFSET_STEP * MAX_ATTEMPTS),
+        y: desiredY + (OFFSET_STEP * MAX_ATTEMPTS)
+    };
+}
+
+// Quick create shape at canvas center with last used style
+function quickCreateShape(shapeType) {
+    const style = lastUsedStyles[shapeType];
+    if (!style) return;
+
+    // Get canvas center in world coordinates
+    let centerX = (canvas.width / 2 - panOffsetX) / zoomLevel;
+    let centerY = (canvas.height / 2 - panOffsetY) / zoomLevel;
+
+    if (shapeType === 'text') {
+        // Create text element at center, avoiding overlap
+        const tempWidth = 50; // Approximate text width for overlap detection
+        const tempHeight = style.fontSize || 16;
+        const pos = findNonOverlappingPosition(centerX, centerY, tempWidth, tempHeight);
+
+        const element = {
+            id: nextElementId++,
+            type: 'text',
+            x: pos.x,
+            y: pos.y,
+            text: 'Text',
+            color: style.textColor,
+            fontFamily: style.fontFamily,
+            fontSize: style.fontSize,
+            bold: style.bold,
+            italic: style.italic
+        };
+        elements.push(element);
+        saveHistory();
+        redraw();
+
+        // Select the text element so user can double-click to edit
+        selectedElement = element;
+        selectedElements = [];
+    } else if (shapeType === 'line' || shapeType === 'arrow') {
+        // Create line/arrow from left to right across center, avoiding overlap
+        const width = 150;
+        const height = 2; // Small height for overlap detection
+        const desiredX = centerX - width / 2;
+        const desiredY = centerY;
+        const pos = findNonOverlappingPosition(desiredX, desiredY, width, height);
+
+        const element = {
+            id: nextElementId++,
+            type: shapeType,
+            x: pos.x,
+            y: pos.y,
+            width: width,
+            height: 0,
+            strokeColor: style.strokeColor,
+            fillColor: null,
+            lineStyle: style.lineStyle,
+            lineRouting: style.lineRouting,
+            lineThickness: style.lineThickness
+        };
+        elements.push(element);
+        lastCreatedShape = element;
+        saveHistory();
+        redraw();
+    } else {
+        // Create shape at center, avoiding overlap
+        const width = 120;
+        const height = 80;
+        const desiredX = centerX - width / 2;
+        const desiredY = centerY - height / 2;
+        const pos = findNonOverlappingPosition(desiredX, desiredY, width, height);
+
+        const element = {
+            id: nextElementId++,
+            type: shapeType,
+            x: pos.x,
+            y: pos.y,
+            width: width,
+            height: height,
+            strokeColor: style.strokeColor,
+            fillColor: style.fillEnabled ? style.fillColor : null,
+            lineStyle: currentLineStyle,
+            lineRouting: undefined,
+            lineThickness: currentLineThickness
+        };
+        elements.push(element);
+        lastCreatedShape = element;
+        saveHistory();
+
+        // Auto-create text input for container shapes
+        const containerShapes = ['rectangle', 'circle', 'diamond', 'parallelogram', 'roundRect'];
+        if (containerShapes.includes(shapeType)) {
+            const actualCenterX = pos.x + width / 2;
+            const actualCenterY = pos.y + height / 2;
+            setTimeout(() => {
+                createTextInputForShape(actualCenterX, actualCenterY, element);
+            }, 10);
+        }
+
+        redraw();
+    }
+}
+
+// Rulers and guides
+let showRulers = false;
+let guides = []; // Array of {type: 'vertical'|'horizontal', position: number}
+let draggingGuide = null; // Currently dragging guide
+let isDraggingFromRuler = false; // Creating new guide from ruler
+const RULER_SIZE = 20; // Size of ruler in pixels
+
 // Clipboard for copy/paste
 let clipboard = [];
+
+// Mouse position for paste location
+let lastMouseX = 0;
+let lastMouseY = 0;
 
 const rectangleBtn = document.getElementById('rectangleBtn');
 const rectangleDropdown = document.getElementById('rectangleDropdown');
@@ -213,6 +459,12 @@ const templates = {
     data: { type: 'parallelogram', width: 120, height: 60 },
     terminator: { type: 'roundRect', width: 120, height: 50 },
     document: { type: 'document', width: 120, height: 100 },
+    'predefined-process': { type: 'predefinedProcess', width: 120, height: 60 },
+    'manual-input': { type: 'manualInput', width: 120, height: 60 },
+    delay: { type: 'delay', width: 100, height: 80 },
+    merge: { type: 'triangle', width: 100, height: 100 },
+    display: { type: 'display', width: 120, height: 80 },
+    'manual-operation': { type: 'manualOperation', width: 120, height: 60 },
     // UML
     class: { type: 'umlClass', width: 140, height: 120 },
     actor: { type: 'stickFigure', width: 60, height: 80 },
@@ -226,10 +478,27 @@ const templates = {
     queue: { type: 'queue', width: 120, height: 60 },
     // Shapes
     hexagon: { type: 'hexagon', width: 100, height: 100 },
+    pentagon: { type: 'pentagon', width: 100, height: 100 },
+    octagon: { type: 'octagon', width: 100, height: 100 },
     triangle: { type: 'triangle', width: 100, height: 100 },
+    trapezoid: { type: 'trapezoid', width: 120, height: 80 },
     star: { type: 'star', width: 100, height: 100 },
+    cross: { type: 'cross', width: 80, height: 80 },
+    'arrow-right': { type: 'arrowRight', width: 120, height: 60 },
+    'arrow-left': { type: 'arrowLeft', width: 120, height: 60 },
+    'speech-bubble': { type: 'speechBubble', width: 120, height: 90 },
+    heart: { type: 'heart', width: 100, height: 100 },
     note: { type: 'note', width: 120, height: 100 },
     cylinder: { type: 'cylinder', width: 100, height: 80 },
+    // Kubernetes
+    'k8s-pod': { type: 'k8sPod', width: 80, height: 80 },
+    'k8s-service': { type: 'k8sService', width: 100, height: 80 },
+    'k8s-deployment': { type: 'k8sDeployment', width: 100, height: 100 },
+    'k8s-configmap': { type: 'k8sConfigMap', width: 90, height: 70 },
+    'k8s-secret': { type: 'k8sSecret', width: 90, height: 70 },
+    'k8s-ingress': { type: 'k8sIngress', width: 120, height: 60 },
+    'k8s-volume': { type: 'k8sVolume', width: 80, height: 80 },
+    'k8s-namespace': { type: 'k8sNamespace', width: 140, height: 100 },
     // Network
     router: { type: 'router', width: 100, height: 80 },
     firewall: { type: 'firewall', width: 100, height: 100 },
@@ -1342,14 +1611,17 @@ document.querySelectorAll('.template-btn').forEach(btn => {
             const rawCenterY = viewportCenterWorldY - template.height / 2;
 
             // Apply grid snapping
-            const centerX = snapToGridValue(rawCenterX);
-            const centerY = snapToGridValue(rawCenterY);
+            let centerX = snapToGridValue(rawCenterX);
+            let centerY = snapToGridValue(rawCenterY);
+
+            // Find non-overlapping position
+            const pos = findNonOverlappingPosition(centerX, centerY, template.width, template.height);
 
             const element = {
                 ...template,
                 id: nextElementId++,
-                x: centerX,
-                y: centerY,
+                x: pos.x,
+                y: pos.y,
                 strokeColor: strokeColorInput.value,
                 fillColor: fillEnabledInput.checked ? fillColorInput.value : null,
                 lineStyle: currentLineStyle,
@@ -1361,38 +1633,7 @@ document.querySelectorAll('.template-btn').forEach(btn => {
             saveHistory();
             redraw();
 
-            // Auto-create text input for container template shapes
-            const containerTemplates = ['process', 'decision', 'data', 'terminator', 'document',
-                                       'class', 'package', 'server', 'database', 'cloud', 'lambda',
-                                       'storage', 'queue', 'hexagon', 'note', 'cylinder',
-                                       'router', 'firewall', 'switch'];
-            const awsTemplates = ['ec2', 'lambda', 'fargate', 'batch', 'ecs', 'eks',
-                                 's3', 'ebs', 'efs', 'glacier',
-                                 'rds', 'dynamodb', 'aurora', 'elasticache', 'neptune', 'documentdb',
-                                 'vpc', 'cloudfront', 'route53', 'api-gateway', 'elb',
-                                 'directconnect', 'transitgateway', 'natgateway',
-                                 'iam', 'cognito', 'secretsmanager', 'waf',
-                                 'codepipeline', 'codebuild', 'codedeploy', 'codecommit',
-                                 'sqs', 'sns', 'eventbridge', 'stepfunctions', 'appsync',
-                                 'athena', 'redshift', 'kinesis', 'emr', 'sagemaker', 'glue',
-                                 'cloudwatch'];
-
-            if (containerTemplates.includes(templateName)) {
-                const shapeCenterX = centerX + template.width / 2;
-                const shapeCenterY = centerY + template.height / 2;
-
-                setTimeout(() => {
-                    createTextInputForShape(shapeCenterX, shapeCenterY, element);
-                }, 10);
-            } else if (awsTemplates.includes(templateName)) {
-                // For AWS templates, position text below the icon
-                const shapeCenterX = centerX + template.width / 2;
-                const shapeBottomY = centerY + template.height + 20; // 20px below the box
-
-                setTimeout(() => {
-                    createTextInputBelowShape(shapeCenterX, shapeBottomY, element);
-                }, 10);
-            }
+            // No auto-text for templates - user can double-click to add text
         }
     });
 });
@@ -1405,6 +1646,13 @@ document.addEventListener('keydown', (e) => {
     }
 
     const key = e.key.toLowerCase();
+
+    // Prevent browser default for all our Ctrl/Cmd shortcuts early
+    if (e.ctrlKey || e.metaKey) {
+        if (['a', 'c', 'v', 'd', 'z', 'l'].includes(key)) {
+            e.preventDefault();
+        }
+    }
 
     // '?' key toggles help panel
     if (e.key === '?' || (e.shiftKey && e.key === '/')) {
@@ -1437,8 +1685,31 @@ document.addEventListener('keydown', (e) => {
         }
     }
 
+    // Quick create shortcuts (Shift + number keys)
+    // Note: e.key when Shift is pressed gives us '!', '@', etc. so we use e.code
+    if (e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const quickCreateMap = {
+            'Digit1': 'rectangle',
+            'Digit2': 'circle',
+            'Digit3': 'diamond',
+            'Digit4': 'parallelogram',
+            'Digit5': 'roundRect',
+            'Digit6': 'triangle',
+            'Digit7': 'hexagon',
+            'Digit8': 'line',
+            'Digit9': 'arrow',
+            'Digit0': 'text'
+        };
+
+        if (quickCreateMap[e.code]) {
+            quickCreateShape(quickCreateMap[e.code]);
+            e.preventDefault();
+            return;
+        }
+    }
+
     // 'c' key enters connect mode for drawing arrows between selected elements
-    if (key === 'c' && !e.ctrlKey && !e.metaKey) {
+    if (key === 'c' && !e.ctrlKey && !e.metaKey && !e.altKey) {
         isConnectMode = true;
         currentTool = 'select';
         isRectangleSelecting = false;
@@ -1461,22 +1732,20 @@ document.addEventListener('keydown', (e) => {
         return;
     }
 
-    const toolMap = {
-        'v': 'select', 'r': 'rectangle',
-        'l': 'line', 'a': 'arrow', 'p': 'pen', 't': 'text', 'h': 'hand'
-    };
-    if (toolMap[key] && !e.ctrlKey && !e.metaKey) {
-        // Handle rectangle dropdown button
-        if (key === 'r') {
-            rectangleBtn.click();
-        } else {
-            const btn = document.querySelector(`[data-tool="${toolMap[key]}"]`);
-            if (btn) btn.click();
-        }
+    // 'r' key with Shift toggles rulers (lowercase since we check shift)
+    if (key === 'r' && e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        showRulers = !showRulers;
+        redraw();
+        e.preventDefault();
+        return;
     }
+
+    // Modifier key shortcuts - check these BEFORE single-key shortcuts
+    // Undo (Cmd/Ctrl+Z)
     if ((e.ctrlKey || e.metaKey) && key === 'z') {
         undo();
         e.preventDefault();
+        return;
     }
 
     // Copy (Cmd/Ctrl+C)
@@ -1512,6 +1781,21 @@ document.addEventListener('keydown', (e) => {
         toggleLockSelection();
         e.preventDefault();
         return;
+    }
+
+    // Single-key tool shortcuts
+    const toolMap = {
+        'v': 'select', 'r': 'rectangle',
+        'l': 'line', 'a': 'arrow', 'p': 'pen', 't': 'text', 'h': 'hand'
+    };
+    if (toolMap[key] && !e.ctrlKey && !e.metaKey) {
+        // Handle rectangle dropdown button
+        if (key === 'r') {
+            rectangleBtn.click();
+        } else {
+            const btn = document.querySelector(`[data-tool="${toolMap[key]}"]`);
+            if (btn) btn.click();
+        }
     }
 
     // 'M' key duplicates the last created shape
@@ -1631,16 +1915,24 @@ document.addEventListener('keydown', (e) => {
 
     if (key === 'delete' || key === 'backspace') {
         if (selectedElements.length > 0) {
-            // Delete all selected elements
-            elements = elements.filter(el => !selectedElements.includes(el));
+            // Delete all selected elements and their child text
+            const deletedIds = new Set(selectedElements.map(el => el.id).filter(id => id));
+            elements = elements.filter(el =>
+                !selectedElements.includes(el) &&
+                !(el.type === 'text' && el.parentId && deletedIds.has(el.parentId))
+            );
             selectedElements = [];
             selectedElement = null;
             saveHistory();
             redraw();
             e.preventDefault();
         } else if (selectedElement) {
-            // Delete single selected element
-            elements = elements.filter(el => el !== selectedElement);
+            // Delete single selected element and its child text
+            const deletedId = selectedElement.id;
+            elements = elements.filter(el =>
+                el !== selectedElement &&
+                !(el.type === 'text' && el.parentId && el.parentId === deletedId)
+            );
             selectedElement = null;
             saveHistory();
             redraw();
@@ -1658,14 +1950,41 @@ function copySelection() {
 
     if (elementsToCopy.length === 0) return;
 
-    clipboard = elementsToCopy.map(el => ({...el}));
+    // Create a set of IDs for the elements being copied
+    const copiedIds = new Set(elementsToCopy.map(el => el.id).filter(id => id));
+
+    // Find all child text elements that belong to the copied elements
+    const childTextElements = elements.filter(el =>
+        el.type === 'text' && el.parentId && copiedIds.has(el.parentId)
+    );
+
+    // Copy both the selected elements and their child text
+    clipboard = [...elementsToCopy, ...childTextElements].map(el => ({...el}));
 }
 
 // Paste elements from clipboard
 function pasteSelection() {
     if (clipboard.length === 0) return;
 
-    const pasteOffset = snapToGrid ? gridSize : 20;
+    // Calculate centroid of clipboard elements
+    let sumX = 0, sumY = 0;
+    clipboard.forEach(el => {
+        sumX += el.x;
+        sumY += el.y;
+    });
+    const centroidX = sumX / clipboard.length;
+    const centroidY = sumY / clipboard.length;
+
+    // Calculate offset to paste at cursor location
+    let offsetX = lastMouseX - centroidX;
+    let offsetY = lastMouseY - centroidY;
+
+    // Apply grid snapping to the paste location if enabled
+    if (snapToGrid) {
+        offsetX = snapToGridValue(centroidX + offsetX) - centroidX;
+        offsetY = snapToGridValue(centroidY + offsetY) - centroidY;
+    }
+
     const idMap = new Map(); // Maps old IDs to new IDs for parent references
     const pastedElements = [];
 
@@ -1673,8 +1992,8 @@ function pasteSelection() {
         const newElement = {
             ...el,
             id: nextElementId++,
-            x: el.x + pasteOffset,
-            y: el.y + pasteOffset
+            x: el.x + offsetX,
+            y: el.y + offsetY
         };
 
         // Store ID mapping for text parent references
@@ -1710,11 +2029,22 @@ function duplicateSelection() {
 
     if (elementsToDuplicate.length === 0) return;
 
+    // Create a set of IDs for the elements being duplicated
+    const duplicatedIds = new Set(elementsToDuplicate.map(el => el.id).filter(id => id));
+
+    // Find all child text elements that belong to the duplicated elements
+    const childTextElements = elements.filter(el =>
+        el.type === 'text' && el.parentId && duplicatedIds.has(el.parentId)
+    );
+
+    // Combine selected elements and their child text
+    const allElementsToDuplicate = [...elementsToDuplicate, ...childTextElements];
+
     const duplicateOffset = snapToGrid ? gridSize : 20;
     const idMap = new Map();
     const duplicatedElements = [];
 
-    elementsToDuplicate.forEach(el => {
+    allElementsToDuplicate.forEach(el => {
         const newElement = {
             ...el,
             id: nextElementId++,
@@ -1751,9 +2081,13 @@ function duplicateSelection() {
 function selectAll() {
     selectedElements = elements.filter(el => !el.locked);
     selectedElement = null;
+
+    // Switch to select tool without triggering click event
     currentTool = 'select';
+    document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
     const selectBtn = document.querySelector('[data-tool="select"]');
-    if (selectBtn) selectBtn.click();
+    if (selectBtn) selectBtn.classList.add('active');
+
     redraw();
 }
 
@@ -1761,9 +2095,13 @@ function selectAll() {
 function selectByType(type) {
     selectedElements = elements.filter(el => el.type === type && !el.locked);
     selectedElement = null;
+
+    // Switch to select tool without triggering click event
     currentTool = 'select';
+    document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
     const selectBtn = document.querySelector('[data-tool="select"]');
-    if (selectBtn) selectBtn.click();
+    if (selectBtn) selectBtn.classList.add('active');
+
     redraw();
 }
 
@@ -1904,6 +2242,10 @@ function handleContextMenu(e) {
     const x = (e.clientX - rect.left - panOffsetX) / zoomLevel;
     const y = (e.clientY - rect.top - panOffsetY) / zoomLevel;
 
+    // Store mouse position for paste location
+    lastMouseX = x;
+    lastMouseY = y;
+
     // Check if right-clicked on an element
     const clickedElement = getElementAtPoint(x, y);
 
@@ -1958,11 +2300,21 @@ document.getElementById('contextDuplicate')?.addEventListener('click', () => {
 
 document.getElementById('contextDelete')?.addEventListener('click', () => {
     if (selectedElements.length > 0) {
-        elements = elements.filter(el => !selectedElements.includes(el));
+        // Delete all selected elements and their child text
+        const deletedIds = new Set(selectedElements.map(el => el.id).filter(id => id));
+        elements = elements.filter(el =>
+            !selectedElements.includes(el) &&
+            !(el.type === 'text' && el.parentId && deletedIds.has(el.parentId))
+        );
         selectedElements = [];
         selectedElement = null;
     } else if (selectedElement) {
-        elements = elements.filter(el => el !== selectedElement);
+        // Delete single selected element and its child text
+        const deletedId = selectedElement.id;
+        elements = elements.filter(el =>
+            el !== selectedElement &&
+            !(el.type === 'text' && el.parentId && el.parentId === deletedId)
+        );
         selectedElement = null;
     }
     saveHistory();
@@ -1975,7 +2327,18 @@ document.getElementById('contextBringFront')?.addEventListener('click', () => {
         ? selectedElements
         : (selectedElement ? [selectedElement] : []);
 
-    elementsToMove.forEach(el => {
+    // Get IDs of elements being moved
+    const movedIds = new Set(elementsToMove.map(el => el.id).filter(id => id));
+
+    // Find child text elements
+    const childTextElements = elements.filter(el =>
+        el.type === 'text' && el.parentId && movedIds.has(el.parentId)
+    );
+
+    // Move both parent elements and their child text
+    const allElementsToMove = [...elementsToMove, ...childTextElements];
+
+    allElementsToMove.forEach(el => {
         const index = elements.indexOf(el);
         if (index > -1) {
             elements.splice(index, 1);
@@ -1992,7 +2355,19 @@ document.getElementById('contextSendBack')?.addEventListener('click', () => {
         ? selectedElements
         : (selectedElement ? [selectedElement] : []);
 
-    elementsToMove.forEach(el => {
+    // Get IDs of elements being moved
+    const movedIds = new Set(elementsToMove.map(el => el.id).filter(id => id));
+
+    // Find child text elements
+    const childTextElements = elements.filter(el =>
+        el.type === 'text' && el.parentId && movedIds.has(el.parentId)
+    );
+
+    // Move both parent elements and their child text
+    const allElementsToMove = [...elementsToMove, ...childTextElements];
+
+    // Move to back in reverse order to maintain relative order
+    allElementsToMove.reverse().forEach(el => {
         const index = elements.indexOf(el);
         if (index > -1) {
             elements.splice(index, 1);
@@ -2163,6 +2538,51 @@ function handleWheel(e) {
 
 function handleMouseDown(e) {
     const rect = canvas.getBoundingClientRect();
+    const screenX = e.clientX - rect.left;
+    const screenY = e.clientY - rect.top;
+
+    // Handle ruler interactions (create guides by dragging from rulers)
+    if (showRulers && currentTool === 'select') {
+        // Check if clicking on vertical ruler (left side)
+        if (screenX < RULER_SIZE && screenY >= RULER_SIZE) {
+            isDraggingFromRuler = true;
+            draggingGuide = {
+                type: 'horizontal',
+                position: (screenY - panOffsetY) / zoomLevel
+            };
+            canvas.style.cursor = 'ns-resize';
+            return;
+        }
+        // Check if clicking on horizontal ruler (top side)
+        if (screenY < RULER_SIZE && screenX >= RULER_SIZE) {
+            isDraggingFromRuler = true;
+            draggingGuide = {
+                type: 'vertical',
+                position: (screenX - panOffsetX) / zoomLevel
+            };
+            canvas.style.cursor = 'ew-resize';
+            return;
+        }
+
+        // Check if clicking on existing guide to drag it
+        const canvasX = (screenX - panOffsetX) / zoomLevel;
+        const canvasY = (screenY - panOffsetY) / zoomLevel;
+        const threshold = 5 / zoomLevel;
+
+        for (let i = 0; i < guides.length; i++) {
+            const guide = guides[i];
+            if (guide.type === 'vertical' && Math.abs(guide.position - canvasX) < threshold) {
+                draggingGuide = guide;
+                canvas.style.cursor = 'ew-resize';
+                return;
+            }
+            if (guide.type === 'horizontal' && Math.abs(guide.position - canvasY) < threshold) {
+                draggingGuide = guide;
+                canvas.style.cursor = 'ns-resize';
+                return;
+            }
+        }
+    }
 
     // Handle panning with spacebar or hand tool (only in infinite canvas mode)
     if (canvasMode === 'infinite' && (spacePressed || currentTool === 'hand')) {
@@ -2264,6 +2684,22 @@ function handleMouseDown(e) {
 }
 
 function handleMouseMove(e) {
+    // Handle ruler guide dragging
+    if (draggingGuide) {
+        const rect = canvas.getBoundingClientRect();
+        const screenX = e.clientX - rect.left;
+        const screenY = e.clientY - rect.top;
+
+        if (draggingGuide.type === 'vertical') {
+            draggingGuide.position = (screenX - panOffsetX) / zoomLevel;
+        } else {
+            draggingGuide.position = (screenY - panOffsetY) / zoomLevel;
+        }
+
+        redraw();
+        return;
+    }
+
     // Handle panning
     if (isPanning) {
         panOffsetX = e.clientX - panStartX;
@@ -2275,6 +2711,10 @@ function handleMouseMove(e) {
     const rect = canvas.getBoundingClientRect();
     const currentX = (e.clientX - rect.left - panOffsetX) / zoomLevel;
     const currentY = (e.clientY - rect.top - panOffsetY) / zoomLevel;
+
+    // Track mouse position for paste location
+    lastMouseX = currentX;
+    lastMouseY = currentY;
 
     if (!isDrawing) {
         // Update cursor based on hover
@@ -2299,11 +2739,60 @@ function handleMouseMove(e) {
             redraw();
         } else if (dragMode === 'move') {
             // Apply grid snapping to current position if snap is enabled
-            const snappedCurrentX = snapToGrid ? snapToGridValue(currentX) : currentX;
-            const snappedCurrentY = snapToGrid ? snapToGridValue(currentY) : currentY;
+            let snappedCurrentX = snapToGrid ? snapToGridValue(currentX) : currentX;
+            let snappedCurrentY = snapToGrid ? snapToGridValue(currentY) : currentY;
 
-            const dx = snappedCurrentX - startX;
-            const dy = snappedCurrentY - startY;
+            let dx = snappedCurrentX - startX;
+            let dy = snappedCurrentY - startY;
+
+            // Get dragging elements
+            const draggingElements = selectedElements.length > 0 ? selectedElements : (selectedElement ? [selectedElement] : []);
+
+            // Apply smart guide snapping if not using grid snap
+            if (!snapToGrid && draggingElements.length > 0) {
+                const snapped = applySmartGuideSnapping(draggingElements, dx, dy);
+                dx = snapped.dx;
+                dy = snapped.dy;
+
+                // Find and store smart guides for visual feedback
+                // Temporarily move elements to check alignment
+                const originalPositions = [];
+                draggingElements.forEach(el => {
+                    if (el.type === 'pen') {
+                        originalPositions.push({ el, points: [...el.points] });
+                    } else {
+                        originalPositions.push({ el, x: el.x, y: el.y });
+                    }
+                });
+
+                // Temporarily apply movement to find guides
+                const selectedIds = new Set(draggingElements.map(el => el.id).filter(id => id));
+                draggingElements.forEach(el => {
+                    if (el.type === 'text' && el.parentId && selectedIds.has(el.parentId)) {
+                        return;
+                    }
+                    if (el.type === 'pen') {
+                        el.points = el.points.map(p => ({ x: p.x + dx, y: p.y + dy }));
+                    } else {
+                        el.x += dx;
+                        el.y += dy;
+                    }
+                });
+
+                smartGuides = findSmartGuides(draggingElements);
+
+                // Restore original positions
+                originalPositions.forEach(({ el, x, y, points }) => {
+                    if (points) {
+                        el.points = points;
+                    } else {
+                        el.x = x;
+                        el.y = y;
+                    }
+                });
+            } else {
+                smartGuides = [];
+            }
 
             // Move all selected elements
             if (selectedElements.length > 0) {
@@ -2322,8 +2811,8 @@ function handleMouseMove(e) {
                 moveElement(selectedElement, dx, dy);
             }
 
-            startX = snappedCurrentX;
-            startY = snappedCurrentY;
+            startX = snappedCurrentX + (dx - (snappedCurrentX - startX));
+            startY = snappedCurrentY + (dy - (snappedCurrentY - startY));
             redraw();
         } else if (dragMode === 'resize' && selectedElement) {
             resizeElement(selectedElement, currentX, currentY, resizeHandle);
@@ -2339,6 +2828,39 @@ function handleMouseMove(e) {
 }
 
 function handleMouseUp(e) {
+    // Handle ruler guide dragging end
+    if (draggingGuide) {
+        const rect = canvas.getBoundingClientRect();
+        const screenX = e.clientX - rect.left;
+        const screenY = e.clientY - rect.top;
+
+        // If dragging from ruler and releasing on canvas, add permanent guide
+        if (isDraggingFromRuler) {
+            // Check if releasing outside ruler area (on canvas)
+            const outsideRuler = (draggingGuide.type === 'vertical' && screenY >= RULER_SIZE) ||
+                                 (draggingGuide.type === 'horizontal' && screenX >= RULER_SIZE);
+
+            if (outsideRuler) {
+                guides.push(draggingGuide);
+            }
+            isDraggingFromRuler = false;
+        } else {
+            // Dragging existing guide - check if releasing back on ruler to delete
+            const onRuler = (draggingGuide.type === 'vertical' && screenY < RULER_SIZE) ||
+                           (draggingGuide.type === 'horizontal' && screenX < RULER_SIZE);
+
+            if (onRuler) {
+                // Remove guide
+                guides = guides.filter(g => g !== draggingGuide);
+            }
+        }
+
+        draggingGuide = null;
+        canvas.style.cursor = 'default';
+        redraw();
+        return;
+    }
+
     // Handle panning end
     if (isPanning) {
         isPanning = false;
@@ -2452,6 +2974,7 @@ function handleMouseUp(e) {
             elements.push(element);
             lastCreatedShape = element; // Track for 'M' key duplication
             duplicationDirection = null; // Reset direction for new shape
+            updateLastUsedStyle(currentTool); // Track style for this shape type
             saveHistory();
 
             // Auto-create text input for container shapes
@@ -2481,6 +3004,7 @@ function handleMouseUp(e) {
     isDrawing = false;
     dragMode = null;
     resizeHandle = null;
+    smartGuides = []; // Clear smart guides when drag ends
     redraw();
 }
 
@@ -4040,6 +4564,441 @@ function drawClock(x, y, w, h, strokeColor, fillColor) {
     ctx.fill();
 }
 
+// New flowchart shapes
+function drawPredefinedProcess(x, y, w, h, strokeColor, fillColor) {
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+    }
+    ctx.stroke();
+
+    // Vertical lines on left and right
+    const lineOffset = w * 0.1;
+    ctx.beginPath();
+    ctx.moveTo(x + lineOffset, y);
+    ctx.lineTo(x + lineOffset, y + h);
+    ctx.moveTo(x + w - lineOffset, y);
+    ctx.lineTo(x + w - lineOffset, y + h);
+    ctx.stroke();
+}
+
+function drawManualInput(x, y, w, h, strokeColor, fillColor) {
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    const slantHeight = h * 0.2;
+    ctx.moveTo(x, y + slantHeight);
+    ctx.lineTo(x + w, y);
+    ctx.lineTo(x + w, y + h);
+    ctx.lineTo(x, y + h);
+    ctx.closePath();
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+    }
+    ctx.stroke();
+}
+
+function drawDelay(x, y, w, h, strokeColor, fillColor) {
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+    const rx = w / 2;
+    const ry = h / 2;
+
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    // Left semi-circle
+    ctx.arc(cx - rx / 2, cy, ry, Math.PI / 2, -Math.PI / 2, false);
+    // Right semi-circle
+    ctx.arc(cx + rx / 2, cy, ry, -Math.PI / 2, Math.PI / 2, false);
+    ctx.closePath();
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+    }
+    ctx.stroke();
+}
+
+function drawDisplay(x, y, w, h, strokeColor, fillColor) {
+    const curve = w * 0.15;
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + w - curve, y);
+    ctx.quadraticCurveTo(x + w + curve, y + h / 2, x + w - curve, y + h);
+    ctx.lineTo(x, y + h);
+    ctx.closePath();
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+    }
+    ctx.stroke();
+}
+
+function drawManualOperation(x, y, w, h, strokeColor, fillColor) {
+    const slant = w * 0.15;
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x + slant, y);
+    ctx.lineTo(x + w - slant, y);
+    ctx.lineTo(x + w, y + h);
+    ctx.lineTo(x, y + h);
+    ctx.closePath();
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+    }
+    ctx.stroke();
+}
+
+// New geometric shapes
+function drawPentagon(x, y, w, h, strokeColor, fillColor) {
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+    const radius = Math.min(w, h) / 2;
+
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+        const angle = (i * 2 * Math.PI / 5) - Math.PI / 2;
+        const px = cx + radius * Math.cos(angle);
+        const py = cy + radius * Math.sin(angle);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+    }
+    ctx.stroke();
+}
+
+function drawOctagon(x, y, w, h, strokeColor, fillColor) {
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+    const radius = Math.min(w, h) / 2;
+
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i < 8; i++) {
+        const angle = (i * 2 * Math.PI / 8) - Math.PI / 2;
+        const px = cx + radius * Math.cos(angle);
+        const py = cy + radius * Math.sin(angle);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+    }
+    ctx.stroke();
+}
+
+function drawTrapezoid(x, y, w, h, strokeColor, fillColor) {
+    const inset = w * 0.2;
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x + inset, y);
+    ctx.lineTo(x + w - inset, y);
+    ctx.lineTo(x + w, y + h);
+    ctx.lineTo(x, y + h);
+    ctx.closePath();
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+    }
+    ctx.stroke();
+}
+
+function drawCross(x, y, w, h, strokeColor, fillColor) {
+    const thickness = Math.min(w, h) / 3;
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    // Vertical bar
+    ctx.rect(cx - thickness / 2, y, thickness, h);
+    // Horizontal bar
+    ctx.rect(x, cy - thickness / 2, w, thickness);
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+    }
+    ctx.stroke();
+}
+
+function drawArrowShape(x, y, w, h, strokeColor, fillColor, direction) {
+    const headWidth = w * 0.4;
+    const shaftHeight = h * 0.5;
+
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+
+    if (direction === 'right') {
+        // Arrow pointing right
+        ctx.moveTo(x, y + (h - shaftHeight) / 2);
+        ctx.lineTo(x + w - headWidth, y + (h - shaftHeight) / 2);
+        ctx.lineTo(x + w - headWidth, y);
+        ctx.lineTo(x + w, y + h / 2);
+        ctx.lineTo(x + w - headWidth, y + h);
+        ctx.lineTo(x + w - headWidth, y + (h + shaftHeight) / 2);
+        ctx.lineTo(x, y + (h + shaftHeight) / 2);
+    } else {
+        // Arrow pointing left
+        ctx.moveTo(x + w, y + (h - shaftHeight) / 2);
+        ctx.lineTo(x + headWidth, y + (h - shaftHeight) / 2);
+        ctx.lineTo(x + headWidth, y);
+        ctx.lineTo(x, y + h / 2);
+        ctx.lineTo(x + headWidth, y + h);
+        ctx.lineTo(x + headWidth, y + (h + shaftHeight) / 2);
+        ctx.lineTo(x + w, y + (h + shaftHeight) / 2);
+    }
+
+    ctx.closePath();
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+    }
+    ctx.stroke();
+}
+
+function drawSpeechBubble(x, y, w, h, strokeColor, fillColor) {
+    const tailWidth = w * 0.15;
+    const tailHeight = h * 0.2;
+    const radius = 10;
+
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+
+    // Main bubble with rounded corners
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + w - radius, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+    ctx.lineTo(x + w, y + h - tailHeight - radius);
+    ctx.quadraticCurveTo(x + w, y + h - tailHeight, x + w - radius, y + h - tailHeight);
+
+    // Tail
+    ctx.lineTo(x + w * 0.3 + tailWidth, y + h - tailHeight);
+    ctx.lineTo(x + w * 0.2, y + h);
+    ctx.lineTo(x + w * 0.3, y + h - tailHeight);
+
+    ctx.lineTo(x + radius, y + h - tailHeight);
+    ctx.quadraticCurveTo(x, y + h - tailHeight, x, y + h - tailHeight - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+    }
+    ctx.stroke();
+}
+
+function drawHeart(x, y, w, h, strokeColor, fillColor) {
+    const cx = x + w / 2;
+    const top = y + h * 0.3;
+
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+
+    // Top left curve
+    ctx.moveTo(cx, top);
+    ctx.bezierCurveTo(cx, top - h * 0.3, x, top - h * 0.3, x, top + h * 0.1);
+    ctx.bezierCurveTo(x, top + h * 0.3, x, top + h * 0.4, cx, y + h);
+
+    // Top right curve
+    ctx.bezierCurveTo(x + w, top + h * 0.4, x + w, top + h * 0.3, x + w, top + h * 0.1);
+    ctx.bezierCurveTo(x + w, top - h * 0.3, cx, top - h * 0.3, cx, top);
+
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+    }
+    ctx.stroke();
+}
+
+// Kubernetes shapes
+function drawK8sPod(x, y, w, h, strokeColor, fillColor) {
+    // Draw as a cube/box
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+    }
+    ctx.stroke();
+
+    // Add "K8s" text
+    ctx.fillStyle = strokeColor;
+    ctx.font = 'bold 12px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Pod', x + w / 2, y + h / 2);
+}
+
+function drawK8sService(x, y, w, h, strokeColor, fillColor) {
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+    const radius = Math.min(w, h) / 2;
+
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+    }
+    ctx.stroke();
+
+    // Add "Svc" text
+    ctx.fillStyle = strokeColor;
+    ctx.font = 'bold 11px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Svc', cx, cy);
+}
+
+function drawK8sDeployment(x, y, w, h, strokeColor, fillColor) {
+    // Draw multiple overlapping rectangles
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+
+    const offset = 5;
+    for (let i = 2; i >= 0; i--) {
+        ctx.beginPath();
+        ctx.rect(x + i * offset, y + i * offset, w - i * offset * 2, h - i * offset * 2);
+        if (i === 0 && fillColor) {
+            ctx.fillStyle = fillColor;
+            ctx.fill();
+        }
+        ctx.stroke();
+    }
+}
+
+function drawK8sConfigMap(x, y, w, h, strokeColor, fillColor) {
+    // Draw as a document/file icon
+    const foldSize = w * 0.2;
+
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + w - foldSize, y);
+    ctx.lineTo(x + w, y + foldSize);
+    ctx.lineTo(x + w, y + h);
+    ctx.lineTo(x, y + h);
+    ctx.closePath();
+
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+    }
+    ctx.stroke();
+
+    // Fold corner
+    ctx.beginPath();
+    ctx.moveTo(x + w - foldSize, y);
+    ctx.lineTo(x + w - foldSize, y + foldSize);
+    ctx.lineTo(x + w, y + foldSize);
+    ctx.stroke();
+}
+
+function drawK8sSecret(x, y, w, h, strokeColor, fillColor) {
+    // Draw as a lock/key icon
+    const cx = x + w / 2;
+    const lockHeight = h * 0.6;
+    const shackleRadius = w * 0.25;
+
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+
+    // Shackle
+    ctx.beginPath();
+    ctx.arc(cx, y + shackleRadius, shackleRadius, Math.PI, 0, false);
+    ctx.stroke();
+
+    // Lock body
+    ctx.beginPath();
+    ctx.rect(x + w * 0.2, y + h - lockHeight, w * 0.6, lockHeight);
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+    }
+    ctx.stroke();
+}
+
+function drawK8sIngress(x, y, w, h, strokeColor, fillColor) {
+    // Draw as an arrow entering a box
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.rect(x + w * 0.3, y, w * 0.7, h);
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+    }
+    ctx.stroke();
+
+    // Arrow
+    const arrowY = y + h / 2;
+    ctx.beginPath();
+    ctx.moveTo(x, arrowY);
+    ctx.lineTo(x + w * 0.3, arrowY);
+    ctx.moveTo(x + w * 0.2, arrowY - 5);
+    ctx.lineTo(x + w * 0.3, arrowY);
+    ctx.lineTo(x + w * 0.2, arrowY + 5);
+    ctx.stroke();
+}
+
+function drawK8sVolume(x, y, w, h, strokeColor, fillColor) {
+    // Draw as a cylinder
+    drawCylinder(x, y, w, h, strokeColor, fillColor);
+}
+
+function drawK8sNamespace(x, y, w, h, strokeColor, fillColor) {
+    // Draw as a folder
+    const tabHeight = h * 0.25;
+    const tabWidth = w * 0.4;
+
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, y + tabHeight);
+    ctx.lineTo(x, y + h);
+    ctx.lineTo(x + w, y + h);
+    ctx.lineTo(x + w, y + tabHeight);
+    ctx.lineTo(x + tabWidth, y + tabHeight);
+    ctx.lineTo(x + tabWidth, y);
+    ctx.lineTo(x, y);
+    ctx.lineTo(x, y + tabHeight);
+
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+    }
+    ctx.stroke();
+}
+
 // Generic AWS Service Drawing Function
 function drawAWSService(x, y, w, h, strokeColor, fillColor, serviceName, fallbackDrawFn) {
     // Draw background
@@ -4634,6 +5593,93 @@ function drawElement(element) {
             drawClock(element.x, element.y, element.width, element.height,
                      element.strokeColor, element.fillColor);
             break;
+        // New flowchart shapes
+        case 'predefinedProcess':
+            drawPredefinedProcess(element.x, element.y, element.width, element.height,
+                                 element.strokeColor, element.fillColor);
+            break;
+        case 'manualInput':
+            drawManualInput(element.x, element.y, element.width, element.height,
+                           element.strokeColor, element.fillColor);
+            break;
+        case 'delay':
+            drawDelay(element.x, element.y, element.width, element.height,
+                     element.strokeColor, element.fillColor);
+            break;
+        case 'display':
+            drawDisplay(element.x, element.y, element.width, element.height,
+                       element.strokeColor, element.fillColor);
+            break;
+        case 'manualOperation':
+            drawManualOperation(element.x, element.y, element.width, element.height,
+                               element.strokeColor, element.fillColor);
+            break;
+        // New geometric shapes
+        case 'pentagon':
+            drawPentagon(element.x, element.y, element.width, element.height,
+                        element.strokeColor, element.fillColor);
+            break;
+        case 'octagon':
+            drawOctagon(element.x, element.y, element.width, element.height,
+                       element.strokeColor, element.fillColor);
+            break;
+        case 'trapezoid':
+            drawTrapezoid(element.x, element.y, element.width, element.height,
+                         element.strokeColor, element.fillColor);
+            break;
+        case 'cross':
+            drawCross(element.x, element.y, element.width, element.height,
+                     element.strokeColor, element.fillColor);
+            break;
+        case 'arrowRight':
+            drawArrowShape(element.x, element.y, element.width, element.height,
+                          element.strokeColor, element.fillColor, 'right');
+            break;
+        case 'arrowLeft':
+            drawArrowShape(element.x, element.y, element.width, element.height,
+                          element.strokeColor, element.fillColor, 'left');
+            break;
+        case 'speechBubble':
+            drawSpeechBubble(element.x, element.y, element.width, element.height,
+                            element.strokeColor, element.fillColor);
+            break;
+        case 'heart':
+            drawHeart(element.x, element.y, element.width, element.height,
+                     element.strokeColor, element.fillColor);
+            break;
+        // Kubernetes shapes
+        case 'k8sPod':
+            drawK8sPod(element.x, element.y, element.width, element.height,
+                      element.strokeColor, element.fillColor);
+            break;
+        case 'k8sService':
+            drawK8sService(element.x, element.y, element.width, element.height,
+                          element.strokeColor, element.fillColor);
+            break;
+        case 'k8sDeployment':
+            drawK8sDeployment(element.x, element.y, element.width, element.height,
+                             element.strokeColor, element.fillColor);
+            break;
+        case 'k8sConfigMap':
+            drawK8sConfigMap(element.x, element.y, element.width, element.height,
+                            element.strokeColor, element.fillColor);
+            break;
+        case 'k8sSecret':
+            drawK8sSecret(element.x, element.y, element.width, element.height,
+                         element.strokeColor, element.fillColor);
+            break;
+        case 'k8sIngress':
+            drawK8sIngress(element.x, element.y, element.width, element.height,
+                          element.strokeColor, element.fillColor);
+            break;
+        case 'k8sVolume':
+            drawK8sVolume(element.x, element.y, element.width, element.height,
+                         element.strokeColor, element.fillColor);
+            break;
+        case 'k8sNamespace':
+            drawK8sNamespace(element.x, element.y, element.width, element.height,
+                            element.strokeColor, element.fillColor);
+            break;
     }
 }
 
@@ -5054,6 +6100,111 @@ function snapToGridValue(value) {
     return Math.round(value / gridSize) * gridSize;
 }
 
+function drawRulers() {
+    // Save current transformation state
+    ctx.save();
+    // Reset to screen coordinates (not canvas coordinates)
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+    const rulerColor = '#e0e0e0';
+    const textColor = '#666';
+    const tickColor = '#999';
+
+    // Draw horizontal ruler (top) - starts after the vertical ruler
+    ctx.fillStyle = rulerColor;
+    ctx.fillRect(RULER_SIZE, 0, canvas.width - RULER_SIZE, RULER_SIZE);
+
+    // Draw vertical ruler (left) - flush with left edge
+    ctx.fillRect(0, RULER_SIZE, RULER_SIZE, canvas.height - RULER_SIZE);
+
+    // Draw corner square
+    ctx.fillStyle = '#d0d0d0';
+    ctx.fillRect(0, 0, RULER_SIZE, RULER_SIZE);
+
+    // Draw ruler markings
+    ctx.strokeStyle = tickColor;
+    ctx.fillStyle = textColor;
+    ctx.font = '9px Arial';
+    ctx.lineWidth = 1;
+
+    const tickSpacing = 50; // Pixels between major ticks
+    const minorTickSpacing = 10;
+
+    // Horizontal ruler ticks
+    for (let i = RULER_SIZE; i < canvas.width; i += minorTickSpacing) {
+        const screenX = i;
+        const canvasX = (screenX - panOffsetX) / zoomLevel;
+
+        if ((i - RULER_SIZE) % tickSpacing === 0) {
+            // Major tick
+            ctx.beginPath();
+            ctx.moveTo(screenX, RULER_SIZE - 8);
+            ctx.lineTo(screenX, RULER_SIZE);
+            ctx.stroke();
+
+            // Label inside ruler
+            ctx.fillText(Math.round(canvasX).toString(), screenX + 2, 10);
+        } else {
+            // Minor tick
+            ctx.beginPath();
+            ctx.moveTo(screenX, RULER_SIZE - 4);
+            ctx.lineTo(screenX, RULER_SIZE);
+            ctx.stroke();
+        }
+    }
+
+    // Vertical ruler ticks
+    for (let i = RULER_SIZE; i < canvas.height; i += minorTickSpacing) {
+        const screenY = i;
+        const canvasY = (screenY - panOffsetY) / zoomLevel;
+
+        if ((i - RULER_SIZE) % tickSpacing === 0) {
+            // Major tick - towards canvas (right side of ruler)
+            ctx.beginPath();
+            ctx.moveTo(RULER_SIZE - 8, screenY);
+            ctx.lineTo(RULER_SIZE, screenY);
+            ctx.stroke();
+
+            // Label (rotated) inside ruler - positioned like horizontal ruler
+            ctx.save();
+            ctx.translate(10, screenY + 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText(Math.round(canvasY).toString(), 0, 0);
+            ctx.restore();
+        } else {
+            // Minor tick
+            ctx.beginPath();
+            ctx.moveTo(RULER_SIZE - 4, screenY);
+            ctx.lineTo(RULER_SIZE, screenY);
+            ctx.stroke();
+        }
+    }
+
+    ctx.restore();
+}
+
+function drawGuides() {
+    ctx.strokeStyle = '#00bcd4';
+    ctx.lineWidth = 1 / zoomLevel;
+    ctx.setLineDash([5 / zoomLevel, 5 / zoomLevel]);
+
+    guides.forEach(guide => {
+        if (guide.type === 'vertical') {
+            ctx.beginPath();
+            ctx.moveTo(guide.position, -10000);
+            ctx.lineTo(guide.position, 10000);
+            ctx.stroke();
+        } else if (guide.type === 'horizontal') {
+            ctx.beginPath();
+            ctx.moveTo(-10000, guide.position);
+            ctx.lineTo(10000, guide.position);
+            ctx.stroke();
+        }
+    });
+
+    ctx.setLineDash([]);
+}
+
 function redraw() {
     // Fill background
     ctx.fillStyle = backgroundColor;
@@ -5136,8 +6287,62 @@ function redraw() {
         }
     }
 
+    // Draw guides (from rulers)
+    if (guides.length > 0) {
+        drawGuides();
+    }
+
+    // Draw dragging guide (while being created or moved)
+    if (draggingGuide) {
+        ctx.strokeStyle = '#00bcd4';
+        ctx.lineWidth = 2 / zoomLevel;
+        ctx.setLineDash([5 / zoomLevel, 5 / zoomLevel]);
+
+        if (draggingGuide.type === 'vertical') {
+            ctx.beginPath();
+            ctx.moveTo(draggingGuide.position, -10000);
+            ctx.lineTo(draggingGuide.position, 10000);
+            ctx.stroke();
+        } else if (draggingGuide.type === 'horizontal') {
+            ctx.beginPath();
+            ctx.moveTo(-10000, draggingGuide.position);
+            ctx.lineTo(10000, draggingGuide.position);
+            ctx.stroke();
+        }
+
+        ctx.setLineDash([]);
+    }
+
+    // Draw smart guides
+    if (smartGuides.length > 0) {
+        ctx.strokeStyle = '#ff4081';
+        ctx.lineWidth = 1 / zoomLevel;
+        ctx.setLineDash([]);
+
+        smartGuides.forEach(guide => {
+            if (guide.type === 'vertical') {
+                // Draw vertical line
+                ctx.beginPath();
+                ctx.moveTo(guide.position, -10000);
+                ctx.lineTo(guide.position, 10000);
+                ctx.stroke();
+            } else if (guide.type === 'horizontal') {
+                // Draw horizontal line
+                ctx.beginPath();
+                ctx.moveTo(-10000, guide.position);
+                ctx.lineTo(10000, guide.position);
+                ctx.stroke();
+            }
+        });
+    }
+
     // Restore context
     ctx.restore();
+
+    // Draw rulers (after restore, in screen coordinates)
+    if (showRulers) {
+        drawRulers();
+    }
 }
 
 // Selection and manipulation
@@ -5219,6 +6424,188 @@ function getResizeHandle(x, y) {
         }
     }
     return null;
+}
+
+// Find smart guides for alignment when dragging elements
+function findSmartGuides(draggingElements) {
+    const guides = [];
+    const draggingIds = new Set(draggingElements.map(el => el.id).filter(id => id));
+
+    // Get bounds of all dragging elements
+    const draggingBounds = [];
+    draggingElements.forEach(el => {
+        if (el.type === 'text' && el.parentId && draggingIds.has(el.parentId)) {
+            // Skip child text - it moves with parent
+            return;
+        }
+        const bounds = getElementBounds(el);
+        if (bounds) {
+            draggingBounds.push({
+                ...bounds,
+                centerX: bounds.x + bounds.width / 2,
+                centerY: bounds.y + bounds.height / 2,
+                right: bounds.x + bounds.width,
+                bottom: bounds.y + bounds.height
+            });
+        }
+    });
+
+    if (draggingBounds.length === 0) return guides;
+
+    // Get bounds of all other (reference) elements
+    const referenceElements = elements.filter(el => {
+        // Skip dragging elements and their children
+        if (draggingIds.has(el.id)) return false;
+        if (el.type === 'text' && el.parentId && draggingIds.has(el.parentId)) return false;
+        // Skip locked elements
+        if (el.locked) return false;
+        return true;
+    });
+
+    // Check each dragging element against each reference element
+    draggingBounds.forEach(dragBounds => {
+        referenceElements.forEach(refEl => {
+            const refBounds = getElementBounds(refEl);
+            if (!refBounds) return;
+
+            const refCenterX = refBounds.x + refBounds.width / 2;
+            const refCenterY = refBounds.y + refBounds.height / 2;
+            const refRight = refBounds.x + refBounds.width;
+            const refBottom = refBounds.y + refBounds.height;
+
+            // Check vertical alignments
+            const verticalAlignments = [
+                { pos: refBounds.x, dragPos: dragBounds.x, label: 'left' },
+                { pos: refCenterX, dragPos: dragBounds.centerX, label: 'center' },
+                { pos: refRight, dragPos: dragBounds.right, label: 'right' }
+            ];
+
+            verticalAlignments.forEach(align => {
+                if (Math.abs(align.pos - align.dragPos) < SNAP_THRESHOLD) {
+                    guides.push({
+                        type: 'vertical',
+                        position: align.pos,
+                        label: align.label
+                    });
+                }
+            });
+
+            // Check horizontal alignments
+            const horizontalAlignments = [
+                { pos: refBounds.y, dragPos: dragBounds.y, label: 'top' },
+                { pos: refCenterY, dragPos: dragBounds.centerY, label: 'middle' },
+                { pos: refBottom, dragPos: dragBounds.bottom, label: 'bottom' }
+            ];
+
+            horizontalAlignments.forEach(align => {
+                if (Math.abs(align.pos - align.dragPos) < SNAP_THRESHOLD) {
+                    guides.push({
+                        type: 'horizontal',
+                        position: align.pos,
+                        label: align.label
+                    });
+                }
+            });
+        });
+    });
+
+    // Remove duplicate guides (same type and position)
+    const uniqueGuides = [];
+    const seen = new Set();
+    guides.forEach(guide => {
+        const key = `${guide.type}-${guide.position}`;
+        if (!seen.has(key)) {
+            seen.add(key);
+            uniqueGuides.push(guide);
+        }
+    });
+
+    return uniqueGuides;
+}
+
+// Apply smart guide snapping to drag delta
+function applySmartGuideSnapping(draggingElements, dx, dy) {
+    const draggingIds = new Set(draggingElements.map(el => el.id).filter(id => id));
+
+    // Get bounds of first dragging element (primary element for snapping)
+    const primaryEl = draggingElements.find(el =>
+        !(el.type === 'text' && el.parentId && draggingIds.has(el.parentId))
+    );
+
+    if (!primaryEl) return { dx, dy };
+
+    const bounds = getElementBounds(primaryEl);
+    if (!bounds) return { dx, dy };
+
+    const newBounds = {
+        x: bounds.x + dx,
+        y: bounds.y + dy,
+        width: bounds.width,
+        height: bounds.height,
+        centerX: bounds.x + dx + bounds.width / 2,
+        centerY: bounds.y + dy + bounds.height / 2,
+        right: bounds.x + dx + bounds.width,
+        bottom: bounds.y + dy + bounds.height
+    };
+
+    // Get reference elements
+    const referenceElements = elements.filter(el => {
+        if (draggingIds.has(el.id)) return false;
+        if (el.type === 'text' && el.parentId && draggingIds.has(el.parentId)) return false;
+        if (el.locked) return false;
+        return true;
+    });
+
+    let snapDx = 0;
+    let snapDy = 0;
+    let minDistX = SNAP_THRESHOLD;
+    let minDistY = SNAP_THRESHOLD;
+
+    // Find closest snap points
+    referenceElements.forEach(refEl => {
+        const refBounds = getElementBounds(refEl);
+        if (!refBounds) return;
+
+        const refCenterX = refBounds.x + refBounds.width / 2;
+        const refCenterY = refBounds.y + refBounds.height / 2;
+        const refRight = refBounds.x + refBounds.width;
+        const refBottom = refBounds.y + refBounds.height;
+
+        // Check vertical snapping (X alignment)
+        const verticalChecks = [
+            { ref: refBounds.x, drag: newBounds.x },
+            { ref: refCenterX, drag: newBounds.centerX },
+            { ref: refRight, drag: newBounds.right }
+        ];
+
+        verticalChecks.forEach(check => {
+            const dist = Math.abs(check.ref - check.drag);
+            if (dist < minDistX) {
+                minDistX = dist;
+                snapDx = check.ref - check.drag;
+            }
+        });
+
+        // Check horizontal snapping (Y alignment)
+        const horizontalChecks = [
+            { ref: refBounds.y, drag: newBounds.y },
+            { ref: refCenterY, drag: newBounds.centerY },
+            { ref: refBottom, drag: newBounds.bottom }
+        ];
+
+        horizontalChecks.forEach(check => {
+            const dist = Math.abs(check.ref - check.drag);
+            if (dist < minDistY) {
+                minDistY = dist;
+                snapDy = check.ref - check.drag;
+            }
+        });
+    });
+
+    return {
+        dx: dx + snapDx,
+        dy: dy + snapDy
+    };
 }
 
 function moveElement(element, dx, dy) {
@@ -6126,10 +7513,27 @@ function populateChangelog() {
 
     const changelog = {
         '2025-10-05': [
+            'Quick create shapes with last used style (Shift+1-9/0) - persists across sessions',
+            'Smart positioning: new shapes automatically offset to avoid overlapping existing objects',
+            'Toolbar reorganized into labeled, color-coded groups (File, Tools, Style, View, Arrange, History, Export)',
+            'Help panel reorganized into compact 5-column layout to avoid scrolling',
+            'Keyboard shortcuts now use Ctrl/⌘ notation for cross-platform compatibility',
+            'Removed automatic text from template shapes (use double-click to add text)',
+            'Expanded shape library: 6 new flowchart shapes, 8 new geometric shapes, 8 Kubernetes shapes',
+            'Flowchart: Predefined Process, Manual Input, Delay, Display, Manual Operation',
+            'Shapes: Pentagon, Octagon, Trapezoid, Cross, Arrow Left/Right, Speech Bubble, Heart',
+            'Kubernetes: Pod, Service, Deployment, ConfigMap, Secret, Ingress, Volume, Namespace',
+            'Associated text now moves with shapes for all operations (copy/paste/duplicate/delete/z-order)',
+            'Copy/paste/duplicate now retains associated text with shapes',
+            'Delete now removes associated text when deleting shapes',
+            'Bring to front/send to back now moves associated text with shapes',
+            'Rulers and draggable guides (Shift+R to toggle rulers)',
+            'Smart guides for alignment hints when dragging elements',
             'Right-click context menu with Copy/Paste/Delete/Z-order/Lock',
             'Double-click empty canvas to create rectangle with text',
             'Zoom indicator display (bottom-right corner)',
             'Multi-line text editing with wrapping (Shift+Enter for line breaks)',
+            'Paste now pastes at cursor location instead of fixed offset',
             'Grid toggle (G) and snap to grid (Shift+G)',
             'Copy/paste/duplicate (Cmd+C/V/D) with parent-child preservation',
             'Alignment tools (left/center/right/top/middle/bottom)',
@@ -6402,6 +7806,9 @@ window.addEventListener('load', () => {
         }, 1500);
     }
 });
+
+// Load last used styles from localStorage
+loadLastUsedStyles();
 
 // Ensure all elements have IDs (for backward compatibility)
 ensureElementIds();

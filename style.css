@@ -109,6 +109,99 @@ body {
     flex-shrink: 0;
 }
 
+.toolbar-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 2px;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 6px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    position: relative;
+}
+
+.toolbar-group-label {
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #666;
+    padding: 2px 6px;
+    user-select: none;
+    border-radius: 4px;
+}
+
+.toolbar-group-content {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 4px;
+}
+
+/* Color coding by group type */
+.toolbar-group[data-group="file"] {
+    background: rgba(139, 92, 246, 0.08);
+    border-color: rgba(139, 92, 246, 0.15);
+}
+
+.toolbar-group[data-group="file"] .toolbar-group-label {
+    color: #7c3aed;
+}
+
+.toolbar-group[data-group="tools"] {
+    background: rgba(59, 130, 246, 0.08);
+    border-color: rgba(59, 130, 246, 0.15);
+}
+
+.toolbar-group[data-group="tools"] .toolbar-group-label {
+    color: #2563eb;
+}
+
+.toolbar-group[data-group="style"] {
+    background: rgba(236, 72, 153, 0.08);
+    border-color: rgba(236, 72, 153, 0.15);
+}
+
+.toolbar-group[data-group="style"] .toolbar-group-label {
+    color: #db2777;
+}
+
+.toolbar-group[data-group="view"] {
+    background: rgba(34, 197, 94, 0.08);
+    border-color: rgba(34, 197, 94, 0.15);
+}
+
+.toolbar-group[data-group="view"] .toolbar-group-label {
+    color: #16a34a;
+}
+
+.toolbar-group[data-group="arrange"] {
+    background: rgba(249, 115, 22, 0.08);
+    border-color: rgba(249, 115, 22, 0.15);
+}
+
+.toolbar-group[data-group="arrange"] .toolbar-group-label {
+    color: #ea580c;
+}
+
+.toolbar-group[data-group="history"] {
+    background: rgba(99, 102, 241, 0.08);
+    border-color: rgba(99, 102, 241, 0.15);
+}
+
+.toolbar-group[data-group="history"] .toolbar-group-label {
+    color: #6366f1;
+}
+
+.toolbar-group[data-group="file-ops"] {
+    background: rgba(14, 165, 233, 0.08);
+    border-color: rgba(14, 165, 233, 0.15);
+}
+
+.toolbar-group[data-group="file-ops"] .toolbar-group-label {
+    color: #0284c7;
+}
+
 .tool-btn, .action-btn {
     padding: 6px 8px;
     border: 1px solid #d0d0d0;
@@ -1091,7 +1184,7 @@ label span {
     background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
     border-radius: 16px;
     padding: 40px;
-    max-width: 700px;
+    max-width: 1200px;
     width: 90%;
     max-height: 80vh;
     overflow-y: auto;
@@ -1126,9 +1219,28 @@ label span {
     margin-bottom: 30px;
 }
 
+.help-grid-compact {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(180px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+@media (max-width: 1024px) {
+    .help-grid-compact {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .help-grid-compact {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
 .help-section h3 {
-    margin: 0 0 16px 0;
-    font-size: 16px;
+    margin: 0 0 12px 0;
+    font-size: 13px;
     font-weight: 600;
     color: #555;
     text-transform: uppercase;
@@ -1138,10 +1250,10 @@ label span {
 .shortcut {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 12px;
-    padding: 8px;
-    border-radius: 6px;
+    gap: 8px;
+    margin-bottom: 6px;
+    padding: 4px 6px;
+    border-radius: 4px;
     transition: background 0.2s;
 }
 
@@ -1152,19 +1264,19 @@ label span {
 .shortcut kbd {
     background: linear-gradient(180deg, #ffffff 0%, #f0f0f0 100%);
     border: 1px solid #d0d0d0;
-    border-radius: 4px;
-    padding: 4px 8px;
+    border-radius: 3px;
+    padding: 3px 6px;
     font-family: 'Lucida Grande', 'Lucida Sans Unicode', 'Lucida Sans', sans-serif;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
     color: #333;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    min-width: 28px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    min-width: 24px;
     text-align: center;
 }
 
 .shortcut span {
-    font-size: 14px;
+    font-size: 12px;
     color: #666;
     flex: 1;
 }
