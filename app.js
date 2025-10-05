@@ -1119,6 +1119,12 @@ document.addEventListener('click', (e) => {
     if (selectionBtn && selectionDropdown && !selectionBtn.contains(e.target) && !selectionDropdown.contains(e.target)) {
         selectionDropdown.classList.remove('active');
     }
+    if (patternBtn && patternDropdown && !patternBtn.contains(e.target) && !patternDropdown.contains(e.target)) {
+        patternDropdown.classList.remove('active');
+    }
+    if (themeBtn && themeDropdown && !themeBtn.contains(e.target) && !themeDropdown.contains(e.target)) {
+        themeDropdown.classList.remove('active');
+    }
 });
 
 // Shape selection with preset styling
@@ -1860,6 +1866,107 @@ if (zoomBtn && zoomDropdown) {
     document.getElementById('zoom200')?.addEventListener('click', () => setZoom(200));
 }
 
+// Background pattern controls
+let currentBackgroundPattern = 'line-grid'; // default
+const patternBtn = document.getElementById('patternBtn');
+const patternDropdown = document.getElementById('patternDropdown');
+
+if (patternBtn && patternDropdown) {
+    patternBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        patternDropdown.classList.toggle('active');
+
+        // Close other dropdowns
+        if (rectangleDropdown) rectangleDropdown.classList.remove('active');
+        if (circleDropdown) circleDropdown.classList.remove('active');
+        if (shapeDropdown) shapeDropdown.classList.remove('active');
+        if (presetDropdown) presetDropdown.classList.remove('active');
+        fontDropdown.classList.remove('active');
+        lineOptionsDropdown.classList.remove('active');
+        const logoDropdown = document.getElementById('logoDropdown');
+        if (logoDropdown) logoDropdown.classList.remove('active');
+        const alignDropdown = document.getElementById('alignDropdown');
+        if (alignDropdown) alignDropdown.classList.remove('active');
+        const zoomDropdown = document.getElementById('zoomDropdown');
+        if (zoomDropdown) zoomDropdown.classList.remove('active');
+        const iconDropdown = document.getElementById('iconDropdown');
+        if (iconDropdown) iconDropdown.classList.remove('active');
+        const selectionDropdown = document.getElementById('selectionDropdown');
+        if (selectionDropdown) selectionDropdown.classList.remove('active');
+    });
+
+    // Event listeners for pattern buttons
+    document.querySelectorAll('.pattern-option-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const pattern = btn.dataset.pattern;
+            currentBackgroundPattern = pattern;
+            patternDropdown.classList.remove('active');
+            redraw();
+        });
+    });
+}
+
+// Color theme controls
+const colorThemes = {
+    professional: { stroke: '#2C3E50', fill: '#ECF0F1' },
+    ocean: { stroke: '#1e3a8a', fill: '#bfdbfe' },
+    sunset: { stroke: '#dc2626', fill: '#fef3c7' },
+    forest: { stroke: '#166534', fill: '#d1fae5' },
+    lavender: { stroke: '#7c3aed', fill: '#f3e8ff' },
+    slate: { stroke: '#475569', fill: '#f1f5f9' }
+};
+
+const themeBtn = document.getElementById('themeBtn');
+const themeDropdown = document.getElementById('themeDropdown');
+
+if (themeBtn && themeDropdown) {
+    themeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        themeDropdown.classList.toggle('active');
+
+        // Close other dropdowns
+        if (rectangleDropdown) rectangleDropdown.classList.remove('active');
+        if (circleDropdown) circleDropdown.classList.remove('active');
+        if (shapeDropdown) shapeDropdown.classList.remove('active');
+        if (presetDropdown) presetDropdown.classList.remove('active');
+        fontDropdown.classList.remove('active');
+        lineOptionsDropdown.classList.remove('active');
+        const logoDropdown = document.getElementById('logoDropdown');
+        if (logoDropdown) logoDropdown.classList.remove('active');
+        const alignDropdown = document.getElementById('alignDropdown');
+        if (alignDropdown) alignDropdown.classList.remove('active');
+        const zoomDropdown = document.getElementById('zoomDropdown');
+        if (zoomDropdown) zoomDropdown.classList.remove('active');
+        const iconDropdown = document.getElementById('iconDropdown');
+        if (iconDropdown) iconDropdown.classList.remove('active');
+        const selectionDropdown = document.getElementById('selectionDropdown');
+        if (selectionDropdown) selectionDropdown.classList.remove('active');
+        const patternDropdown = document.getElementById('patternDropdown');
+        if (patternDropdown) patternDropdown.classList.remove('active');
+    });
+
+    // Event listeners for theme buttons
+    document.querySelectorAll('.theme-option-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const themeName = btn.dataset.theme;
+            const theme = colorThemes[themeName];
+
+            if (theme) {
+                // Apply theme colors to inputs
+                strokeColorInput.value = theme.stroke;
+                fillColorInput.value = theme.fill;
+                fillEnabledInput.checked = true;
+
+                // Update color icons
+                updateColorIcons();
+
+                // Close dropdown
+                themeDropdown.classList.remove('active');
+            }
+        });
+    });
+}
+
 // Selection controls dropdown
 const selectionBtn = document.getElementById('selectionBtn');
 const selectionDropdown = document.getElementById('selectionDropdown');
@@ -2267,23 +2374,38 @@ document.addEventListener('keydown', (e) => {
                                 const startBounds = getElementBounds(startShape);
                                 const endBounds = getElementBounds(endShape);
 
-                                const centerToCenter = {
-                                    dx: (endBounds.x + endBounds.width / 2) - (startBounds.x + startBounds.width / 2),
-                                    dy: (endBounds.y + endBounds.height / 2) - (startBounds.y + startBounds.height / 2)
-                                };
-                                const isHorizontal = Math.abs(centerToCenter.dx) > Math.abs(centerToCenter.dy);
+                                // Use stored anchor points if available
+                                let fromPoint, toPoint;
+                                if (connector.startAnchor && connector.endAnchor) {
+                                    const startAnchors = getAnchorPoints(startBounds, startShape.type);
+                                    const endAnchors = getAnchorPoints(endBounds, endShape.type);
+                                    fromPoint = startAnchors[connector.startAnchor];
+                                    toPoint = endAnchors[connector.endAnchor];
+                                } else {
+                                    // Fallback to directional connection for old arrows
+                                    const centerToCenter = {
+                                        dx: (endBounds.x + endBounds.width / 2) - (startBounds.x + startBounds.width / 2),
+                                        dy: (endBounds.y + endBounds.height / 2) - (startBounds.y + startBounds.height / 2)
+                                    };
+                                    const isHorizontal = Math.abs(centerToCenter.dx) > Math.abs(centerToCenter.dy);
 
-                                const connectionPoints = getDirectionalConnection(
-                                    startBounds, startShape.type,
-                                    endBounds, endShape.type,
-                                    isHorizontal
-                                );
+                                    const connectionPoints = getDirectionalConnection(
+                                        startBounds, startShape.type,
+                                        endBounds, endShape.type,
+                                        isHorizontal
+                                    );
 
-                                if (connectionPoints) {
-                                    connector.x = connectionPoints.from.x;
-                                    connector.y = connectionPoints.from.y;
-                                    connector.width = connectionPoints.to.x - connectionPoints.from.x;
-                                    connector.height = connectionPoints.to.y - connectionPoints.from.y;
+                                    if (connectionPoints) {
+                                        fromPoint = connectionPoints.from;
+                                        toPoint = connectionPoints.to;
+                                    }
+                                }
+
+                                if (fromPoint && toPoint) {
+                                    connector.x = fromPoint.x;
+                                    connector.y = fromPoint.y;
+                                    connector.width = toPoint.x - fromPoint.x;
+                                    connector.height = toPoint.y - fromPoint.y;
                                 }
                             }
                         }
@@ -3268,19 +3390,24 @@ function handleMouseDown(e) {
     let x = (e.clientX - rect.left - panOffsetX) / zoomLevel;
     let y = (e.clientY - rect.top - panOffsetY) / zoomLevel;
 
-    // Snap to shape edge for arrows and lines
+    // Snap to anchor point for arrows and lines
     let startShape = null;
+    let startAnchor = null;
     if (currentTool === 'arrow' || currentTool === 'line') {
-        const snapped = findNearestShapeEdge(x, y);
-        x = snapped.x;
-        y = snapped.y;
-        startShape = snapped.shape;
+        const snapped = findNearestAnchorPoint(x, y);
+        if (snapped) {
+            x = snapped.point.x;
+            y = snapped.point.y;
+            startShape = snapped.shape;
+            startAnchor = snapped.anchor;
+        }
     }
 
     startX = x;
     startY = y;
-    // Store start shape for later use in mouseup
+    // Store start shape and anchor for later use in mouseup
     window.tempStartShape = startShape;
+    window.tempStartAnchor = startAnchor;
 
     if (currentTool === 'select') {
         // In connect mode, always start rectangle selection
@@ -3622,13 +3749,17 @@ function handleMouseUp(e) {
         return;
     }
 
-    // Snap endpoint to shape edge for arrows and lines
+    // Snap endpoint to anchor point for arrows and lines
     let endShape = null;
+    let endAnchor = null;
     if (currentTool === 'arrow' || currentTool === 'line') {
-        const snapped = findNearestShapeEdge(endX, endY, 20, startX, startY);
-        endX = snapped.x;
-        endY = snapped.y;
-        endShape = snapped.shape;
+        const snapped = findNearestAnchorPoint(endX, endY);
+        if (snapped) {
+            endX = snapped.point.x;
+            endY = snapped.point.y;
+            endShape = snapped.shape;
+            endAnchor = snapped.anchor;
+        }
     }
 
     if (currentTool !== 'select' && currentTool !== 'pen' && currentTool !== 'text') {
@@ -3659,11 +3790,14 @@ function handleMouseUp(e) {
             // Store connection information for arrows and lines
             if (currentTool === 'arrow' || currentTool === 'line') {
                 const startShape = window.tempStartShape;
+                const startAnchor = window.tempStartAnchor;
                 if (startShape && startShape.id) {
                     element.startShapeId = startShape.id;
+                    element.startAnchor = startAnchor;
                 }
                 if (endShape && endShape.id) {
                     element.endShapeId = endShape.id;
+                    element.endAnchor = endAnchor;
                 }
             }
 
@@ -3832,61 +3966,149 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal) 
     }
 }
 
-// Get center points of all sides of a shape
-function getSideCenters(bounds, shapeType) {
+// Get all anchor points for a shape (9 points: 4 corners, 4 sides, 1 center)
+function getAnchorPoints(bounds, shapeType) {
     const { x, y, width: w, height: h } = bounds;
     const centerX = x + w / 2;
     const centerY = y + h / 2;
 
     if (shapeType === 'circle') {
-        // For circles, return points at cardinal directions
+        // For circles, return points at cardinal directions plus center and corners
         const rx = w / 2;
         const ry = h / 2;
         return {
+            center: { x: centerX, y: centerY },
             top: { x: centerX, y: centerY - ry },
             bottom: { x: centerX, y: centerY + ry },
             left: { x: centerX - rx, y: centerY },
-            right: { x: centerX + rx, y: centerY }
+            right: { x: centerX + rx, y: centerY },
+            topLeft: { x: centerX - rx * 0.707, y: centerY - ry * 0.707 },
+            topRight: { x: centerX + rx * 0.707, y: centerY - ry * 0.707 },
+            bottomLeft: { x: centerX - rx * 0.707, y: centerY + ry * 0.707 },
+            bottomRight: { x: centerX + rx * 0.707, y: centerY + ry * 0.707 }
         };
     } else if (shapeType === 'diamond') {
         // For diamonds, the vertices are at the midpoints of the bounding box edges
         return {
+            center: { x: centerX, y: centerY },
             top: { x: centerX, y },
             bottom: { x: centerX, y: y + h },
             left: { x, y: centerY },
-            right: { x: x + w, y: centerY }
+            right: { x: x + w, y: centerY },
+            topLeft: { x: centerX - w * 0.25, y: centerY - h * 0.25 },
+            topRight: { x: centerX + w * 0.25, y: centerY - h * 0.25 },
+            bottomLeft: { x: centerX - w * 0.25, y: centerY + h * 0.25 },
+            bottomRight: { x: centerX + w * 0.25, y: centerY + h * 0.25 }
         };
     } else if (shapeType === 'parallelogram') {
         const skew = w * 0.15;
         return {
-            top: { x: x + w / 2 + skew / 2, y },                    // midpoint of top edge
-            bottom: { x: x + w / 2 - skew / 2, y: y + h },          // midpoint of bottom edge
-            left: { x: x + skew / 2, y: centerY },                  // midpoint of left edge
-            right: { x: x + w - skew / 2, y: centerY }              // midpoint of right edge
+            center: { x: centerX, y: centerY },
+            top: { x: x + w / 2 + skew / 2, y },
+            bottom: { x: x + w / 2 - skew / 2, y: y + h },
+            left: { x: x + skew / 2, y: centerY },
+            right: { x: x + w - skew / 2, y: centerY },
+            topLeft: { x: x + skew, y },
+            topRight: { x: x + w, y },
+            bottomLeft: { x, y: y + h },
+            bottomRight: { x: x + w - skew, y: y + h }
         };
     } else if (shapeType === 'triangle') {
         return {
-            top: { x: centerX, y },                                 // top vertex
-            bottom: { x: centerX, y: y + h },                       // midpoint of bottom edge
-            left: { x: x + w / 4, y: y + h / 2 },                  // midpoint of left edge
-            right: { x: x + w * 0.75, y: y + h / 2 }               // midpoint of right edge
+            center: { x: centerX, y: y + h * 0.6 },
+            top: { x: centerX, y },
+            bottom: { x: centerX, y: y + h },
+            left: { x: x + w / 4, y: y + h / 2 },
+            right: { x: x + w * 0.75, y: y + h / 2 },
+            topLeft: { x: x + w * 0.25, y: y + h * 0.3 },
+            topRight: { x: x + w * 0.75, y: y + h * 0.3 },
+            bottomLeft: { x, y: y + h },
+            bottomRight: { x: x + w, y: y + h }
         };
     } else if (shapeType === 'hexagon') {
         const hw = w / 4;
         return {
-            top: { x: centerX, y },                                 // midpoint of top edge
-            bottom: { x: centerX, y: y + h },                       // midpoint of bottom edge
-            left: { x, y: centerY },                                // left vertex
-            right: { x: x + w, y: centerY }                         // right vertex
+            center: { x: centerX, y: centerY },
+            top: { x: centerX, y },
+            bottom: { x: centerX, y: y + h },
+            left: { x, y: centerY },
+            right: { x: x + w, y: centerY },
+            topLeft: { x: x + hw, y },
+            topRight: { x: x + w - hw, y },
+            bottomLeft: { x: x + hw, y: y + h },
+            bottomRight: { x: x + w - hw, y: y + h }
         };
     } else {
         // For rectangles and other shapes
         return {
+            center: { x: centerX, y: centerY },
             top: { x: centerX, y },
             bottom: { x: centerX, y: y + h },
             left: { x, y: centerY },
-            right: { x: x + w, y: centerY }
+            right: { x: x + w, y: centerY },
+            topLeft: { x, y },
+            topRight: { x: x + w, y },
+            bottomLeft: { x, y: y + h },
+            bottomRight: { x: x + w, y: y + h }
         };
+    }
+}
+
+// Get center points of all sides of a shape (legacy function for backwards compatibility)
+function getSideCenters(bounds, shapeType) {
+    const anchors = getAnchorPoints(bounds, shapeType);
+    return {
+        top: anchors.top,
+        bottom: anchors.bottom,
+        left: anchors.left,
+        right: anchors.right
+    };
+}
+
+// Find nearest anchor point on any shape
+function findNearestAnchorPoint(x, y, snapDistance = 25) {
+    let nearestPoint = null;
+    let nearestShape = null;
+    let nearestAnchor = null;
+    let minDistance = snapDistance;
+
+    for (const element of elements) {
+        if (element.type === 'text' || element.type === 'line' || element.type === 'arrow' || element.type === 'pen') {
+            continue; // Skip non-container elements
+        }
+
+        const bounds = getElementBounds(element);
+        const anchors = getAnchorPoints(bounds, element.type);
+
+        // Check each anchor point
+        for (const [anchorName, point] of Object.entries(anchors)) {
+            const dist = Math.sqrt(Math.pow(x - point.x, 2) + Math.pow(y - point.y, 2));
+            if (dist < minDistance) {
+                minDistance = dist;
+                nearestPoint = point;
+                nearestShape = element;
+                nearestAnchor = anchorName;
+            }
+        }
+    }
+
+    return nearestPoint ? { point: nearestPoint, shape: nearestShape, anchor: nearestAnchor } : null;
+}
+
+// Draw anchor points for a shape
+function drawAnchorPoints(element) {
+    const bounds = getElementBounds(element);
+    const anchors = getAnchorPoints(bounds, element.type);
+
+    ctx.fillStyle = '#2196f3';
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2 / zoomLevel;
+
+    for (const point of Object.values(anchors)) {
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, 4 / zoomLevel, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
     }
 }
 
@@ -6922,8 +7144,8 @@ function layoutVertical() {
     redraw();
 }
 
-// Grid drawing function
-function drawGrid() {
+// Background pattern drawing functions
+function drawLineGrid() {
     const startX = Math.floor(-panOffsetX / zoomLevel / gridSize) * gridSize;
     const startY = Math.floor(-panOffsetY / zoomLevel / gridSize) * gridSize;
     const endX = startX + Math.ceil(canvas.width / zoomLevel / gridSize) * gridSize + gridSize;
@@ -6946,6 +7168,85 @@ function drawGrid() {
     }
 
     ctx.stroke();
+}
+
+function drawDotGrid() {
+    const startX = Math.floor(-panOffsetX / zoomLevel / gridSize) * gridSize;
+    const startY = Math.floor(-panOffsetY / zoomLevel / gridSize) * gridSize;
+    const endX = startX + Math.ceil(canvas.width / zoomLevel / gridSize) * gridSize + gridSize;
+    const endY = startY + Math.ceil(canvas.height / zoomLevel / gridSize) * gridSize + gridSize;
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+    const dotSize = 2 / zoomLevel;
+
+    for (let x = startX; x <= endX; x += gridSize) {
+        for (let y = startY; y <= endY; y += gridSize) {
+            ctx.beginPath();
+            ctx.arc(x, y, dotSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+}
+
+function drawIsometricGrid() {
+    const startX = Math.floor(-panOffsetX / zoomLevel / gridSize) * gridSize;
+    const startY = Math.floor(-panOffsetY / zoomLevel / gridSize) * gridSize;
+    const endX = startX + Math.ceil(canvas.width / zoomLevel / gridSize) * gridSize + gridSize * 2;
+    const endY = startY + Math.ceil(canvas.height / zoomLevel / gridSize) * gridSize + gridSize * 2;
+
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+    ctx.lineWidth = 1 / zoomLevel;
+    ctx.beginPath();
+
+    // Isometric angle is 30 degrees
+    const angle30 = Math.PI / 6;
+    const isoSpacing = gridSize;
+
+    // Draw lines at 30 degrees
+    for (let i = startX - gridSize * 4; i <= endX + gridSize * 4; i += isoSpacing) {
+        const x1 = i;
+        const y1 = startY - gridSize * 4;
+        const x2 = i + (endY - startY + gridSize * 8) * Math.tan(angle30);
+        const y2 = endY + gridSize * 4;
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+    }
+
+    // Draw lines at -30 degrees
+    for (let i = startX - gridSize * 4; i <= endX + gridSize * 4; i += isoSpacing) {
+        const x1 = i;
+        const y1 = startY - gridSize * 4;
+        const x2 = i - (endY - startY + gridSize * 8) * Math.tan(angle30);
+        const y2 = endY + gridSize * 4;
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+    }
+
+    // Draw horizontal lines
+    for (let y = startY; y <= endY; y += isoSpacing) {
+        ctx.moveTo(startX - gridSize * 4, y);
+        ctx.lineTo(endX + gridSize * 4, y);
+    }
+
+    ctx.stroke();
+}
+
+function drawBackgroundPattern() {
+    if (currentBackgroundPattern === 'blank') {
+        // No pattern, just background color
+        return;
+    } else if (currentBackgroundPattern === 'line-grid') {
+        drawLineGrid();
+    } else if (currentBackgroundPattern === 'dot-grid') {
+        drawDotGrid();
+    } else if (currentBackgroundPattern === 'isometric') {
+        drawIsometricGrid();
+    }
+}
+
+// Legacy function for backwards compatibility
+function drawGrid() {
+    drawLineGrid();
 }
 
 // Snap to grid helper
@@ -7069,9 +7370,9 @@ function redraw() {
     ctx.translate(panOffsetX, panOffsetY);
     ctx.scale(zoomLevel, zoomLevel);
 
-    // Draw grid if enabled
+    // Draw background pattern if enabled
     if (showGrid) {
-        drawGrid();
+        drawBackgroundPattern();
     }
 
     elements.forEach(element => {
@@ -7127,9 +7428,24 @@ function redraw() {
             handles.forEach(handle => {
                 ctx.fillRect(handle.x - 4, handle.y - 4, 8, 8);
             });
+
+            // Draw anchor points for shapes (not for lines, arrows, text, or pen)
+            if (selectedElement.type !== 'line' && selectedElement.type !== 'arrow' &&
+                selectedElement.type !== 'text' && selectedElement.type !== 'pen') {
+                drawAnchorPoints(selectedElement);
+            }
         }
 
         ctx.setLineDash([]);
+
+        // Show anchor points on all shapes when drawing arrows or lines
+        if ((currentTool === 'arrow' || currentTool === 'line') && isDrawing) {
+            elements.forEach(el => {
+                if (el.type !== 'line' && el.type !== 'arrow' && el.type !== 'text' && el.type !== 'pen') {
+                    drawAnchorPoints(el);
+                }
+            });
+        }
 
         // Draw rectangle selection box
         if (isRectangleSelecting && selectionRect) {
@@ -8380,6 +8696,12 @@ function populateChangelog() {
             'Fixed splash screen hanging issue on load'
         ],
         '2025-10-05': [
+            'Background pattern selector - dot grid, line grid, isometric, or blank backgrounds',
+            'Smart anchor points - arrows snap to 9 anchor points per shape (corners, sides, center)',
+            'Anchor points visible when shapes selected or drawing arrows for precise connections',
+            'Arrows remember anchor points - stay connected when shapes move or resize',
+            'Color themes/palettes - quick switching between 6 professional color combinations',
+            'Themes include Professional, Ocean, Sunset, Forest, Lavender, and Slate',
             'Redo support with Ctrl/⌘+Y keyboard shortcut',
             'Removed Undo button from toolbar (use Ctrl/⌘+Z keyboard shortcut)',
             'Drop shadows for shapes - toggle with Shadow checkbox in toolbar',

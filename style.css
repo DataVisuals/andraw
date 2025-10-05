@@ -740,6 +740,56 @@ body {
     margin: 4px 0;
 }
 
+/* Pattern dropdown styles */
+.pattern-dropdown-container {
+    position: relative;
+    display: inline-block;
+}
+
+.pattern-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 8px;
+    background: white;
+    border: 1px solid #d0d0d0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    padding: 8px;
+    min-width: 160px;
+}
+
+.pattern-dropdown.active {
+    display: block;
+}
+
+.pattern-option-btn {
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    background: white;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.15s ease;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+}
+
+.pattern-option-btn:hover {
+    background: #f0f0f0;
+}
+
+.pattern-option-btn i {
+    width: 16px;
+    text-align: center;
+    font-size: 12px;
+}
+
 /* Selection dropdown styles */
 .selection-dropdown-container {
     position: relative;
@@ -787,6 +837,62 @@ body {
 
 .selection-option-btn:active {
     background: #e3f2fd;
+}
+
+/* Theme dropdown styles */
+.theme-dropdown-container {
+    position: relative;
+    display: inline-block;
+}
+
+.theme-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 8px;
+    background: white;
+    border: 1px solid #d0d0d0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    padding: 8px;
+    min-width: 160px;
+}
+
+.theme-dropdown.active {
+    display: block;
+}
+
+.theme-option-btn {
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    background: white;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+
+.theme-option-btn:hover {
+    background: #f0f0f0;
+}
+
+.theme-preview {
+    display: flex;
+    gap: 4px;
+}
+
+.theme-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .selection-option-btn i {
