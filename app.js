@@ -751,28 +751,81 @@ if (shapeBtn && shapeDropdown) {
                 currentShapeType = shape;
                 currentTool = shape;
 
-                // Activate the shape tool
-                document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-                shapeBtn.classList.add('active');
-                canvas.style.cursor = 'crosshair';
+                // Check if there are selected shape elements to transform
+                const elementsToTransform = selectedElements.length > 0
+                    ? selectedElements
+                    : (selectedElement ? [selectedElement] : []);
 
-                // Apply current preset colors
-                if (stylePresets[currentPreset]) {
-                    strokeColorInput.value = stylePresets[currentPreset].stroke;
-                    fillColorInput.value = stylePresets[currentPreset].fill;
-                    fillEnabledInput.checked = true;
-                    updateColorIcons();
+                const shapesToTransform = elementsToTransform.filter(el =>
+                    el.type !== 'line' && el.type !== 'arrow' &&
+                    el.type !== 'text' && el.type !== 'pen' && el.type !== 'icon'
+                );
+
+                if (shapesToTransform.length > 0) {
+                    // Transform selected shapes to new type
+                    shapesToTransform.forEach(el => {
+                        const oldId = el.id;
+                        el.type = shape;
+
+                        // Update any arrows connected to this shape to recalculate anchor points
+                        elements.forEach(connector => {
+                            if ((connector.type === 'arrow' || connector.type === 'line') &&
+                                (connector.startShapeId === oldId || connector.endShapeId === oldId)) {
+
+                                const startShape = connector.startShapeId ? elements.find(e => e.id === connector.startShapeId) : null;
+                                const endShape = connector.endShapeId ? elements.find(e => e.id === connector.endShapeId) : null;
+
+                                if (startShape && endShape) {
+                                    const startBounds = getElementBounds(startShape);
+                                    const endBounds = getElementBounds(endShape);
+
+                                    // Use stored anchor points if available
+                                    if (connector.startAnchor && connector.endAnchor) {
+                                        const startAnchors = getAnchorPoints(startBounds, startShape.type);
+                                        const endAnchors = getAnchorPoints(endBounds, endShape.type);
+                                        const fromPoint = startAnchors[connector.startAnchor];
+                                        const toPoint = endAnchors[connector.endAnchor];
+
+                                        if (fromPoint && toPoint) {
+                                            connector.x = fromPoint.x;
+                                            connector.y = fromPoint.y;
+                                            connector.width = toPoint.x - fromPoint.x;
+                                            connector.height = toPoint.y - fromPoint.y;
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    });
+
+                    saveHistory();
+                    shapeDropdown.classList.remove('active');
+                    redraw();
+                } else {
+                    // No shapes selected - just switch tool
+                    // Activate the shape tool
+                    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                    shapeBtn.classList.add('active');
+                    canvas.style.cursor = 'crosshair';
+
+                    // Apply current preset colors
+                    if (stylePresets[currentPreset]) {
+                        strokeColorInput.value = stylePresets[currentPreset].stroke;
+                        fillColorInput.value = stylePresets[currentPreset].fill;
+                        fillEnabledInput.checked = true;
+                        updateColorIcons();
+                    }
+
+                    // Update preset previews to show the new shape
+                    if (presetDropdown) {
+                        updatePresetPreviews();
+                    }
+
+                    selectedElement = null;
+                    selectedElements = [];
+                    shapeDropdown.classList.remove('active');
+                    redraw();
                 }
-
-                // Update preset previews to show the new shape
-                if (presetDropdown) {
-                    updatePresetPreviews();
-                }
-
-                selectedElement = null;
-                selectedElements = [];
-                shapeDropdown.classList.remove('active');
-                redraw();
             }
         });
     });
@@ -8634,6 +8687,8 @@ function populateChangelog() {
             'Smart anchor points - arrows snap to 9 anchor points per shape (corners, sides, center)',
             'Anchor points visible when shapes selected or drawing arrows for precise connections',
             'Arrows remember anchor points - stay connected when shapes move or resize',
+            'Transform shapes - select shapes and click a shape tool to transform them while preserving connections',
+            'Connected arrows automatically adjust when shapes are transformed',
             'Style preset selector moved to Style group for better organization',
             'Redo support with Ctrl/⌘+Y keyboard shortcut',
             'Removed Undo button from toolbar (use Ctrl/⌘+Z keyboard shortcut)',
