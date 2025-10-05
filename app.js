@@ -1893,6 +1893,112 @@ canvas.addEventListener('mousemove', handleMouseMove);
 canvas.addEventListener('mouseup', handleMouseUp);
 canvas.addEventListener('dblclick', handleDoubleClick);
 canvas.addEventListener('wheel', handleWheel, { passive: false });
+canvas.addEventListener('contextmenu', handleContextMenu);
+
+// Context menu handling
+function handleContextMenu(e) {
+    e.preventDefault();
+
+    const contextMenu = document.getElementById('contextMenu');
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left - panOffsetX) / zoomLevel;
+    const y = (e.clientY - rect.top - panOffsetY) / zoomLevel;
+
+    // Check if right-clicked on an element
+    const clickedElement = getElementAtPoint(x, y);
+
+    // Only show context menu if there's a selection or clicked element
+    if (!clickedElement && selectedElements.length === 0 && !selectedElement) {
+        return;
+    }
+
+    // If clicked on an unselected element, select it
+    if (clickedElement && !selectedElements.includes(clickedElement) && clickedElement !== selectedElement) {
+        selectedElement = clickedElement;
+        selectedElements = [];
+        redraw();
+    }
+
+    // Position and show context menu
+    contextMenu.style.left = e.clientX + 'px';
+    contextMenu.style.top = e.clientY + 'px';
+    contextMenu.classList.add('active');
+}
+
+// Hide context menu on click elsewhere
+document.addEventListener('click', () => {
+    const contextMenu = document.getElementById('contextMenu');
+    contextMenu.classList.remove('active');
+});
+
+// Context menu actions
+document.getElementById('contextCopy')?.addEventListener('click', () => {
+    copySelection();
+    document.getElementById('contextMenu').classList.remove('active');
+});
+
+document.getElementById('contextPaste')?.addEventListener('click', () => {
+    pasteSelection();
+    document.getElementById('contextMenu').classList.remove('active');
+});
+
+document.getElementById('contextDuplicate')?.addEventListener('click', () => {
+    duplicateSelection();
+    document.getElementById('contextMenu').classList.remove('active');
+});
+
+document.getElementById('contextDelete')?.addEventListener('click', () => {
+    if (selectedElements.length > 0) {
+        elements = elements.filter(el => !selectedElements.includes(el));
+        selectedElements = [];
+        selectedElement = null;
+    } else if (selectedElement) {
+        elements = elements.filter(el => el !== selectedElement);
+        selectedElement = null;
+    }
+    saveHistory();
+    redraw();
+    document.getElementById('contextMenu').classList.remove('active');
+});
+
+document.getElementById('contextBringFront')?.addEventListener('click', () => {
+    const elementsToMove = selectedElements.length > 0
+        ? selectedElements
+        : (selectedElement ? [selectedElement] : []);
+
+    elementsToMove.forEach(el => {
+        const index = elements.indexOf(el);
+        if (index > -1) {
+            elements.splice(index, 1);
+            elements.push(el);
+        }
+    });
+    saveHistory();
+    redraw();
+    document.getElementById('contextMenu').classList.remove('active');
+});
+
+document.getElementById('contextSendBack')?.addEventListener('click', () => {
+    const elementsToMove = selectedElements.length > 0
+        ? selectedElements
+        : (selectedElement ? [selectedElement] : []);
+
+    elementsToMove.forEach(el => {
+        const index = elements.indexOf(el);
+        if (index > -1) {
+            elements.splice(index, 1);
+            elements.unshift(el);
+        }
+    });
+    saveHistory();
+    redraw();
+    document.getElementById('contextMenu').classList.remove('active');
+});
+
+document.getElementById('contextLock')?.addEventListener('click', () => {
+    toggleLockSelection();
+    document.getElementById('contextMenu').classList.remove('active');
+});
 
 function handleDoubleClick(e) {
     const rect = canvas.getBoundingClientRect();
