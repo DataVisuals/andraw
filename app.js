@@ -1977,26 +1977,18 @@ document.querySelectorAll('.template-btn').forEach(btn => {
         const templateName = btn.dataset.template;
         const template = templates[templateName];
         if (template) {
-            // Calculate center in world coordinates (accounting for pan and zoom)
-            const viewportCenterWorldX = (canvas.width / 2 - panOffsetX) / zoomLevel;
-            const viewportCenterWorldY = (canvas.height / 2 - panOffsetY) / zoomLevel;
-            const rawCenterX = viewportCenterWorldX - template.width / 2;
-            const rawCenterY = viewportCenterWorldY - template.height / 2;
+            // Get current colors
+            const currentStroke = strokeColorInput.value;
+            const currentFill = fillEnabledInput.checked ? fillColorInput.value : null;
 
-            // Apply grid snapping
-            let centerX = snapToGridValue(rawCenterX);
-            let centerY = snapToGridValue(rawCenterY);
-
-            // Find non-overlapping position
-            const pos = findNonOverlappingPosition(centerX, centerY, template.width, template.height);
-
+            // Create shape at temporary position (layout will reposition)
             const element = {
                 ...template,
                 id: nextElementId++,
-                x: pos.x,
-                y: pos.y,
-                strokeColor: strokeColorInput.value,
-                fillColor: fillEnabledInput.checked ? fillColorInput.value : null,
+                x: 50,
+                y: 50,
+                strokeColor: currentStroke,
+                fillColor: currentFill,
                 shadow: shadowEnabledInput.checked,
                 lineStyle: currentLineStyle,
                 lineThickness: currentLineThickness
@@ -2004,6 +1996,10 @@ document.querySelectorAll('.template-btn').forEach(btn => {
             elements.push(element);
             lastCreatedShape = element; // Track for 'M' key duplication
             duplicationDirection = null; // Reset direction for new shape
+
+            // Layout all shapes with the same colors
+            layoutShapesWithColors(currentStroke, currentFill);
+
             saveHistory();
             redraw();
 
@@ -2662,20 +2658,18 @@ function addSageShape(shapeType) {
     redraw();
 }
 
-function layoutSageShapes() {
-    const sageStroke = '#556B2F';
-    const sageFill = '#D8E4BC';
-
-    // Get only sage-colored shapes
-    const sageShapes = elements.filter(el =>
-        el.strokeColor === sageStroke &&
-        el.fillColor === sageFill &&
+// Generic layout function for shapes with specific colors
+function layoutShapesWithColors(strokeColor, fillColor) {
+    // Get shapes matching the specified colors
+    const matchingShapes = elements.filter(el =>
+        el.strokeColor === strokeColor &&
+        el.fillColor === fillColor &&
         el.type !== 'line' &&
         el.type !== 'arrow' &&
         el.type !== 'text'
     );
 
-    if (sageShapes.length === 0) return;
+    if (matchingShapes.length === 0) return;
 
     const spacing = 20;
     const sideMargin = 50;
@@ -2683,14 +2677,14 @@ function layoutSageShapes() {
     const canvasHeight = canvas.height;
 
     // Sort by creation order (ID) to keep new shapes at the end
-    sageShapes.sort((a, b) => (a.id || 0) - (b.id || 0));
+    matchingShapes.sort((a, b) => (a.id || 0) - (b.id || 0));
 
     // First pass: group shapes into rows
     const rows = [];
     let currentRow = [];
     let currentRowWidth = 0;
 
-    sageShapes.forEach((shape, index) => {
+    matchingShapes.forEach((shape, index) => {
         const shapeWidth = Math.abs(shape.width || 100);
         const shapeHeight = Math.abs(shape.height || 80);
 
@@ -2754,6 +2748,14 @@ function layoutSageShapes() {
 
         currentY += rowHeight + spacing;
     });
+}
+
+function layoutSageShapes() {
+    const sageStroke = '#556B2F';
+    const sageFill = '#D8E4BC';
+
+    // Use the generic layout function with sage colors
+    layoutShapesWithColors(sageStroke, sageFill);
 }
 
 function duplicateLastShape() {
