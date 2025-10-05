@@ -350,7 +350,8 @@ const stylePresets = {
     ink: { stroke: '#1C2833', fill: '#F4F6F7' },        // Very dark blue-black border, off-white fill
     clay: { stroke: '#8B4726', fill: '#DEB887' },       // Brown-red border, burlywood fill
     storm: { stroke: '#34495E', fill: '#D5DBDB' },      // Dark slate blue border, light blue-grey fill
-    mauve: { stroke: '#7D6B7D', fill: '#F0E6EF' }       // Muted purple border, light rose fill
+    mauve: { stroke: '#7D6B7D', fill: '#F0E6EF' },      // Muted purple border, light rose fill
+    cerulean: { stroke: '#00395d', fill: '#00aeef' }    // Astronaut blue border, cerulean fill
 };
 
 // Background color state
@@ -3254,8 +3255,37 @@ function editTextElement(textElement) {
     const input = document.createElement('textarea');
     input.className = 'text-input';
     const rect = canvas.getBoundingClientRect();
-    input.style.left = (rect.left + panOffsetX + textElement.x * zoomLevel) + 'px';
-    input.style.top = (rect.top + panOffsetY + textElement.y * zoomLevel) + 'px';
+
+    // Check if this text is inside a shape (has a parent)
+    const isShapeText = textElement.parentId !== undefined;
+
+    if (isShapeText && textElement.parentId) {
+        // Center the input for shape text
+        input.style.textAlign = 'center';
+
+        const parentShape = elements.find(el => el.id === textElement.parentId);
+        if (parentShape) {
+            const shapeWidth = Math.abs(parentShape.width || 100);
+            const centerX = parentShape.x + shapeWidth / 2;
+            const centerY = parentShape.y + Math.abs(parentShape.height || 100) / 2;
+
+            // Position textarea centered on shape
+            const inputWidth = shapeWidth * 0.9;
+            input.style.left = (rect.left + panOffsetX + (centerX - inputWidth / 2) * zoomLevel) + 'px';
+            input.style.top = (rect.top + panOffsetY + (centerY - 12) * zoomLevel) + 'px';
+            input.style.width = (inputWidth * zoomLevel) + 'px';
+        } else {
+            input.style.left = (rect.left + panOffsetX + textElement.x * zoomLevel) + 'px';
+            input.style.top = (rect.top + panOffsetY + textElement.y * zoomLevel) + 'px';
+            input.style.width = '150px';
+        }
+    } else {
+        // Regular text positioning
+        input.style.left = (rect.left + panOffsetX + textElement.x * zoomLevel) + 'px';
+        input.style.top = (rect.top + panOffsetY + textElement.y * zoomLevel) + 'px';
+        input.style.minWidth = '200px';
+    }
+
     input.style.fontFamily = textElement.fontFamily || 'Comic Sans MS, cursive';
     input.style.fontSize = (textElement.fontSize || 16) + 'px';
     input.style.fontWeight = textElement.bold ? 'bold' : 'normal';
@@ -3263,7 +3293,6 @@ function editTextElement(textElement) {
     input.style.color = textElement.textColor || textElement.strokeColor;
     input.value = textElement.text;
     input.rows = 1;
-    input.style.minWidth = '200px';
     input.style.resize = 'both';
     document.body.appendChild(input);
 
@@ -3278,6 +3307,10 @@ function editTextElement(textElement) {
         if (newText) {
             // Update existing element
             textElement.text = newText;
+
+            // For shape text, position is calculated dynamically during draw
+            // so we don't need to update x,y coordinates here
+
             saveHistory();
             redraw();
         } else {
@@ -3430,6 +3463,14 @@ function handleMouseDown(e) {
             return;
         }
 
+        // Check if clicking on bend point handle for stepped arrows/lines
+        const bendHandle = getBendPointHandle(startX, startY);
+        if (bendHandle) {
+            dragMode = 'bend';
+            isDrawing = true;
+            return;
+        }
+
         // Check if clicking on element
         const clickedElement = getElementAtPoint(startX, startY);
         if (clickedElement) {
@@ -3523,8 +3564,11 @@ function handleMouseMove(e) {
         // Update cursor based on hover
         if (currentTool === 'select') {
             const handle = getResizeHandle(currentX, currentY);
+            const bendHandle = getBendPointHandle(currentX, currentY);
             if (handle) {
                 canvas.style.cursor = handle.cursor;
+            } else if (bendHandle) {
+                canvas.style.cursor = 'move';
             } else if (getElementAtPoint(currentX, currentY)) {
                 canvas.style.cursor = 'move';
             } else {
@@ -3619,6 +3663,43 @@ function handleMouseMove(e) {
             redraw();
         } else if (dragMode === 'resize' && selectedElement) {
             resizeElement(selectedElement, currentX, currentY, resizeHandle);
+            redraw();
+        } else if (dragMode === 'bend' && selectedElement) {
+            // Update bend point for stepped arrow/line
+            const x1 = selectedElement.x;
+            const y1 = selectedElement.y;
+            const x2 = selectedElement.x + selectedElement.width;
+            const y2 = selectedElement.y + selectedElement.height;
+
+            // Determine bend point constraints based on anchor information
+            if (selectedElement.startAnchor && selectedElement.endAnchor) {
+                const startIsHorizontal = selectedElement.startAnchor === 'left' || selectedElement.startAnchor === 'right';
+                const endIsHorizontal = selectedElement.endAnchor === 'left' || selectedElement.endAnchor === 'right';
+
+                if (startIsHorizontal && endIsHorizontal) {
+                    // Both horizontal - allow x movement, keep y at start
+                    selectedElement.bendPoint = { x: currentX, y: y1 };
+                } else if (!startIsHorizontal && !endIsHorizontal) {
+                    // Both vertical - allow y movement, keep x at start
+                    selectedElement.bendPoint = { x: x1, y: currentY };
+                } else if (startIsHorizontal && !endIsHorizontal) {
+                    // Start horizontal, end vertical - allow x movement of the turn point
+                    selectedElement.bendPoint = { x: currentX, y: y1 };
+                } else {
+                    // Start vertical, end horizontal - allow y movement of the turn point
+                    selectedElement.bendPoint = { x: x1, y: currentY };
+                }
+            } else {
+                // Fallback to old logic
+                const dx = Math.abs(x2 - x1);
+                const dy = Math.abs(y2 - y1);
+
+                if (dx > dy) {
+                    selectedElement.bendPoint = { x: currentX, y: y1 };
+                } else {
+                    selectedElement.bendPoint = { x: x1, y: currentY };
+                }
+            }
             redraw();
         }
     } else if (currentTool === 'pen') {
@@ -3808,8 +3889,8 @@ function handleMouseUp(e) {
         }
     }
 
-    // Save history after move/resize operations
-    if (dragMode === 'move' || dragMode === 'resize') {
+    // Save history after move/resize/bend operations
+    if (dragMode === 'move' || dragMode === 'resize' || dragMode === 'bend') {
         saveHistory();
     }
 
@@ -3906,6 +3987,17 @@ function connectSelectedElements() {
         );
 
         if (connectionPoints) {
+            // Check if shapes are aligned on the same plane
+            const ALIGNMENT_THRESHOLD = 20; // pixels
+            const isAlignedHorizontally = Math.abs(connectionPoints.from.y - connectionPoints.to.y) < ALIGNMENT_THRESHOLD;
+            const isAlignedVertically = Math.abs(connectionPoints.from.x - connectionPoints.to.x) < ALIGNMENT_THRESHOLD;
+
+            // Auto-use stepped routing if shapes are not aligned on the same plane
+            let routing = currentLineRouting;
+            if (!isAlignedHorizontally && !isAlignedVertically) {
+                routing = 'stepped';
+            }
+
             const arrow = {
                 id: nextElementId++,
                 type: 'arrow',
@@ -3916,16 +4008,18 @@ function connectSelectedElements() {
                 strokeColor: strokeColorInput.value,
                 fillColor: null,
                 lineStyle: currentLineStyle,
-                lineRouting: currentLineRouting,
+                lineRouting: routing,
                 lineThickness: currentLineThickness
             };
 
-            // Store connection IDs so arrows update when shapes move
+            // Store connection IDs and anchor names so arrows update when shapes move
             if (from.element.id) {
                 arrow.startShapeId = from.element.id;
+                arrow.startAnchor = connectionPoints.fromAnchor;
             }
             if (to.element.id) {
                 arrow.endShapeId = to.element.id;
+                arrow.endAnchor = connectionPoints.toAnchor;
             }
 
             elements.push(arrow);
@@ -3933,23 +4027,67 @@ function connectSelectedElements() {
     }
 }
 
-// Get directional connection points based on flow (horizontal or vertical)
+// Get directional connection points based on relative position of shapes
 function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal) {
     const sidesA = getSideCenters(boundsA, typeA);
     const sidesB = getSideCenters(boundsB, typeB);
 
-    if (isHorizontal) {
-        // For horizontal flow: connect right side of A to left side of B
-        return {
-            from: sidesA.right,
-            to: sidesB.left
-        };
+    // Calculate centers of both shapes
+    const centerA = {
+        x: boundsA.x + boundsA.width / 2,
+        y: boundsA.y + boundsA.height / 2
+    };
+    const centerB = {
+        x: boundsB.x + boundsB.width / 2,
+        y: boundsB.y + boundsB.height / 2
+    };
+
+    // Calculate relative position
+    const dx = centerB.x - centerA.x;
+    const dy = centerB.y - centerA.y;
+
+    // Determine connection based on which dimension has greater offset
+    const absDx = Math.abs(dx);
+    const absDy = Math.abs(dy);
+
+    if (absDx > absDy) {
+        // Horizontal connection is more appropriate
+        if (dx > 0) {
+            // B is to the right of A
+            return {
+                from: sidesA.right,
+                to: sidesB.left,
+                fromAnchor: 'right',
+                toAnchor: 'left'
+            };
+        } else {
+            // B is to the left of A
+            return {
+                from: sidesA.left,
+                to: sidesB.right,
+                fromAnchor: 'left',
+                toAnchor: 'right'
+            };
+        }
     } else {
-        // For vertical flow: connect bottom side of A to top side of B
-        return {
-            from: sidesA.bottom,
-            to: sidesB.top
-        };
+        // Vertical connection is more appropriate
+        if (dy > 0) {
+            // B is below A
+            return {
+                from: sidesA.bottom,
+                to: sidesB.top,
+                fromAnchor: 'bottom',
+                toAnchor: 'top'
+            };
+        } else {
+            // B is above A
+            return {
+                from: sidesA.top,
+                to: sidesB.bottom,
+                fromAnchor: 'top',
+                toAnchor: 'bottom'
+            };
+        }
     }
 }
 
@@ -4366,33 +4504,68 @@ function drawArrow(x1, y1, x2, y2, color, lineStyle = 'solid', lineThickness = 2
 }
 
 // Calculate stepped path points (orthogonal routing)
-function getSteppedPath(x1, y1, x2, y2) {
+// bendPoint: optional {x, y} to override automatic midpoint calculation
+// startAnchor: direction exiting from ('top', 'bottom', 'left', 'right')
+// endAnchor: direction entering to ('top', 'bottom', 'left', 'right')
+function getSteppedPath(x1, y1, x2, y2, bendPoint = null, startAnchor = null, endAnchor = null) {
     const points = [];
     points.push({x: x1, y: y1});
 
-    const dx = Math.abs(x2 - x1);
-    const dy = Math.abs(y2 - y1);
+    // If we have anchor information, use it to determine the path
+    if (startAnchor && endAnchor) {
+        const startIsHorizontal = startAnchor === 'left' || startAnchor === 'right';
+        const endIsHorizontal = endAnchor === 'left' || endAnchor === 'right';
 
-    // Determine if this is primarily a horizontal or vertical connection
-    if (dx > dy) {
-        // Horizontal flow: go horizontal first, then vertical, then horizontal
-        const midX = (x1 + x2) / 2;
-        points.push({x: midX, y: y1});
-        points.push({x: midX, y: y2});
-        points.push({x: x2, y: y2});
+        if (startIsHorizontal && endIsHorizontal) {
+            // Both horizontal - go horizontal, vertical, horizontal
+            const midX = bendPoint ? bendPoint.x : (x1 + x2) / 2;
+            points.push({x: midX, y: y1});
+            points.push({x: midX, y: y2});
+            points.push({x: x2, y: y2});
+        } else if (!startIsHorizontal && !endIsHorizontal) {
+            // Both vertical - go vertical, horizontal, vertical
+            const midY = bendPoint ? bendPoint.y : (y1 + y2) / 2;
+            points.push({x: x1, y: midY});
+            points.push({x: x2, y: midY});
+            points.push({x: x2, y: y2});
+        } else if (startIsHorizontal && !endIsHorizontal) {
+            // Start horizontal, end vertical - go horizontal then vertical
+            const turnX = bendPoint ? bendPoint.x : x2;
+            points.push({x: turnX, y: y1});
+            points.push({x: turnX, y: y2});
+            points.push({x: x2, y: y2});
+        } else {
+            // Start vertical, end horizontal - go vertical then horizontal
+            const turnY = bendPoint ? bendPoint.y : y2;
+            points.push({x: x1, y: turnY});
+            points.push({x: x2, y: turnY});
+            points.push({x: x2, y: y2});
+        }
     } else {
-        // Vertical flow: go vertical first, then horizontal, then vertical
-        const midY = (y1 + y2) / 2;
-        points.push({x: x1, y: midY});
-        points.push({x: x2, y: midY});
-        points.push({x: x2, y: y2});
+        // Fallback to old logic if no anchor info
+        const dx = Math.abs(x2 - x1);
+        const dy = Math.abs(y2 - y1);
+
+        if (dx > dy) {
+            // Horizontal flow: go horizontal first, then vertical, then horizontal
+            const midX = bendPoint ? bendPoint.x : (x1 + x2) / 2;
+            points.push({x: midX, y: y1});
+            points.push({x: midX, y: y2});
+            points.push({x: x2, y: y2});
+        } else {
+            // Vertical flow: go vertical first, then horizontal, then vertical
+            const midY = bendPoint ? bendPoint.y : (y1 + y2) / 2;
+            points.push({x: x1, y: midY});
+            points.push({x: x2, y: midY});
+            points.push({x: x2, y: y2});
+        }
     }
 
     return points;
 }
 
-function drawSteppedLine(x1, y1, x2, y2, color, lineStyle = 'solid', lineThickness = 2) {
-    const points = getSteppedPath(x1, y1, x2, y2);
+function drawSteppedLine(x1, y1, x2, y2, color, lineStyle = 'solid', lineThickness = 2, bendPoint = null, startAnchor = null, endAnchor = null) {
+    const points = getSteppedPath(x1, y1, x2, y2, bendPoint, startAnchor, endAnchor);
 
     ctx.strokeStyle = color;
     ctx.lineWidth = lineThickness;
@@ -4411,8 +4584,8 @@ function drawSteppedLine(x1, y1, x2, y2, color, lineStyle = 'solid', lineThickne
     ctx.setLineDash([]);
 }
 
-function drawSteppedArrow(x1, y1, x2, y2, color, lineStyle = 'solid', lineThickness = 2) {
-    const points = getSteppedPath(x1, y1, x2, y2);
+function drawSteppedArrow(x1, y1, x2, y2, color, lineStyle = 'solid', lineThickness = 2, bendPoint = null, startAnchor = null, endAnchor = null) {
+    const points = getSteppedPath(x1, y1, x2, y2, bendPoint, startAnchor, endAnchor);
 
     // Draw the stepped line portion
     ctx.strokeStyle = color;
@@ -4479,13 +4652,64 @@ function drawText(element) {
     ctx.fillStyle = element.textColor || element.strokeColor;
     ctx.textBaseline = 'top';
 
-    // Handle multi-line text
-    const lines = element.text.split('\n');
     const lineHeight = fontSize * 1.2;
 
-    lines.forEach((line, index) => {
-        ctx.fillText(line, element.x, element.y + (index * lineHeight));
-    });
+    // Check if this is text inside a shape (has a parent)
+    const isShapeText = element.parentId !== undefined;
+
+    if (isShapeText) {
+        // Get parent shape to wrap and center text
+        const parentShape = elements.find(el => el.id === element.parentId);
+        if (parentShape) {
+            const shapeWidth = Math.abs(parentShape.width || 100);
+            const shapeHeight = Math.abs(parentShape.height || 100);
+            const centerX = parentShape.x + shapeWidth / 2;
+            const centerY = parentShape.y + shapeHeight / 2;
+            const maxWidth = shapeWidth * 0.9; // 90% of shape width for padding
+
+            // Wrap text to fit shape width
+            const wrappedLines = [];
+            const inputLines = element.text.split('\n');
+
+            inputLines.forEach(line => {
+                const words = line.split(' ');
+                let currentLine = '';
+
+                words.forEach((word, i) => {
+                    const testLine = currentLine ? currentLine + ' ' + word : word;
+                    const metrics = ctx.measureText(testLine);
+
+                    if (metrics.width > maxWidth && currentLine) {
+                        wrappedLines.push(currentLine);
+                        currentLine = word;
+                    } else {
+                        currentLine = testLine;
+                    }
+                });
+
+                if (currentLine) {
+                    wrappedLines.push(currentLine);
+                }
+            });
+
+            // Calculate total height and vertical centering
+            const totalHeight = wrappedLines.length * lineHeight;
+            const startY = centerY - totalHeight / 2;
+
+            // Draw centered text
+            ctx.textAlign = 'center';
+            wrappedLines.forEach((line, index) => {
+                ctx.fillText(line, centerX, startY + (index * lineHeight));
+            });
+            ctx.textAlign = 'start'; // Reset
+        }
+    } else {
+        // Regular text rendering
+        const lines = element.text.split('\n');
+        lines.forEach((line, index) => {
+            ctx.fillText(line, element.x, element.y + (index * lineHeight));
+        });
+    }
 }
 
 // Template shape drawing functions
@@ -6275,7 +6499,8 @@ function drawElement(element) {
             if (element.lineRouting === 'stepped') {
                 drawSteppedLine(element.x, element.y,
                                element.x + element.width, element.y + element.height,
-                               element.strokeColor, lineStyle, element.lineThickness || 2);
+                               element.strokeColor, lineStyle, element.lineThickness || 2,
+                               element.bendPoint, element.startAnchor, element.endAnchor);
             } else {
                 drawRoughLine(element.x, element.y,
                              element.x + element.width, element.y + element.height,
@@ -6286,7 +6511,8 @@ function drawElement(element) {
             if (element.lineRouting === 'stepped') {
                 drawSteppedArrow(element.x, element.y,
                                 element.x + element.width, element.y + element.height,
-                                element.strokeColor, lineStyle, element.lineThickness || 2);
+                                element.strokeColor, lineStyle, element.lineThickness || 2,
+                                element.bendPoint, element.startAnchor, element.endAnchor);
             } else {
                 drawArrow(element.x, element.y,
                          element.x + element.width, element.y + element.height,
@@ -7383,6 +7609,23 @@ function redraw() {
                 ctx.fillRect(handle.x - 4, handle.y - 4, 8, 8);
             });
 
+            // Draw bend point handle for stepped arrows/lines
+            if ((selectedElement.type === 'arrow' || selectedElement.type === 'line') &&
+                selectedElement.lineRouting === 'stepped') {
+                const bendPointPos = getSteppedBendPoint(selectedElement);
+                if (bendPointPos) {
+                    ctx.fillStyle = '#ff9800'; // Orange color for bend point
+                    ctx.fillRect(bendPointPos.x - 6, bendPointPos.y - 6, 12, 12);
+
+                    // Draw a small circle inside to indicate it's draggable
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(bendPointPos.x, bendPointPos.y, 4, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            }
+
             // Draw anchor points for shapes (not for lines, arrows, text, or pen)
             if (selectedElement.type !== 'line' && selectedElement.type !== 'arrow' &&
                 selectedElement.type !== 'text' && selectedElement.type !== 'pen') {
@@ -7487,10 +7730,58 @@ function getElementBounds(element) {
             const bold = element.bold ? 'bold ' : '';
             const italic = element.italic ? 'italic ' : '';
             ctx.font = `${italic}${bold}${fontSize}px ${fontFamily}`;
-
-            // Handle multi-line text
-            const lines = (element.text || '').split('\n');
             const lineHeight = fontSize * 1.2;
+
+            // Check if this is text inside a shape
+            if (element.parentId) {
+                const parentShape = elements.find(el => el.id === element.parentId);
+                if (parentShape) {
+                    const shapeWidth = Math.abs(parentShape.width || 100);
+                    const shapeHeight = Math.abs(parentShape.height || 100);
+                    const centerX = parentShape.x + shapeWidth / 2;
+                    const centerY = parentShape.y + shapeHeight / 2;
+                    const maxWidth = shapeWidth * 0.9;
+
+                    // Calculate wrapped lines
+                    const wrappedLines = [];
+                    const inputLines = (element.text || '').split('\n');
+
+                    inputLines.forEach(line => {
+                        const words = line.split(' ');
+                        let currentLine = '';
+
+                        words.forEach((word) => {
+                            const testLine = currentLine ? currentLine + ' ' + word : word;
+                            const metrics = ctx.measureText(testLine);
+
+                            if (metrics.width > maxWidth && currentLine) {
+                                wrappedLines.push(currentLine);
+                                currentLine = word;
+                            } else {
+                                currentLine = testLine;
+                            }
+                        });
+
+                        if (currentLine) {
+                            wrappedLines.push(currentLine);
+                        }
+                    });
+
+                    const totalHeight = wrappedLines.length * lineHeight;
+                    const startY = centerY - totalHeight / 2;
+
+                    // Return bounds that encompass the wrapped text
+                    return {
+                        x: centerX - maxWidth / 2,
+                        y: startY,
+                        width: maxWidth,
+                        height: totalHeight
+                    };
+                }
+            }
+
+            // Regular text (not in a shape)
+            const lines = (element.text || '').split('\n');
             let maxWidth = 20; // Minimum width for empty text
 
             lines.forEach(line => {
@@ -7537,6 +7828,57 @@ function getResizeHandles(bounds) {
     ];
 }
 
+// Get the bend point position for a stepped arrow/line
+function getSteppedBendPoint(element) {
+    if (!element || (element.type !== 'arrow' && element.type !== 'line') || element.lineRouting !== 'stepped') {
+        return null;
+    }
+
+    const x1 = element.x;
+    const y1 = element.y;
+    const x2 = element.x + element.width;
+    const y2 = element.y + element.height;
+
+    // If there's a custom bend point, use it
+    if (element.bendPoint) {
+        return element.bendPoint;
+    }
+
+    // Use anchor information if available
+    if (element.startAnchor && element.endAnchor) {
+        const startIsHorizontal = element.startAnchor === 'left' || element.startAnchor === 'right';
+        const endIsHorizontal = element.endAnchor === 'left' || element.endAnchor === 'right';
+
+        if (startIsHorizontal && endIsHorizontal) {
+            // Both horizontal - bend point is at the midpoint
+            const midX = (x1 + x2) / 2;
+            return { x: midX, y: y1 };
+        } else if (!startIsHorizontal && !endIsHorizontal) {
+            // Both vertical - bend point is at the midpoint
+            const midY = (y1 + y2) / 2;
+            return { x: x1, y: midY };
+        } else if (startIsHorizontal && !endIsHorizontal) {
+            // Start horizontal, end vertical - bend at the turn
+            return { x: x2, y: y1 };
+        } else {
+            // Start vertical, end horizontal - bend at the turn
+            return { x: x1, y: y2 };
+        }
+    }
+
+    // Fallback to old logic if no anchor info
+    const dx = Math.abs(x2 - x1);
+    const dy = Math.abs(y2 - y1);
+
+    if (dx > dy) {
+        const midX = (x1 + x2) / 2;
+        return { x: midX, y: y1 };
+    } else {
+        const midY = (y1 + y2) / 2;
+        return { x: x1, y: midY };
+    }
+}
+
 function getResizeHandle(x, y) {
     if (!selectedElement) return null;
     const bounds = getElementBounds(selectedElement);
@@ -7547,6 +7889,25 @@ function getResizeHandle(x, y) {
             return handle;
         }
     }
+    return null;
+}
+
+// Check if mouse is over bend point handle
+function getBendPointHandle(x, y) {
+    if (!selectedElement) return null;
+    if ((selectedElement.type !== 'arrow' && selectedElement.type !== 'line') ||
+        selectedElement.lineRouting !== 'stepped') {
+        return null;
+    }
+
+    const bendPoint = getSteppedBendPoint(selectedElement);
+    if (!bendPoint) return null;
+
+    // Check if mouse is within 10 pixels of the bend point
+    if (Math.abs(x - bendPoint.x) < 10 && Math.abs(y - bendPoint.y) < 10) {
+        return bendPoint;
+    }
+
     return null;
 }
 
@@ -8862,6 +9223,286 @@ document.getElementById('addPage').addEventListener('click', () => {
     addNewPage();
 });
 
+// ============================================================================
+// SETTINGS DIALOG
+// ============================================================================
+
+// Default settings
+const defaultSettings = {
+    stylePreset: 'sage',
+    backgroundColor: '#FFFEF9',
+    backgroundPattern: 'line-grid',
+    showRulers: false,
+    canvasMode: 'infinite',
+    fontFamily: 'Comic Sans MS, cursive',
+    fontSize: 16
+};
+
+// Load settings from localStorage
+function loadSettings() {
+    const saved = localStorage.getItem('andraw_settings');
+    if (saved) {
+        try {
+            const settings = JSON.parse(saved);
+
+            // Backward compatibility: convert old individual style settings to preset
+            if (!settings.stylePreset && (settings.strokeColor || settings.fillColor)) {
+                // Try to find a matching preset based on colors
+                settings.stylePreset = 'sage'; // Default fallback
+            }
+
+            return { ...defaultSettings, ...settings };
+        } catch (e) {
+            console.error('Failed to load settings:', e);
+            return { ...defaultSettings };
+        }
+    }
+
+    // Backward compatibility: check for individual settings
+    const backwardCompatSettings = {};
+
+    // Check for old backgroundColor setting
+    const oldBgColor = localStorage.getItem('andraw_backgroundColor');
+    if (oldBgColor) {
+        backwardCompatSettings.backgroundColor = oldBgColor;
+    }
+
+    // Check for old canvasMode setting
+    const oldCanvasMode = localStorage.getItem('andraw_canvasMode');
+    if (oldCanvasMode) {
+        backwardCompatSettings.canvasMode = oldCanvasMode;
+    }
+
+    return { ...defaultSettings, ...backwardCompatSettings };
+}
+
+// Save settings to localStorage
+function saveSettings(settings) {
+    try {
+        localStorage.setItem('andraw_settings', JSON.stringify(settings));
+    } catch (e) {
+        console.error('Failed to save settings:', e);
+    }
+}
+
+// Apply settings to application
+function applySettings(settings) {
+    // Apply style preset
+    if (settings.stylePreset && stylePresets[settings.stylePreset]) {
+        const preset = stylePresets[settings.stylePreset];
+        const presetParts = settings.stylePreset.split('-');
+        const basePreset = presetParts[0];
+        const hasShadow = presetParts.includes('shadow');
+        const hasDashed = presetParts.includes('dashed');
+
+        strokeColorInput.value = preset.stroke;
+        fillColorInput.value = preset.fill;
+        fillEnabledInput.checked = true;
+        shadowEnabledInput.checked = hasShadow;
+        currentLineStyle = hasDashed ? 'dashed' : 'solid';
+
+        // Update line style buttons
+        document.querySelectorAll('.line-style-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.lineStyle === currentLineStyle);
+        });
+
+        currentPreset = settings.stylePreset;
+    }
+
+    // Apply view defaults
+    backgroundColor = settings.backgroundColor;
+    bgColorInput.value = settings.backgroundColor;
+    currentBackgroundPattern = settings.backgroundPattern;
+    lastNonBlankPattern = settings.backgroundPattern !== 'blank' ? settings.backgroundPattern : 'line-grid';
+    showRulers = settings.showRulers;
+
+    // Apply canvas mode
+    canvasMode = settings.canvasMode;
+    if (canvasMode === 'storybook' && pages.length === 0) {
+        initializePages();
+    }
+    updateModeUI();
+
+    // Apply text defaults
+    selectedFont = settings.fontFamily;
+    fontBtnText.textContent = settings.fontFamily.split(',')[0].replace(/['"]/g, '');
+    fontSizeSelect.value = settings.fontSize;
+
+    redraw();
+}
+
+// Populate settings dialog with current values
+function populateSettingsDialog() {
+    const settings = loadSettings();
+
+    // Set preset text and value
+    settingsCurrentPreset = settings.stylePreset || 'sage';
+    const presetName = settings.stylePreset ? settings.stylePreset.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' + ') : 'Sage';
+    document.getElementById('settingsPresetText').textContent = presetName;
+
+    // Set font text and value
+    const fontName = settings.fontFamily.split(',')[0].replace(/['"]/g, '');
+    document.getElementById('settingsFontText').textContent = fontName;
+    settingsCurrentFont = settings.fontFamily;
+
+    document.getElementById('settingsBackgroundColor').value = settings.backgroundColor;
+    document.getElementById('settingsBackgroundPattern').value = settings.backgroundPattern;
+    document.getElementById('settingsShowRulers').checked = settings.showRulers;
+    document.getElementById('settingsCanvasMode').value = settings.canvasMode;
+    document.getElementById('settingsFontSize').value = settings.fontSize;
+
+    // Update preset previews in settings dropdown
+    updateSettingsPresetPreviews();
+}
+
+// Update preset previews in settings dialog
+function updateSettingsPresetPreviews() {
+    const shapePath = getShapeSVGPath('rectangle'); // Always use rectangle for settings preview
+
+    settingsPresetDropdown.querySelectorAll('.preset-grid-item').forEach(item => {
+        const preset = item.dataset.preset;
+        const svg = item.querySelector('.preset-preview');
+
+        if (preset && svg) {
+            // Parse preset name
+            const parts = preset.split('-');
+            const basePreset = parts[0];
+            const hasShadow = parts.includes('shadow');
+            const hasDashed = parts.includes('dashed');
+
+            const colors = stylePresets[basePreset];
+            if (colors) {
+                const strokeDasharray = hasDashed ? '2,2' : '';
+                const filter = hasShadow ? 'drop-shadow(1px 1px 2px rgba(0,0,0,0.3))' : '';
+
+                svg.innerHTML = shapePath;
+                svg.style.filter = filter;
+
+                const shape = svg.querySelector('rect, circle, path');
+                if (shape) {
+                    shape.setAttribute('fill', colors.fill);
+                    shape.setAttribute('stroke', colors.stroke);
+                    shape.setAttribute('stroke-width', '2');
+                    if (strokeDasharray) {
+                        shape.setAttribute('stroke-dasharray', strokeDasharray);
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Settings dialog event handlers
+const settingsModal = document.getElementById('settingsModal');
+const settingsBtn = document.getElementById('settingsBtn');
+const settingsSaveBtn = document.getElementById('settingsSave');
+const settingsResetBtn = document.getElementById('settingsReset');
+const settingsCloseBtn = document.getElementById('settingsClose');
+
+// Settings preset and font state
+let settingsCurrentPreset = 'sage';
+let settingsCurrentFont = 'Comic Sans MS, cursive';
+
+// Settings preset dropdown
+const settingsPresetBtn = document.getElementById('settingsPresetBtn');
+const settingsPresetDropdown = document.getElementById('settingsPresetDropdown');
+
+settingsPresetBtn.addEventListener('click', () => {
+    settingsPresetDropdown.classList.toggle('active');
+    settingsFontDropdown.classList.remove('active');
+});
+
+settingsPresetDropdown.querySelectorAll('.preset-grid-item').forEach(item => {
+    item.addEventListener('click', () => {
+        const preset = item.dataset.preset;
+        settingsCurrentPreset = preset;
+        const presetName = preset.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' + ');
+        document.getElementById('settingsPresetText').textContent = presetName;
+        settingsPresetDropdown.classList.remove('active');
+    });
+});
+
+// Settings font dropdown
+const settingsFontBtn = document.getElementById('settingsFontBtn');
+const settingsFontDropdown = document.getElementById('settingsFontDropdown');
+
+settingsFontBtn.addEventListener('click', () => {
+    settingsFontDropdown.classList.toggle('active');
+    settingsPresetDropdown.classList.remove('active');
+});
+
+settingsFontDropdown.querySelectorAll('.font-item').forEach(item => {
+    item.addEventListener('click', () => {
+        const font = item.dataset.font;
+        const name = item.dataset.name;
+        settingsCurrentFont = font;
+        document.getElementById('settingsFontText').textContent = name;
+        settingsFontDropdown.classList.remove('active');
+    });
+});
+
+// Open settings dialog
+settingsBtn.addEventListener('click', () => {
+    populateSettingsDialog();
+    settingsModal.classList.add('active');
+});
+
+// Close settings dialog
+settingsCloseBtn.addEventListener('click', () => {
+    settingsModal.classList.remove('active');
+});
+
+// Close on outside click
+settingsModal.addEventListener('click', (e) => {
+    if (e.target === settingsModal) {
+        settingsModal.classList.remove('active');
+    }
+});
+
+// Close dropdowns when clicking outside (only when modal is active)
+document.addEventListener('click', (e) => {
+    if (settingsModal.classList.contains('active')) {
+        if (!settingsPresetBtn.contains(e.target) && !settingsPresetDropdown.contains(e.target)) {
+            settingsPresetDropdown.classList.remove('active');
+        }
+        if (!settingsFontBtn.contains(e.target) && !settingsFontDropdown.contains(e.target)) {
+            settingsFontDropdown.classList.remove('active');
+        }
+    }
+});
+
+// Save and apply settings
+settingsSaveBtn.addEventListener('click', () => {
+    const settings = {
+        stylePreset: settingsCurrentPreset,
+        backgroundColor: document.getElementById('settingsBackgroundColor').value,
+        backgroundPattern: document.getElementById('settingsBackgroundPattern').value,
+        showRulers: document.getElementById('settingsShowRulers').checked,
+        canvasMode: document.getElementById('settingsCanvasMode').value,
+        fontFamily: settingsCurrentFont,
+        fontSize: parseInt(document.getElementById('settingsFontSize').value)
+    };
+
+    saveSettings(settings);
+    applySettings(settings);
+    settingsModal.classList.remove('active');
+});
+
+// Reset to defaults
+settingsResetBtn.addEventListener('click', () => {
+    if (confirm('Reset all settings to defaults? This will reload the page.')) {
+        localStorage.removeItem('andraw_settings');
+        // Also remove old individual settings for clean slate
+        localStorage.removeItem('andraw_backgroundColor');
+        localStorage.removeItem('andraw_canvasMode');
+        location.reload();
+    }
+});
+
+// ============================================================================
+// INITIALIZATION
+// ============================================================================
+
 // Initialize canvas
 resizeCanvas();
 
@@ -8870,7 +9511,7 @@ if (presetDropdown) {
     updatePresetPreviews();
 }
 
-// Splash screen handling - hide immediately
+// Splash screen handling - show for 0.75 seconds
 (function() {
     const splashScreen = document.getElementById('splashScreen');
     if (splashScreen) {
@@ -8881,9 +9522,13 @@ if (presetDropdown) {
                     splashScreen.parentNode.removeChild(splashScreen);
                 }
             }, 250);
-        }, 100);
+        }, 750);
     }
 })();
+
+// Load and apply settings from localStorage
+const savedSettings = loadSettings();
+applySettings(savedSettings);
 
 // Load last used styles from localStorage
 loadLastUsedStyles();
@@ -8894,5 +9539,5 @@ ensureElementIds();
 // Initialize undo history with empty state
 saveHistory();
 
-// Initialize mode UI (start in infinite canvas mode)
-updateModeUI();
+// Initialize mode UI (handled by applySettings now)
+// updateModeUI();

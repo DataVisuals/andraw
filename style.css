@@ -1816,6 +1816,208 @@ svg.preset-preview {
     border-color: #999;
 }
 
+/* Settings Modal */
+.settings-modal {
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.settings-modal h2 {
+    margin: 0 0 24px 0;
+    font-size: 24px;
+    font-weight: 600;
+    color: #333;
+    text-align: center;
+}
+
+.settings-section {
+    margin-bottom: 24px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.settings-section:last-of-type {
+    border-bottom: none;
+}
+
+.settings-section h3 {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #2196f3;
+}
+
+.settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    gap: 16px;
+}
+
+.settings-row label {
+    font-size: 14px;
+    color: #555;
+    min-width: 140px;
+}
+
+.settings-row input[type="color"] {
+    width: 60px;
+    height: 32px;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.settings-row input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+.settings-row select {
+    flex: 1;
+    padding: 6px 12px;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+}
+
+.settings-buttons {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.settings-btn {
+    flex: 1;
+    padding: 12px;
+    background: #2196f3;
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.settings-btn:hover {
+    background: #1976d2;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+}
+
+#settingsReset {
+    background: #666;
+}
+
+#settingsReset:hover {
+    background: #555;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Settings Preset Selector */
+.settings-preset-selector {
+    position: relative;
+    flex: 1;
+}
+
+.settings-preset-btn {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 14px;
+    transition: all 0.15s;
+}
+
+.settings-preset-btn:hover {
+    border-color: #2196f3;
+    background: #f8f9fa;
+}
+
+.settings-preset-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 4px;
+    background: white;
+    border: 1px solid #d0d0d0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 1000;
+    padding: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+.settings-preset-dropdown.active {
+    display: grid;
+}
+
+/* Settings Font Selector */
+.settings-font-selector {
+    position: relative;
+    flex: 1;
+}
+
+.settings-font-btn {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 14px;
+    transition: all 0.15s;
+}
+
+.settings-font-btn:hover {
+    border-color: #2196f3;
+    background: #f8f9fa;
+}
+
+.settings-font-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 4px;
+    background: white;
+    border: 1px solid #d0d0d0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 1000;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.settings-font-dropdown.active {
+    display: block;
+}
+
+.settings-font-dropdown .font-item {
+    width: 100%;
+}
+
 @keyframes slideUp {
     from {
         opacity: 0;

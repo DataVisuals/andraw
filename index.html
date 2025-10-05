@@ -27,18 +27,21 @@
             <div class="toolbar-group" data-group="file">
                 <div class="toolbar-group-label">File</div>
                 <div class="toolbar-group-content">
-                <div class="logo-dropdown-container">
-                    <div class="logo" id="logoBtn" title="Quick Load from Browser Storage">
-                        <img src="logo-transparent.png" alt="Andraw Logo" class="logo-img" width="32" height="32">
-                        <i class="fas fa-caret-down" style="font-size: 10px; margin-left: 2px; color: #fff;"></i>
-                    </div>
-                    <div class="logo-dropdown" id="logoDropdown">
-                        <div class="logo-dropdown-header">Browser Storage</div>
-                        <div id="savedDiagramsList" class="saved-diagrams-list">
-                            <div class="no-diagrams">No saved diagrams</div>
+                    <div class="logo-dropdown-container">
+                        <div class="logo" id="logoBtn" title="Quick Load from Browser Storage">
+                            <img src="logo-transparent.png" alt="Andraw Logo" class="logo-img" width="32" height="32">
+                            <i class="fas fa-caret-down" style="font-size: 10px; margin-left: 2px; color: #fff;"></i>
+                        </div>
+                        <div class="logo-dropdown" id="logoDropdown">
+                            <div class="logo-dropdown-header">Browser Storage</div>
+                            <div id="savedDiagramsList" class="saved-diagrams-list">
+                                <div class="no-diagrams">No saved diagrams</div>
+                            </div>
                         </div>
                     </div>
-                </div>
+                    <button class="action-btn" id="settingsBtn" title="Settings">
+                        <i class="fas fa-cog"></i>
+                    </button>
                 </div>
             </div>
 
@@ -295,6 +298,20 @@
                         <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
                     </button>
                     <button class="preset-grid-item" data-preset="moss-shadow-dashed" title="Moss + Shadow + Dashed">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+
+                    <!-- Cerulean variants -->
+                    <button class="preset-grid-item" data-preset="cerulean" title="Cerulean">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+                    <button class="preset-grid-item" data-preset="cerulean-shadow" title="Cerulean + Shadow">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+                    <button class="preset-grid-item" data-preset="cerulean-dashed" title="Cerulean + Dashed">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+                    <button class="preset-grid-item" data-preset="cerulean-shadow-dashed" title="Cerulean + Shadow + Dashed">
                         <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
                     </button>
                 </div>
@@ -1410,6 +1427,253 @@
                 </button>
             </div>
             <button class="modal-close-btn" id="exportModalClose">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Settings Dialog -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content settings-modal">
+            <h2>Settings</h2>
+            <div class="settings-section">
+                <h3>Default Styles</h3>
+                <div class="settings-row">
+                    <label>Style Preset:</label>
+                    <div class="settings-preset-selector">
+                        <button class="settings-preset-btn" id="settingsPresetBtn">
+                            <span id="settingsPresetText">Sage</span>
+                            <i class="fas fa-caret-down" style="font-size: 10px; margin-left: 8px;"></i>
+                        </button>
+                        <div class="settings-preset-dropdown" id="settingsPresetDropdown">
+                            <button class="preset-grid-item" data-preset="sage" title="Sage">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="sage-shadow" title="Sage + Shadow">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="sage-dashed" title="Sage + Dashed">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="sage-shadow-dashed" title="Sage + Shadow + Dashed">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="slate" title="Slate">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="slate-shadow" title="Slate + Shadow">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="slate-dashed" title="Slate + Dashed">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="slate-shadow-dashed" title="Slate + Shadow + Dashed">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="terracotta" title="Terracotta">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="terracotta-shadow" title="Terracotta + Shadow">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="terracotta-dashed" title="Terracotta + Dashed">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="terracotta-shadow-dashed" title="Terracotta + Shadow + Dashed">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="ocean" title="Ocean">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="ocean-shadow" title="Ocean + Shadow">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="ocean-dashed" title="Ocean + Dashed">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="ocean-shadow-dashed" title="Ocean + Shadow + Dashed">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="plum" title="Plum">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="plum-shadow" title="Plum + Shadow">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="plum-dashed" title="Plum + Dashed">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="plum-shadow-dashed" title="Plum + Shadow + Dashed">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="charcoal" title="Charcoal">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="charcoal-shadow" title="Charcoal + Shadow">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="charcoal-dashed" title="Charcoal + Dashed">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="charcoal-shadow-dashed" title="Charcoal + Shadow + Dashed">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="forest" title="Forest">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="forest-shadow" title="Forest + Shadow">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="forest-dashed" title="Forest + Dashed">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="forest-shadow-dashed" title="Forest + Shadow + Dashed">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="burgundy" title="Burgundy">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="burgundy-shadow" title="Burgundy + Shadow">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="burgundy-dashed" title="Burgundy + Dashed">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="burgundy-shadow-dashed" title="Burgundy + Shadow + Dashed">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="navy" title="Navy">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="navy-shadow" title="Navy + Shadow">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="navy-dashed" title="Navy + Dashed">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="navy-shadow-dashed" title="Navy + Shadow + Dashed">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="copper" title="Copper">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="copper-shadow" title="Copper + Shadow">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="copper-dashed" title="Copper + Dashed">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="copper-shadow-dashed" title="Copper + Shadow + Dashed">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="moss" title="Moss">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="moss-shadow" title="Moss + Shadow">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="moss-dashed" title="Moss + Dashed">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="moss-shadow-dashed" title="Moss + Shadow + Dashed">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="cerulean" title="Cerulean">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="cerulean-shadow" title="Cerulean + Shadow">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="cerulean-dashed" title="Cerulean + Dashed">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                            <button class="preset-grid-item" data-preset="cerulean-shadow-dashed" title="Cerulean + Shadow + Dashed">
+                                <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="settings-section">
+                <h3>Default View</h3>
+                <div class="settings-row">
+                    <label>Background Color:</label>
+                    <input type="color" id="settingsBackgroundColor" value="#FFFEF9">
+                </div>
+                <div class="settings-row">
+                    <label>Background Pattern:</label>
+                    <select id="settingsBackgroundPattern">
+                        <option value="blank">Blank</option>
+                        <option value="line-grid" selected>Line Grid</option>
+                        <option value="dot-grid">Dot Grid</option>
+                    </select>
+                </div>
+                <div class="settings-row">
+                    <label>Show Rulers:</label>
+                    <input type="checkbox" id="settingsShowRulers">
+                </div>
+                <div class="settings-row">
+                    <label>Canvas Mode:</label>
+                    <select id="settingsCanvasMode">
+                        <option value="infinite" selected>Infinite Canvas</option>
+                        <option value="storybook">Storybook</option>
+                    </select>
+                </div>
+            </div>
+            <div class="settings-section">
+                <h3>Default Text</h3>
+                <div class="settings-row">
+                    <label>Font Family:</label>
+                    <div class="settings-font-selector">
+                        <button class="settings-font-btn" id="settingsFontBtn">
+                            <span id="settingsFontText">Handwritten</span>
+                            <i class="fas fa-caret-down" style="font-size: 10px; margin-left: 8px;"></i>
+                        </button>
+                        <div class="settings-font-dropdown" id="settingsFontDropdown">
+                            <button class="font-item" data-font="Comic Sans MS, cursive" data-name="Handwritten">
+                                <span style="font-family: 'Comic Sans MS', cursive;">Handwritten</span>
+                            </button>
+                            <button class="font-item" data-font="Arial, sans-serif" data-name="Arial">
+                                <span style="font-family: Arial, sans-serif;">Arial</span>
+                            </button>
+                            <button class="font-item" data-font="Helvetica, sans-serif" data-name="Helvetica">
+                                <span style="font-family: Helvetica, sans-serif;">Helvetica</span>
+                            </button>
+                            <button class="font-item" data-font="Verdana, sans-serif" data-name="Verdana">
+                                <span style="font-family: Verdana, sans-serif;">Verdana</span>
+                            </button>
+                            <button class="font-item" data-font="Trebuchet MS, sans-serif" data-name="Trebuchet">
+                                <span style="font-family: 'Trebuchet MS', sans-serif;">Trebuchet</span>
+                            </button>
+                            <button class="font-item" data-font="Georgia, serif" data-name="Georgia">
+                                <span style="font-family: Georgia, serif;">Georgia</span>
+                            </button>
+                            <button class="font-item" data-font="Times New Roman, serif" data-name="Times">
+                                <span style="font-family: 'Times New Roman', serif;">Times</span>
+                            </button>
+                            <button class="font-item" data-font="Courier New, monospace" data-name="Courier">
+                                <span style="font-family: 'Courier New', monospace;">Courier</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-row">
+                    <label>Font Size:</label>
+                    <select id="settingsFontSize">
+                        <option value="10">10px</option>
+                        <option value="12">12px</option>
+                        <option value="14">14px</option>
+                        <option value="16" selected>16px</option>
+                        <option value="18">18px</option>
+                        <option value="20">20px</option>
+                        <option value="24">24px</option>
+                        <option value="32">32px</option>
+                    </select>
+                </div>
+            </div>
+            <div class="settings-buttons">
+                <button class="settings-btn" id="settingsSave">Save & Apply</button>
+                <button class="settings-btn" id="settingsReset">Reset to Defaults</button>
+                <button class="modal-close-btn" id="settingsClose">Cancel</button>
+            </div>
         </div>
     </div>
 
