@@ -1089,8 +1089,11 @@ let selectedIconClass = 'fas fa-star'; // Default icon
 function drawIcon(element) {
     ctx.save();
 
+    // Use the smaller dimension to ensure icon fits
+    const iconSize = Math.min(Math.abs(element.width), Math.abs(element.height));
+
     // Set font to Font Awesome
-    ctx.font = `${element.height}px "Font Awesome 6 Free"`;
+    ctx.font = `${iconSize}px "Font Awesome 6 Free"`;
     ctx.fillStyle = element.color || '#2C3E50';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -1118,7 +1121,7 @@ function drawIcon(element) {
     const fontWeight = element.iconClass.includes('fas') ? '900' :
                        element.iconClass.includes('far') ? '400' :
                        element.iconClass.includes('fab') ? '400' : '900';
-    ctx.font = `${fontWeight} ${element.height}px "Font Awesome 6 Free", "Font Awesome 6 Brands"`;
+    ctx.font = `${fontWeight} ${iconSize}px "Font Awesome 6 Free", "Font Awesome 6 Brands"`;
 
     ctx.fillText(iconChar, centerX, centerY);
 
@@ -3465,25 +3468,6 @@ function handleMouseDown(e) {
         e.preventDefault();
         createTextInput(startX, startY);
         return;
-    } else if (currentTool === 'icon') {
-        // Create icon at click position
-        const iconSize = 48; // Default icon size
-        const icon = {
-            id: nextElementId++,
-            type: 'icon',
-            x: startX - iconSize / 2, // Center on click
-            y: startY - iconSize / 2,
-            width: iconSize,
-            height: iconSize,
-            iconClass: selectedIconClass,
-            color: textColorInput.value // Use text color for icon color
-        };
-        elements.push(icon);
-        lastCreatedShape = icon; // Track for 'M' key duplication
-        duplicationDirection = null; // Reset direction for new icon
-        saveHistory();
-        redraw();
-        return;
     } else {
         isDrawing = true;
         if (currentTool === 'pen') {
@@ -3783,6 +3767,12 @@ function handleMouseUp(e) {
                 lineRouting: (currentTool === 'line' || currentTool === 'arrow') ? currentLineRouting : undefined,
                 lineThickness: currentLineThickness
             };
+
+            // Add icon-specific properties
+            if (currentTool === 'icon') {
+                element.iconClass = selectedIconClass;
+                element.color = textColorInput.value;
+            }
 
             // Store connection information for arrows and lines
             if (currentTool === 'arrow' || currentTool === 'line') {
@@ -6766,6 +6756,12 @@ function drawPreview(x, y) {
         lineThickness: currentLineThickness
     };
 
+    // Add icon-specific properties to preview
+    if (currentTool === 'icon') {
+        previewElement.iconClass = selectedIconClass;
+        previewElement.color = textColorInput.value;
+    }
+
     drawElement(previewElement);
     ctx.restore();
 }
@@ -8650,7 +8646,10 @@ function populateChangelog() {
             'Arrows remember anchor points - stay connected when shapes move or resize',
             'Transform shapes - select shapes and click a shape tool to transform them while preserving connections',
             'Connected arrows automatically adjust when shapes are transformed',
+            'Icons now work like shapes - drag to draw at desired size instead of fixed size',
+            'Icon size scales based on smaller dimension to maintain aspect ratio',
             'Style preset selector moved to Style group for better organization',
+            'Fixed zoom rendering artifacts',
             'Redo support with Ctrl/⌘+Y keyboard shortcut',
             'Removed Undo button from toolbar (use Ctrl/⌘+Z keyboard shortcut)',
             'Drop shadows for shapes - toggle with Shadow checkbox in toolbar',
