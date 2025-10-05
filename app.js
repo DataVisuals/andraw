@@ -7185,49 +7185,6 @@ function drawDotGrid() {
     }
 }
 
-function drawIsometricGrid() {
-    const startX = Math.floor(-panOffsetX / zoomLevel / gridSize) * gridSize;
-    const startY = Math.floor(-panOffsetY / zoomLevel / gridSize) * gridSize;
-    const endX = startX + Math.ceil(canvas.width / zoomLevel / gridSize) * gridSize + gridSize * 2;
-    const endY = startY + Math.ceil(canvas.height / zoomLevel / gridSize) * gridSize + gridSize * 2;
-
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
-    ctx.lineWidth = 1 / zoomLevel;
-    ctx.beginPath();
-
-    // Isometric angle is 30 degrees
-    const angle30 = Math.PI / 6;
-    const isoSpacing = gridSize;
-
-    // Draw lines at 30 degrees
-    for (let i = startX - gridSize * 4; i <= endX + gridSize * 4; i += isoSpacing) {
-        const x1 = i;
-        const y1 = startY - gridSize * 4;
-        const x2 = i + (endY - startY + gridSize * 8) * Math.tan(angle30);
-        const y2 = endY + gridSize * 4;
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-    }
-
-    // Draw lines at -30 degrees
-    for (let i = startX - gridSize * 4; i <= endX + gridSize * 4; i += isoSpacing) {
-        const x1 = i;
-        const y1 = startY - gridSize * 4;
-        const x2 = i - (endY - startY + gridSize * 8) * Math.tan(angle30);
-        const y2 = endY + gridSize * 4;
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-    }
-
-    // Draw horizontal lines
-    for (let y = startY; y <= endY; y += isoSpacing) {
-        ctx.moveTo(startX - gridSize * 4, y);
-        ctx.lineTo(endX + gridSize * 4, y);
-    }
-
-    ctx.stroke();
-}
-
 function drawBackgroundPattern() {
     if (currentBackgroundPattern === 'blank') {
         // No pattern, just background color
@@ -7236,8 +7193,6 @@ function drawBackgroundPattern() {
         drawLineGrid();
     } else if (currentBackgroundPattern === 'dot-grid') {
         drawDotGrid();
-    } else if (currentBackgroundPattern === 'isometric') {
-        drawIsometricGrid();
     }
 }
 
@@ -8687,7 +8642,7 @@ function populateChangelog() {
             'Fixed splash screen hanging issue on load'
         ],
         '2025-10-05': [
-            'Background pattern selector - dot grid, line grid, isometric, or blank backgrounds',
+            'Background pattern selector - dot grid, line grid, or blank backgrounds',
             'Pattern selector replaces grid toggle - select pattern or blank directly',
             'G key now toggles between blank and last selected pattern',
             'Smart anchor points - arrows snap to 9 anchor points per shape (corners, sides, center)',
