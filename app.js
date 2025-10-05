@@ -1401,11 +1401,18 @@ document.addEventListener('keydown', (e) => {
         return;
     }
 
-    // Escape key closes help panel and modals
+    // Escape key closes help panel, changelog panel, and modals
     if (e.key === 'Escape') {
         const helpPanel = document.getElementById('helpPanel');
         if (helpPanel.classList.contains('active')) {
             helpPanel.classList.remove('active');
+            e.preventDefault();
+            return;
+        }
+
+        const changelogPanel = document.getElementById('changelogPanel');
+        if (changelogPanel.classList.contains('active')) {
+            changelogPanel.classList.remove('active');
             e.preventDefault();
             return;
         }
@@ -5916,6 +5923,79 @@ function toggleHelpPanel() {
 // Close help panel when clicking outside the content
 document.getElementById('helpPanel').addEventListener('click', (e) => {
     if (e.target.id === 'helpPanel') {
+        e.target.classList.remove('active');
+    }
+});
+
+// Changelog panel toggle
+function toggleChangelogPanel() {
+    const changelogPanel = document.getElementById('changelogPanel');
+    changelogPanel.classList.toggle('active');
+
+    // Populate changelog if it's being opened
+    if (changelogPanel.classList.contains('active')) {
+        populateChangelog();
+    }
+}
+
+// Populate changelog with features
+function populateChangelog() {
+    const changelogContent = document.querySelector('.changelog-content');
+
+    const changelog = {
+        '2025-10-05': [
+            'Grid toggle (G) and snap to grid (Shift+G)',
+            'Copy/paste/duplicate (Cmd+C/V/D) with parent-child preservation',
+            'Alignment tools (left/center/right/top/middle/bottom)',
+            'Distribution tools (horizontal/vertical)',
+            'Zoom controls (Fit/Reset/50%/100%/150%/200%)',
+            'Selection tools (Select All, Lock/Unlock, Select by Type)',
+            'Arrow key positioning (1px or 10px with Shift)',
+            'Layout buttons now preserve selection',
+            'Fixed copy/paste keyboard shortcuts'
+        ],
+        '2025-10-04': [
+            'New selection icons and improved styling',
+            'Logo and visual enhancements'
+        ],
+        '2025-10-03': [
+            'Keyboard shortcuts help panel (press ?)',
+            'Connect mode for auto-connecting shapes with arrows (press C)',
+            'Auto-numbering for duplicated shapes (Thing 1, Thing 2, etc.)',
+            'Duplicate last shape with M key',
+            'Smart arrow routing (horizontal/vertical)',
+            'Improved parent-child text relationships',
+            '6 new style presets for shapes'
+        ],
+        '2025-10-02': [
+            'PowerPoint export functionality',
+            'Font size selector for text',
+            'Multi-select with rectangle drag',
+            'Template shape library with categories',
+            'Andraw logo and branding',
+            'Pan and zoom for infinite canvas'
+        ]
+    };
+
+    let html = '';
+    for (const [date, items] of Object.entries(changelog)) {
+        html += `<div class="changelog-date">${date}</div>`;
+        html += '<ul class="changelog-items">';
+        items.forEach(item => {
+            html += `<li class="changelog-item">${item}</li>`;
+        });
+        html += '</ul>';
+    }
+
+    changelogContent.innerHTML = html;
+}
+
+// Changelog button click handler
+document.getElementById('changelogBtn').addEventListener('click', toggleChangelogPanel);
+
+// Close changelog panel when clicking outside the content
+document.getElementById('changelogPanel').addEventListener('click', (e) => {
+    if (e.target.id === 'changelogPanel') {
         e.target.classList.remove('active');
     }
 });

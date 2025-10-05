@@ -1184,6 +1184,46 @@ label span {
     color: #999;
 }
 
+/* Changelog Panel */
+.changelog-content {
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.changelog-date {
+    font-size: 18px;
+    font-weight: 600;
+    color: #2196f3;
+    margin: 24px 0 12px 0;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e3f2fd;
+}
+
+.changelog-date:first-child {
+    margin-top: 0;
+}
+
+.changelog-items {
+    margin-left: 0;
+    padding-left: 0;
+    list-style: none;
+}
+
+.changelog-item {
+    padding: 8px 0 8px 24px;
+    position: relative;
+    font-size: 14px;
+    color: #555;
+    line-height: 1.6;
+}
+
+.changelog-item:before {
+    content: "✨";
+    position: absolute;
+    left: 0;
+    top: 8px;
+}
+
 /* Page Navigation */
 .page-navigation {
     position: absolute;

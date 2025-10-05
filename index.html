@@ -484,6 +484,9 @@
             <button class="action-btn" id="exportJSON" title="Save to File + Browser Storage">
                 <i class="fas fa-save"></i>
             </button>
+            <button class="action-btn" id="changelogBtn" title="What's New">
+                <i class="fas fa-sparkles"></i>
+            </button>
             <button class="action-btn" id="importJSON" title="Load from File (also saves to Browser Storage)">
                 <i class="fas fa-folder-open"></i>
             </button>
@@ -1000,6 +1003,19 @@
         </div>
 
         <!-- Keyboard Shortcuts Help Panel -->
+        <!-- Changelog Panel -->
+        <div id="changelogPanel" class="help-panel">
+            <div class="help-content">
+                <h2>What's New</h2>
+                <div class="changelog-content">
+                    <!-- Populated by JavaScript -->
+                </div>
+                <div class="help-footer">
+                    Press <kbd>Esc</kbd> to close
+                </div>
+            </div>
+        </div>
+
         <div id="helpPanel" class="help-panel">
             <div class="help-content">
                 <h2>Keyboard Shortcuts</h2>
