@@ -905,6 +905,174 @@ if (presetBtn && presetDropdown) {
     });
 }
 
+// Font Awesome icon selector
+const iconBtn = document.getElementById('iconBtn');
+const iconDropdown = document.getElementById('iconDropdown');
+const iconSearch = document.getElementById('iconSearch');
+const iconGrid = document.getElementById('iconGrid');
+
+// Popular Font Awesome icons
+const popularIcons = [
+    { name: 'user', class: 'fas fa-user', keywords: 'person profile account' },
+    { name: 'users', class: 'fas fa-users', keywords: 'people group team' },
+    { name: 'home', class: 'fas fa-home', keywords: 'house building' },
+    { name: 'heart', class: 'fas fa-heart', keywords: 'love favorite like' },
+    { name: 'star', class: 'fas fa-star', keywords: 'favorite rating' },
+    { name: 'check', class: 'fas fa-check', keywords: 'confirm ok done tick' },
+    { name: 'times', class: 'fas fa-times', keywords: 'close delete remove x' },
+    { name: 'envelope', class: 'fas fa-envelope', keywords: 'email mail message' },
+    { name: 'phone', class: 'fas fa-phone', keywords: 'call telephone' },
+    { name: 'calendar', class: 'fas fa-calendar', keywords: 'date schedule' },
+    { name: 'clock', class: 'fas fa-clock', keywords: 'time watch' },
+    { name: 'map-marker', class: 'fas fa-map-marker-alt', keywords: 'location pin place' },
+    { name: 'search', class: 'fas fa-search', keywords: 'find magnify' },
+    { name: 'cog', class: 'fas fa-cog', keywords: 'settings gear config' },
+    { name: 'bell', class: 'fas fa-bell', keywords: 'notification alert' },
+    { name: 'lock', class: 'fas fa-lock', keywords: 'secure password' },
+    { name: 'unlock', class: 'fas fa-unlock', keywords: 'open unsecure' },
+    { name: 'key', class: 'fas fa-key', keywords: 'password access' },
+    { name: 'shield', class: 'fas fa-shield-alt', keywords: 'security protect' },
+    { name: 'download', class: 'fas fa-download', keywords: 'save arrow' },
+    { name: 'upload', class: 'fas fa-upload', keywords: 'send arrow' },
+    { name: 'cloud', class: 'fas fa-cloud', keywords: 'weather sky' },
+    { name: 'database', class: 'fas fa-database', keywords: 'storage data' },
+    { name: 'server', class: 'fas fa-server', keywords: 'computer host' },
+    { name: 'laptop', class: 'fas fa-laptop', keywords: 'computer device' },
+    { name: 'mobile', class: 'fas fa-mobile-alt', keywords: 'phone device' },
+    { name: 'folder', class: 'fas fa-folder', keywords: 'directory files' },
+    { name: 'file', class: 'fas fa-file', keywords: 'document' },
+    { name: 'chart-bar', class: 'fas fa-chart-bar', keywords: 'graph analytics' },
+    { name: 'chart-pie', class: 'fas fa-chart-pie', keywords: 'graph analytics' },
+    { name: 'shopping-cart', class: 'fas fa-shopping-cart', keywords: 'buy store' },
+    { name: 'credit-card', class: 'fas fa-credit-card', keywords: 'payment money' },
+    { name: 'dollar', class: 'fas fa-dollar-sign', keywords: 'money currency' },
+    { name: 'globe', class: 'fas fa-globe', keywords: 'world international' },
+    { name: 'wifi', class: 'fas fa-wifi', keywords: 'internet network' },
+    { name: 'plug', class: 'fas fa-plug', keywords: 'power electric' },
+    { name: 'bolt', class: 'fas fa-bolt', keywords: 'lightning power' },
+    { name: 'fire', class: 'fas fa-fire', keywords: 'flame hot' },
+    { name: 'lightbulb', class: 'fas fa-lightbulb', keywords: 'idea bright' },
+    { name: 'camera', class: 'fas fa-camera', keywords: 'photo picture' },
+    { name: 'video', class: 'fas fa-video', keywords: 'film movie' },
+    { name: 'music', class: 'fas fa-music', keywords: 'audio sound' },
+    { name: 'comment', class: 'fas fa-comment', keywords: 'message chat' },
+    { name: 'bookmark', class: 'fas fa-bookmark', keywords: 'save favorite' },
+    { name: 'flag', class: 'fas fa-flag', keywords: 'marker banner' },
+    { name: 'trophy', class: 'fas fa-trophy', keywords: 'award win' },
+    { name: 'gift', class: 'fas fa-gift', keywords: 'present box' },
+    { name: 'thumbs-up', class: 'fas fa-thumbs-up', keywords: 'like approve' },
+    { name: 'arrow-right', class: 'fas fa-arrow-right', keywords: 'next direction' },
+    { name: 'arrow-left', class: 'fas fa-arrow-left', keywords: 'back direction' },
+    { name: 'arrow-up', class: 'fas fa-arrow-up', keywords: 'top direction' },
+    { name: 'arrow-down', class: 'fas fa-arrow-down', keywords: 'bottom direction' },
+    { name: 'plus', class: 'fas fa-plus', keywords: 'add create new' },
+    { name: 'minus', class: 'fas fa-minus', keywords: 'remove subtract' },
+    { name: 'exclamation', class: 'fas fa-exclamation-triangle', keywords: 'warning alert' },
+    { name: 'info', class: 'fas fa-info-circle', keywords: 'information help' },
+    { name: 'question', class: 'fas fa-question-circle', keywords: 'help unknown' }
+];
+
+// Populate icon grid
+function populateIconGrid(filter = '') {
+    iconGrid.innerHTML = '';
+    const filteredIcons = filter
+        ? popularIcons.filter(icon =>
+            icon.name.includes(filter.toLowerCase()) ||
+            icon.keywords.includes(filter.toLowerCase()))
+        : popularIcons;
+
+    filteredIcons.forEach(icon => {
+        const btn = document.createElement('button');
+        btn.className = 'icon-grid-item';
+        btn.dataset.iconClass = icon.class;
+        btn.title = icon.name;
+        btn.innerHTML = `<i class="${icon.class}"></i>`;
+        iconGrid.appendChild(btn);
+    });
+}
+
+// Icon dropdown toggle
+if (iconBtn && iconDropdown) {
+    iconBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        iconDropdown.classList.toggle('active');
+
+        if (iconDropdown.classList.contains('active')) {
+            populateIconGrid();
+            iconSearch.value = '';
+            iconSearch.focus();
+        }
+
+        if (shapeDropdown) shapeDropdown.classList.remove('active');
+        if (presetDropdown) presetDropdown.classList.remove('active');
+        if (rectangleDropdown) rectangleDropdown.classList.remove('active');
+        if (circleDropdown) circleDropdown.classList.remove('active');
+        fontDropdown.classList.remove('active');
+    });
+
+    // Icon search
+    iconSearch.addEventListener('input', (e) => {
+        populateIconGrid(e.target.value);
+    });
+
+    // Icon selection
+    iconGrid.addEventListener('click', (e) => {
+        const item = e.target.closest('.icon-grid-item');
+        if (item) {
+            const iconClass = item.dataset.iconClass;
+            // Switch to select tool and prepare to place icon
+            currentTool = 'icon';
+            selectedIconClass = iconClass;
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            iconBtn.classList.add('active');
+            canvas.style.cursor = 'crosshair';
+            iconDropdown.classList.remove('active');
+        }
+    });
+}
+
+let selectedIconClass = 'fas fa-star'; // Default icon
+
+// Draw Font Awesome icon
+function drawIcon(element) {
+    ctx.save();
+
+    // Set font to Font Awesome
+    ctx.font = `${element.height}px "Font Awesome 6 Free"`;
+    ctx.fillStyle = element.color || '#2C3E50';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Get the icon character from the iconClass
+    // Create a temporary element to get the icon's unicode character
+    const tempElement = document.createElement('i');
+    tempElement.className = element.iconClass;
+    tempElement.style.fontFamily = '"Font Awesome 6 Free", "Font Awesome 6 Brands"';
+    tempElement.style.fontWeight = element.iconClass.includes('fas') ? '900' :
+                                   element.iconClass.includes('far') ? '400' :
+                                   element.iconClass.includes('fab') ? '400' : '900';
+    document.body.appendChild(tempElement);
+    const iconText = window.getComputedStyle(tempElement, '::before').content;
+    document.body.removeChild(tempElement);
+
+    // Remove quotes from content if present
+    const iconChar = iconText ? iconText.replace(/['"]/g, '') : '\uf005'; // fallback to star
+
+    // Draw the icon centered in its bounding box
+    const centerX = element.x + element.width / 2;
+    const centerY = element.y + element.height / 2;
+
+    // Set proper font weight based on icon class
+    const fontWeight = element.iconClass.includes('fas') ? '900' :
+                       element.iconClass.includes('far') ? '400' :
+                       element.iconClass.includes('fab') ? '400' : '900';
+    ctx.font = `${fontWeight} ${element.height}px "Font Awesome 6 Free", "Font Awesome 6 Brands"`;
+
+    ctx.fillText(iconChar, centerX, centerY);
+
+    ctx.restore();
+}
+
 // Close dropdowns when clicking outside
 document.addEventListener('click', (e) => {
     const logoBtn = document.getElementById('logoBtn');
@@ -932,6 +1100,9 @@ document.addEventListener('click', (e) => {
     }
     if (presetBtn && presetDropdown && !presetBtn.contains(e.target) && !presetDropdown.contains(e.target)) {
         presetDropdown.classList.remove('active');
+    }
+    if (iconBtn && iconDropdown && !iconBtn.contains(e.target) && !iconDropdown.contains(e.target)) {
+        iconDropdown.classList.remove('active');
     }
     if (logoBtn && logoDropdown && !logoBtn.contains(e.target) && !logoDropdown.contains(e.target)) {
         logoDropdown.classList.remove('active');
@@ -3130,6 +3301,23 @@ function handleMouseDown(e) {
     } else if (currentTool === 'text') {
         e.preventDefault();
         createTextInput(startX, startY);
+        return;
+    } else if (currentTool === 'icon') {
+        // Create icon at click position
+        const iconSize = 48; // Default icon size
+        const icon = {
+            id: nextElementId++,
+            type: 'icon',
+            x: startX - iconSize / 2, // Center on click
+            y: startY - iconSize / 2,
+            width: iconSize,
+            height: iconSize,
+            iconClass: selectedIconClass,
+            color: textColorInput.value // Use text color for icon color
+        };
+        elements.push(icon);
+        saveHistory();
+        redraw();
         return;
     } else {
         isDrawing = true;
@@ -5852,6 +6040,9 @@ function drawElement(element) {
         case 'text':
             drawText(element);
             break;
+        case 'icon':
+            drawIcon(element);
+            break;
         case 'diamond':
             drawDiamond(element.x, element.y, element.width, element.height,
                        element.strokeColor, element.fillColor);
@@ -8125,6 +8316,8 @@ function populateChangelog() {
 
     const changelog = {
         '2025-10-06': [
+            'Font Awesome icon library - searchable selector with 60+ popular icons',
+            'Icons are resizable, moveable, and color customizable',
             'Unified shape selector with all shapes and keyboard shortcuts (Shift+1-7)',
             'Style preset selector reorganized into 4-column grid layout',
             'Dynamic shape thumbnails in style presets - updates based on selected shape',

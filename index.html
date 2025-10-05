@@ -278,6 +278,20 @@
             <button class="tool-btn" data-tool="text" title="Text (T)">
                 <svg width="20" height="20" viewBox="0 0 20 20"><text x="10" y="15" text-anchor="middle" font-size="14" fill="currentColor">T</text></svg>
             </button>
+
+            <!-- Font Awesome Icon Selector -->
+            <div class="shape-dropdown-container">
+                <button class="tool-btn" id="iconBtn" title="Insert Icon">
+                    <i class="fas fa-icons"></i>
+                    <i class="fas fa-caret-down" style="font-size: 10px; margin-left: 2px;"></i>
+                </button>
+                <div class="shape-dropdown icon-dropdown" id="iconDropdown">
+                    <input type="text" id="iconSearch" class="icon-search" placeholder="Search icons...">
+                    <div class="icon-grid" id="iconGrid">
+                        <!-- Icons will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
                 </div>
             </div>
 
