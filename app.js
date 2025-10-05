@@ -1907,17 +1907,26 @@ function handleContextMenu(e) {
     // Check if right-clicked on an element
     const clickedElement = getElementAtPoint(x, y);
 
-    // Only show context menu if there's a selection or clicked element
-    if (!clickedElement && selectedElements.length === 0 && !selectedElement) {
-        return;
-    }
-
     // If clicked on an unselected element, select it
     if (clickedElement && !selectedElements.includes(clickedElement) && clickedElement !== selectedElement) {
         selectedElement = clickedElement;
         selectedElements = [];
         redraw();
     }
+
+    // Show/hide menu items based on context
+    const hasSelection = clickedElement || selectedElements.length > 0 || selectedElement;
+
+    document.getElementById('contextCopy').style.display = hasSelection ? 'flex' : 'none';
+    document.getElementById('contextDuplicate').style.display = hasSelection ? 'flex' : 'none';
+    document.getElementById('contextDelete').style.display = hasSelection ? 'flex' : 'none';
+    document.getElementById('contextBringFront').style.display = hasSelection ? 'flex' : 'none';
+    document.getElementById('contextSendBack').style.display = hasSelection ? 'flex' : 'none';
+    document.getElementById('contextLock').style.display = hasSelection ? 'flex' : 'none';
+
+    // Hide dividers if there's no selection
+    const dividers = contextMenu.querySelectorAll('.context-menu-divider');
+    dividers.forEach(div => div.style.display = hasSelection ? 'block' : 'none');
 
     // Position and show context menu
     contextMenu.style.left = e.clientX + 'px';
@@ -5391,12 +5400,14 @@ function createTextInputForShape(centerX, centerY, shape) {
             const lines = text.split('\n');
             const lineWidths = lines.map(line => ctx.measureText(line).width);
             const textWidth = Math.max(...lineWidths);
+            const lineHeight = fontSize * 1.2;
+            const totalHeight = lines.length * lineHeight;
 
             const textElement = {
                 id: nextElementId++,
                 type: 'text',
                 x: centerX - textWidth / 2,
-                y: centerY - fontSize / 2, // Adjust for vertical centering
+                y: centerY - totalHeight / 2, // Adjust for vertical centering of all lines
                 text: text,
                 strokeColor: strokeColorInput.value,
                 textColor: textColorInput.value,
