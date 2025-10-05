@@ -1224,6 +1224,23 @@ label span {
     top: 8px;
 }
 
+/* Zoom Indicator */
+.zoom-indicator {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8f8f8 100%);
+    padding: 6px 12px;
+    border-radius: 16px;
+    border: 1px solid #d0d0d0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 100;
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+    user-select: none;
+}
+
 /* Page Navigation */
 .page-navigation {
     position: absolute;

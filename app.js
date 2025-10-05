@@ -1097,6 +1097,14 @@ if (alignBtn && alignDropdown) {
     document.getElementById('distributeV')?.addEventListener('click', distributeVertically);
 }
 
+// Update zoom indicator display (global function)
+function updateZoomIndicator() {
+    const zoomPercentage = document.getElementById('zoomPercentage');
+    if (zoomPercentage) {
+        zoomPercentage.textContent = Math.round(zoomLevel * 100) + '%';
+    }
+}
+
 // Zoom controls dropdown
 const zoomBtn = document.getElementById('zoomBtn');
 const zoomDropdown = document.getElementById('zoomDropdown');
@@ -1123,6 +1131,7 @@ if (zoomBtn && zoomDropdown) {
             zoomLevel = 1;
             panOffsetX = 0;
             panOffsetY = 0;
+            updateZoomIndicator();
             redraw();
             zoomDropdown.classList.remove('active');
             return;
@@ -1169,6 +1178,7 @@ if (zoomBtn && zoomDropdown) {
         panOffsetX = -(minX - padding) * zoomLevel;
         panOffsetY = -(minY - padding) * zoomLevel;
 
+        updateZoomIndicator();
         redraw();
         zoomDropdown.classList.remove('active');
     }
@@ -1178,6 +1188,7 @@ if (zoomBtn && zoomDropdown) {
         zoomLevel = 1;
         panOffsetX = 0;
         panOffsetY = 0;
+        updateZoomIndicator();
         redraw();
         zoomDropdown.classList.remove('active');
     }
@@ -1195,6 +1206,7 @@ if (zoomBtn && zoomDropdown) {
         panOffsetX = centerX - worldX * zoomLevel;
         panOffsetY = centerY - worldY * zoomLevel;
 
+        updateZoomIndicator();
         redraw();
         zoomDropdown.classList.remove('active');
     }
@@ -2003,6 +2015,7 @@ function handleWheel(e) {
     panOffsetX = mouseX - (mouseX - panOffsetX) * zoomChange;
     panOffsetY = mouseY - (mouseY - panOffsetY) * zoomChange;
 
+    updateZoomIndicator();
     redraw();
 }
 
