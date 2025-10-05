@@ -29,6 +29,10 @@ let duplicationDirection = null; // Track direction for consistent duplication c
 let thingCounter = 1; // Auto-incrementing counter for "Thing N"
 let isConnectMode = false; // For connecting selected elements
 let nextElementId = 1; // Unique ID for elements
+let isFormatPainterActive = false; // Format painter mode
+let copiedFormat = null; // Stores the format to be applied
+let formatPainterMultiApply = false; // When true, format painter stays active after applying
+let formatPainterLastClick = 0; // For double-click detection
 
 // Canvas mode ('infinite' or 'storybook')
 let canvasMode = 'infinite'; // Default to infinite canvas
@@ -76,16 +80,16 @@ const SNAP_THRESHOLD = 5; // Pixels threshold for snapping to guides
 
 // Last used styles per shape type (persisted across sessions)
 let lastUsedStyles = {
-    rectangle: { strokeColor: '#2C3E50', fillColor: '#ECF0F1', fillEnabled: false },
-    circle: { strokeColor: '#2C3E50', fillColor: '#ECF0F1', fillEnabled: false },
-    diamond: { strokeColor: '#2C3E50', fillColor: '#ECF0F1', fillEnabled: false },
-    parallelogram: { strokeColor: '#2C3E50', fillColor: '#ECF0F1', fillEnabled: false },
-    roundRect: { strokeColor: '#2C3E50', fillColor: '#ECF0F1', fillEnabled: false },
-    triangle: { strokeColor: '#2C3E50', fillColor: '#ECF0F1', fillEnabled: false },
-    hexagon: { strokeColor: '#2C3E50', fillColor: '#ECF0F1', fillEnabled: false },
-    line: { strokeColor: '#2C3E50', lineStyle: 'solid', lineRouting: 'straight', lineThickness: 2 },
-    arrow: { strokeColor: '#2C3E50', lineStyle: 'solid', lineRouting: 'straight', lineThickness: 2 },
-    text: { textColor: '#2C3E50', fontFamily: 'Comic Sans MS, cursive', fontSize: 16, bold: false, italic: false }
+    rectangle: { strokeColor: '#556B2F', fillColor: '#D8E4BC', fillEnabled: false, shadow: false },
+    circle: { strokeColor: '#556B2F', fillColor: '#D8E4BC', fillEnabled: false, shadow: false },
+    diamond: { strokeColor: '#556B2F', fillColor: '#D8E4BC', fillEnabled: false, shadow: false },
+    parallelogram: { strokeColor: '#556B2F', fillColor: '#D8E4BC', fillEnabled: false, shadow: false },
+    roundRect: { strokeColor: '#556B2F', fillColor: '#D8E4BC', fillEnabled: false, shadow: false },
+    triangle: { strokeColor: '#556B2F', fillColor: '#D8E4BC', fillEnabled: false, shadow: false },
+    hexagon: { strokeColor: '#556B2F', fillColor: '#D8E4BC', fillEnabled: false, shadow: false },
+    line: { strokeColor: '#556B2F', lineStyle: 'solid', lineRouting: 'straight', lineThickness: 2, shadow: false },
+    arrow: { strokeColor: '#556B2F', lineStyle: 'solid', lineRouting: 'straight', lineThickness: 2, shadow: false },
+    text: { textColor: '#556B2F', fontFamily: 'Comic Sans MS, cursive', fontSize: 16, bold: false, italic: false }
 };
 
 // Load last used styles from localStorage
@@ -258,7 +262,7 @@ function quickCreateShape(shapeType) {
             height: 0,
             strokeColor: style.strokeColor,
             fillColor: null,
-            shadow: shadowEnabledInput.checked,
+            shadow: style.shadow,
             lineStyle: style.lineStyle,
             lineRouting: style.lineRouting,
             lineThickness: style.lineThickness
@@ -284,10 +288,10 @@ function quickCreateShape(shapeType) {
             height: height,
             strokeColor: style.strokeColor,
             fillColor: style.fillEnabled ? style.fillColor : null,
-            shadow: shadowEnabledInput.checked,
-            lineStyle: currentLineStyle,
+            shadow: style.shadow,
+            lineStyle: style.lineStyle,
             lineRouting: undefined,
-            lineThickness: currentLineThickness
+            lineThickness: style.lineThickness
         };
         elements.push(element);
         lastCreatedShape = element;
@@ -722,6 +726,11 @@ document.querySelectorAll('.tool-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         // Only handle as tool selection if button has data-tool attribute
         if (!btn.dataset.tool) return;
+
+        // Deactivate format painter when switching tools
+        if (isFormatPainterActive) {
+            deactivateFormatPainter();
+        }
 
         document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
@@ -1185,6 +1194,17 @@ if (presetBtn && presetDropdown) {
                     } else {
                         currentLineStyle = 'solid';
                     }
+
+                    // Update line combo button to match current settings
+                    document.querySelectorAll('.line-combo-btn').forEach(btn => {
+                        const matches = btn.dataset.style === currentLineStyle &&
+                                        btn.dataset.routing === currentLineRouting &&
+                                        parseInt(btn.dataset.thickness) === currentLineThickness;
+                        btn.classList.toggle('active', matches);
+                    });
+
+                    // Update line options button to reflect the new style
+                    updateLineOptionsButtonIcon(currentLineStyle, currentLineRouting, currentLineThickness);
 
                     updateColorIcons();
                 }
@@ -1672,8 +1692,16 @@ lineOptionsBtn.addEventListener('click', (e) => {
 
 // Update line options button icon
 function updateLineOptionsButtonIcon(style, routing, thickness = 2) {
-    const btnSvg = lineOptionsBtn.querySelector('svg');
-    if (!btnSvg) return;
+    // Get the button each time to ensure we have the latest reference
+    const btn = document.getElementById('lineOptionsBtn');
+    if (!btn) {
+        return;
+    }
+
+    const btnSvg = btn.querySelector('svg');
+    if (!btnSvg) {
+        return;
+    }
 
     let dashArray = '';
     if (style === 'dashed') {
@@ -2418,6 +2446,13 @@ document.addEventListener('keydown', (e) => {
             e.preventDefault();
             return;
         }
+
+        // Deactivate format painter if active
+        if (isFormatPainterActive) {
+            deactivateFormatPainter();
+            e.preventDefault();
+            return;
+        }
     }
 
     // Quick create shortcuts (Shift + number keys)
@@ -2438,13 +2473,30 @@ document.addEventListener('keydown', (e) => {
 
         if (quickCreateMap[e.code]) {
             const shapeType = quickCreateMap[e.code];
-            if (shapeType === 'line' || shapeType === 'arrow' || shapeType === 'text') {
-                // Use original quick create for these types
-                quickCreateShape(shapeType);
+
+            // Update the style for this shape type with current toolbar values before creating
+            if (shapeType !== 'text') {
+                lastUsedStyles[shapeType] = {
+                    strokeColor: strokeColorInput.value,
+                    fillColor: fillEnabledInput.checked ? fillColorInput.value : null,
+                    fillEnabled: fillEnabledInput.checked,
+                    shadow: shadowEnabledInput.checked,
+                    lineStyle: currentLineStyle,
+                    lineThickness: currentLineThickness,
+                    lineRouting: currentLineRouting
+                };
             } else {
-                // Use sage shape creation for fillable shapes
-                addSageShape(shapeType);
+                lastUsedStyles[shapeType] = {
+                    textColor: textColorInput.value,
+                    fontFamily: selectedFont,
+                    fontSize: parseInt(fontSizeSelect.value),
+                    bold: isBold,
+                    italic: isItalic
+                };
             }
+
+            // Use quick create with current format for all types
+            quickCreateShape(shapeType);
             e.preventDefault();
             return;
         }
@@ -2483,6 +2535,16 @@ document.addEventListener('keydown', (e) => {
     if (key === 'r' && e.shiftKey && !e.ctrlKey && !e.metaKey) {
         showRulers = !showRulers;
         redraw();
+        e.preventDefault();
+        return;
+    }
+
+    // 'p' key with Shift activates format painter
+    if (key === 'p' && e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        const now = Date.now();
+        const isDoublePress = (now - formatPainterLastClick) < 300;
+        formatPainterLastClick = now;
+        toggleFormatPainter(isDoublePress);
         e.preventDefault();
         return;
     }
@@ -2559,6 +2621,14 @@ document.addEventListener('keydown', (e) => {
         return;
     }
 
+    // 'I' key opens eyedropper/color picker
+    if (key === 'i' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (window.EyeDropper && eyeDropperBtn && !eyeDropperBtn.disabled) {
+            eyeDropperBtn.click();
+            e.preventDefault();
+        }
+        return;
+    }
 
     // Arrow keys for fine-grained positioning
     if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
@@ -3805,6 +3875,18 @@ function handleMouseDown(e) {
         // Check if clicking on element
         const clickedElement = getElementAtPoint(startX, startY);
         if (clickedElement) {
+            // If format painter is active, apply format
+            if (isFormatPainterActive) {
+                applyFormat(clickedElement);
+                saveHistory();
+                // Only deactivate if not in multi-apply mode
+                if (!formatPainterMultiApply) {
+                    deactivateFormatPainter();
+                }
+                redraw();
+                return;
+            }
+
             // If clicking on already selected element, keep selection
             if (selectedElements.includes(clickedElement) || clickedElement === selectedElement) {
                 dragMode = 'move';
@@ -9131,6 +9213,157 @@ function escapeXML(text) {
 
 // Undo button - removed from UI, now keyboard-only (Ctrl/Cmd+Z)
 
+// Format Painter Functions
+function toggleFormatPainter(isDoubleClick = false) {
+    if (isFormatPainterActive) {
+        // Deactivate format painter
+        deactivateFormatPainter();
+    } else {
+        // Activate format painter - copy format from selected element
+        if (selectedElement) {
+            copyFormat(selectedElement);
+            activateFormatPainter(isDoubleClick);
+        } else if (selectedElements.length === 1) {
+            copyFormat(selectedElements[0]);
+            activateFormatPainter(isDoubleClick);
+        } else {
+            alert('Please select a single element to copy its format');
+        }
+    }
+}
+
+function activateFormatPainter(multiApply = false) {
+    isFormatPainterActive = true;
+    formatPainterMultiApply = multiApply;
+    const btn = document.getElementById('formatPainterBtn');
+    if (btn) {
+        btn.classList.add('active');
+        // Add special styling for multi-apply mode
+        if (multiApply) {
+            btn.style.boxShadow = '0 0 0 2px #2196f3 inset';
+        }
+    }
+    canvas.style.cursor = 'copy';
+
+    // Deactivate connect mode if active
+    if (isConnectMode) {
+        isConnectMode = false;
+    }
+
+    // Switch to select tool
+    currentTool = 'select';
+    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+    const selectBtn = document.querySelector('[data-tool="select"]');
+    if (selectBtn) selectBtn.classList.add('active');
+}
+
+function deactivateFormatPainter() {
+    isFormatPainterActive = false;
+    formatPainterMultiApply = false;
+    const btn = document.getElementById('formatPainterBtn');
+    if (btn) {
+        btn.classList.remove('active');
+        btn.style.boxShadow = '';
+    }
+    canvas.style.cursor = 'default';
+    copiedFormat = null;
+}
+
+function copyFormat(element) {
+    copiedFormat = {};
+
+    // Copy common properties
+    if (element.strokeColor !== undefined) copiedFormat.strokeColor = element.strokeColor;
+    if (element.fillColor !== undefined) copiedFormat.fillColor = element.fillColor;
+    if (element.shadow !== undefined) copiedFormat.shadow = element.shadow;
+    if (element.lineStyle !== undefined) copiedFormat.lineStyle = element.lineStyle;
+    if (element.lineThickness !== undefined) copiedFormat.lineThickness = element.lineThickness;
+    if (element.lineRouting !== undefined) copiedFormat.lineRouting = element.lineRouting;
+
+    // Copy text properties
+    if (element.type === 'text') {
+        if (element.textColor !== undefined) copiedFormat.textColor = element.textColor;
+        if (element.fontFamily !== undefined) copiedFormat.fontFamily = element.fontFamily;
+        if (element.fontSize !== undefined) copiedFormat.fontSize = element.fontSize;
+        if (element.bold !== undefined) copiedFormat.bold = element.bold;
+        if (element.italic !== undefined) copiedFormat.italic = element.italic;
+    }
+
+    // Copy icon color
+    if (element.type === 'icon' && element.color !== undefined) {
+        copiedFormat.color = element.color;
+    }
+}
+
+function applyFormat(element) {
+    if (!copiedFormat) return;
+
+    // Apply common properties
+    if (copiedFormat.strokeColor !== undefined) element.strokeColor = copiedFormat.strokeColor;
+    if (copiedFormat.fillColor !== undefined) element.fillColor = copiedFormat.fillColor;
+    if (copiedFormat.shadow !== undefined) element.shadow = copiedFormat.shadow;
+    if (copiedFormat.lineStyle !== undefined) element.lineStyle = copiedFormat.lineStyle;
+    if (copiedFormat.lineThickness !== undefined) element.lineThickness = copiedFormat.lineThickness;
+    if (copiedFormat.lineRouting !== undefined && (element.type === 'arrow' || element.type === 'line')) {
+        element.lineRouting = copiedFormat.lineRouting;
+    }
+
+    // Apply text properties
+    if (element.type === 'text') {
+        if (copiedFormat.textColor !== undefined) element.textColor = copiedFormat.textColor;
+        if (copiedFormat.fontFamily !== undefined) element.fontFamily = copiedFormat.fontFamily;
+        if (copiedFormat.fontSize !== undefined) element.fontSize = copiedFormat.fontSize;
+        if (copiedFormat.bold !== undefined) element.bold = copiedFormat.bold;
+        if (copiedFormat.italic !== undefined) element.italic = copiedFormat.italic;
+    }
+
+    // Apply icon color
+    if (element.type === 'icon' && copiedFormat.color !== undefined) {
+        element.color = copiedFormat.color;
+    }
+}
+
+// Format Painter
+const formatPainterBtn = document.getElementById('formatPainterBtn');
+if (formatPainterBtn) {
+    formatPainterBtn.addEventListener('click', (e) => {
+        const now = Date.now();
+        const isDoubleClick = (now - formatPainterLastClick) < 300;
+        formatPainterLastClick = now;
+
+        toggleFormatPainter(isDoubleClick);
+    });
+}
+
+// EyeDropper / Color Picker
+const eyeDropperBtn = document.getElementById('eyeDropperBtn');
+if (eyeDropperBtn) {
+    // Check if EyeDropper API is supported
+    if (!window.EyeDropper) {
+        eyeDropperBtn.style.opacity = '0.5';
+        eyeDropperBtn.title = 'Color Picker not supported in this browser';
+        eyeDropperBtn.disabled = true;
+    } else {
+        eyeDropperBtn.addEventListener('click', async () => {
+            try {
+                const eyeDropper = new EyeDropper();
+                const result = await eyeDropper.open();
+
+                // Apply to stroke color by default
+                // TODO: Could add a dropdown to choose which color to apply to
+                strokeColorInput.value = result.sRGBHex;
+                updateColorIcons();
+
+            } catch (err) {
+                // User cancelled or error occurred
+                if (err.name !== 'AbortError') {
+                    console.error('EyeDropper error:', err);
+                }
+            }
+        });
+    }
+}
+
 // Layout buttons
 document.getElementById('layoutHorizontalBtn').addEventListener('click', () => {
     layoutHorizontal();
@@ -9865,25 +10098,66 @@ function saveSettings(settings) {
 // Apply settings to application
 function applySettings(settings) {
     // Apply style preset
-    if (settings.stylePreset && stylePresets[settings.stylePreset]) {
-        const preset = stylePresets[settings.stylePreset];
+    if (settings.stylePreset === 'custom') {
+        // Apply custom colors
+        if (settings.customStrokeColor) strokeColorInput.value = settings.customStrokeColor;
+        if (settings.customFillColor) fillColorInput.value = settings.customFillColor;
+        if (settings.customTextColor) textColorInput.value = settings.customTextColor;
+        if (settings.customShadow !== undefined) shadowEnabledInput.checked = settings.customShadow;
+        if (settings.customLineStyle) currentLineStyle = settings.customLineStyle;
+        if (settings.customLineThickness) currentLineThickness = settings.customLineThickness;
+        if (settings.customLineRouting) currentLineRouting = settings.customLineRouting;
+
+        // Update line combo button to match current settings
+        document.querySelectorAll('.line-combo-btn').forEach(btn => {
+            const matches = btn.dataset.style === currentLineStyle &&
+                            btn.dataset.routing === currentLineRouting &&
+                            parseInt(btn.dataset.thickness) === currentLineThickness;
+            btn.classList.toggle('active', matches);
+        });
+
+        // Update line options button icon
+        updateLineOptionsButtonIcon(currentLineStyle, currentLineRouting, currentLineThickness);
+
+        currentPreset = 'custom';
+
+        // Update color icons to reflect the new colors
+        updateColorIcons();
+    } else if (settings.stylePreset) {
         const presetParts = settings.stylePreset.split('-');
         const basePreset = presetParts[0];
         const hasShadow = presetParts.includes('shadow');
         const hasDashed = presetParts.includes('dashed');
 
+        console.log('Applying preset:', settings.stylePreset, 'hasDashed:', hasDashed);
+
+        const preset = stylePresets[basePreset];
+        if (!preset) return; // Invalid preset
+
         strokeColorInput.value = preset.stroke;
         fillColorInput.value = preset.fill;
+        textColorInput.value = preset.stroke; // Match text color to stroke
         fillEnabledInput.checked = true;
         shadowEnabledInput.checked = hasShadow;
         currentLineStyle = hasDashed ? 'dashed' : 'solid';
 
-        // Update line style buttons
-        document.querySelectorAll('.line-style-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.lineStyle === currentLineStyle);
+        console.log('Set currentLineStyle to:', currentLineStyle);
+
+        // Update line combo button to match current settings
+        document.querySelectorAll('.line-combo-btn').forEach(btn => {
+            const matches = btn.dataset.style === currentLineStyle &&
+                            btn.dataset.routing === currentLineRouting &&
+                            parseInt(btn.dataset.thickness) === currentLineThickness;
+            btn.classList.toggle('active', matches);
         });
 
+        // Update line options button icon
+        updateLineOptionsButtonIcon(currentLineStyle, currentLineRouting, currentLineThickness);
+
         currentPreset = settings.stylePreset;
+
+        // Update color icons to reflect the new colors
+        updateColorIcons();
     }
 
     // Apply view defaults
@@ -9912,10 +10186,39 @@ function applySettings(settings) {
 function populateSettingsDialog() {
     const settings = loadSettings();
 
+    // Detect current preset based on toolbar colors
+    const currentStroke = strokeColorInput.value.toUpperCase();
+    const currentFill = fillColorInput.value.toUpperCase();
+    const hasShadow = shadowEnabledInput.checked;
+    const isDashed = currentLineStyle === 'dashed';
+
+    // Find matching preset
+    let matchedPreset = null;
+    for (const [presetKey, presetColors] of Object.entries(stylePresets)) {
+        if (presetColors.stroke.toUpperCase() === currentStroke &&
+            presetColors.fill.toUpperCase() === currentFill) {
+            // Build preset name with modifiers
+            matchedPreset = presetKey;
+            if (hasShadow && isDashed) {
+                matchedPreset += '-shadow-dashed';
+            } else if (hasShadow) {
+                matchedPreset += '-shadow';
+            } else if (isDashed) {
+                matchedPreset += '-dashed';
+            }
+            break;
+        }
+    }
+
     // Set preset text and value
-    settingsCurrentPreset = settings.stylePreset || 'sage';
-    const presetName = settings.stylePreset ? settings.stylePreset.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' + ') : 'Sage';
-    document.getElementById('settingsPresetText').textContent = presetName;
+    if (matchedPreset) {
+        settingsCurrentPreset = matchedPreset;
+        const presetName = matchedPreset.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' + ');
+        document.getElementById('settingsPresetText').textContent = presetName;
+    } else {
+        settingsCurrentPreset = 'custom';
+        document.getElementById('settingsPresetText').textContent = 'Custom';
+    }
 
     // Set font text and value
     const fontName = settings.fontFamily.split(',')[0].replace(/['"]/g, '');
@@ -10022,6 +10325,12 @@ settingsFontDropdown.querySelectorAll('.font-item').forEach(item => {
 settingsBtn.addEventListener('click', () => {
     populateSettingsDialog();
     settingsModal.classList.add('active');
+
+    // Close logo dropdown if open
+    const logoDropdown = document.getElementById('logoDropdown');
+    if (logoDropdown) {
+        logoDropdown.classList.remove('active');
+    }
 });
 
 // Close settings dialog
@@ -10059,6 +10368,17 @@ settingsSaveBtn.addEventListener('click', () => {
         fontFamily: settingsCurrentFont,
         fontSize: parseInt(document.getElementById('settingsFontSize').value)
     };
+
+    // If custom preset, save the actual colors
+    if (settingsCurrentPreset === 'custom') {
+        settings.customStrokeColor = strokeColorInput.value;
+        settings.customFillColor = fillColorInput.value;
+        settings.customTextColor = textColorInput.value;
+        settings.customShadow = shadowEnabledInput.checked;
+        settings.customLineStyle = currentLineStyle;
+        settings.customLineThickness = currentLineThickness;
+        settings.customLineRouting = currentLineRouting;
+    }
 
     saveSettings(settings);
     applySettings(settings);
@@ -10103,9 +10423,11 @@ if (presetDropdown) {
     }
 })();
 
-// Load and apply settings from localStorage
-const savedSettings = loadSettings();
-applySettings(savedSettings);
+// Load and apply settings from localStorage on DOM ready
+document.addEventListener('DOMContentLoaded', () => {
+    const savedSettings = loadSettings();
+    applySettings(savedSettings);
+});
 
 // Load last used styles from localStorage
 loadLastUsedStyles();

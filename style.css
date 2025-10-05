@@ -375,6 +375,37 @@ body {
     background: #fee;
 }
 
+.logo-dropdown-divider {
+    height: 1px;
+    background: #e0e0e0;
+    margin: 8px 0;
+}
+
+.logo-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 16px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    color: #333;
+    text-align: left;
+    transition: background-color 0.2s;
+}
+
+.logo-dropdown-item:hover {
+    background-color: #f0f0f0;
+}
+
+.logo-dropdown-item i {
+    width: 16px;
+    text-align: center;
+    color: #666;
+}
+
 .divider {
     width: 1px;
     height: 18px;
@@ -932,6 +963,18 @@ label {
 label span {
     white-space: nowrap;
     display: none; /* Hide label text to save space */
+}
+
+.checkbox-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-items: flex-start;
+}
+
+.checkbox-stack label {
+    height: auto;
+    padding: 2px 0;
 }
 
 #fontSizeSelect, #lineStyleSelect, #lineRoutingSelect, #exportFormatSelect {
