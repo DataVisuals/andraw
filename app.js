@@ -1936,6 +1936,33 @@ function handleDoubleClick(e) {
             }
         }
     }
+
+    // If we got here, user double-clicked on empty canvas - create a rectangle
+    const rectWidth = 120;
+    const rectHeight = 60;
+    const newRect = {
+        id: nextElementId++,
+        type: 'rectangle',
+        x: x - rectWidth / 2, // Center on click point
+        y: y - rectHeight / 2,
+        width: rectWidth,
+        height: rectHeight,
+        strokeColor: strokeColorInput.value,
+        fillColor: fillEnabledInput.checked ? fillColorInput.value : null,
+        lineStyle: currentLineStyle,
+        lineThickness: currentLineThickness
+    };
+    elements.push(newRect);
+    lastCreatedShape = newRect;
+    saveHistory();
+    redraw();
+
+    // Automatically add centered text to the new shape
+    const centerX = newRect.x + rectWidth / 2;
+    const centerY = newRect.y + rectHeight / 2;
+    setTimeout(() => {
+        createTextInputForShape(centerX, centerY, newRect);
+    }, 10);
 }
 
 function editTextElement(textElement) {
