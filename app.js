@@ -67,7 +67,6 @@ let currentLineRouting = 'straight';
 let currentLineThickness = 2;
 
 // Grid and snapping
-let showGrid = false;
 let snapToGrid = false;
 const gridSize = 20;
 
@@ -1868,6 +1867,7 @@ if (zoomBtn && zoomDropdown) {
 
 // Background pattern controls
 let currentBackgroundPattern = 'line-grid'; // default
+let lastNonBlankPattern = 'line-grid'; // for toggling with G key
 const patternBtn = document.getElementById('patternBtn');
 const patternDropdown = document.getElementById('patternDropdown');
 
@@ -1900,6 +1900,9 @@ if (patternBtn && patternDropdown) {
         btn.addEventListener('click', () => {
             const pattern = btn.dataset.pattern;
             currentBackgroundPattern = pattern;
+            if (pattern !== 'blank') {
+                lastNonBlankPattern = pattern;
+            }
             patternDropdown.classList.remove('active');
             redraw();
         });
@@ -2222,14 +2225,19 @@ document.addEventListener('keydown', (e) => {
         return;
     }
 
-    // 'g' key toggles grid, Shift+G toggles snap
+    // 'g' key toggles pattern, Shift+G toggles snap
     if (key === 'g' && !e.ctrlKey && !e.metaKey) {
         if (e.shiftKey) {
             // Shift+G toggles snap
             document.getElementById('snapToggleBtn').click();
         } else {
-            // G toggles grid
-            document.getElementById('gridToggleBtn').click();
+            // G toggles between blank and last selected pattern
+            if (currentBackgroundPattern === 'blank') {
+                currentBackgroundPattern = lastNonBlankPattern;
+            } else {
+                currentBackgroundPattern = 'blank';
+            }
+            redraw();
         }
         e.preventDefault();
         return;
@@ -7389,8 +7397,8 @@ function redraw() {
     ctx.translate(panOffsetX, panOffsetY);
     ctx.scale(zoomLevel, zoomLevel);
 
-    // Draw background pattern if enabled
-    if (showGrid) {
+    // Draw background pattern
+    if (currentBackgroundPattern !== 'blank') {
         drawBackgroundPattern();
     }
 
@@ -8267,27 +8275,15 @@ document.getElementById('layoutVerticalBtn').addEventListener('click', () => {
     layoutVertical();
 });
 
-// Grid and snapping toggles
-document.getElementById('gridToggleBtn').addEventListener('click', () => {
-    showGrid = !showGrid;
-    const btn = document.getElementById('gridToggleBtn');
-    if (showGrid) {
-        btn.classList.add('active');
-    } else {
-        btn.classList.remove('active');
-    }
-    redraw();
-});
-
+// Snap to grid toggle
 document.getElementById('snapToggleBtn').addEventListener('click', () => {
     snapToGrid = !snapToGrid;
     const btn = document.getElementById('snapToggleBtn');
     if (snapToGrid) {
         btn.classList.add('active');
-        // Auto-enable grid when snap is enabled
-        if (!showGrid) {
-            showGrid = true;
-            document.getElementById('gridToggleBtn').classList.add('active');
+        // Auto-enable pattern when snap is enabled
+        if (currentBackgroundPattern === 'blank') {
+            currentBackgroundPattern = lastNonBlankPattern;
         }
     } else {
         btn.classList.remove('active');
@@ -8716,6 +8712,8 @@ function populateChangelog() {
         ],
         '2025-10-05': [
             'Background pattern selector - dot grid, line grid, isometric, or blank backgrounds',
+            'Pattern selector replaces grid toggle - select pattern or blank directly',
+            'G key now toggles between blank and last selected pattern',
             'Smart anchor points - arrows snap to 9 anchor points per shape (corners, sides, center)',
             'Anchor points visible when shapes selected or drawing arrows for precise connections',
             'Arrows remember anchor points - stay connected when shapes move or resize',
