@@ -6126,6 +6126,9 @@ function populateChangelog() {
 
     const changelog = {
         '2025-10-05': [
+            'Right-click context menu with Copy/Paste/Delete/Z-order/Lock',
+            'Double-click empty canvas to create rectangle with text',
+            'Zoom indicator display (bottom-right corner)',
             'Multi-line text editing with wrapping (Shift+Enter for line breaks)',
             'Grid toggle (G) and snap to grid (Shift+G)',
             'Copy/paste/duplicate (Cmd+C/V/D) with parent-child preservation',
