@@ -53,6 +53,7 @@ let spacePressed = false;
 const strokeColorInput = document.getElementById('strokeColor');
 const fillColorInput = document.getElementById('fillColor');
 const fillEnabledInput = document.getElementById('fillEnabled');
+const shadowEnabledInput = document.getElementById('shadowEnabled');
 const fontBtn = document.getElementById('fontBtn');
 const fontBtnText = document.getElementById('fontBtnText');
 const fontDropdown = document.getElementById('fontDropdown');
@@ -261,6 +262,7 @@ function quickCreateShape(shapeType) {
             height: 0,
             strokeColor: style.strokeColor,
             fillColor: null,
+            shadow: shadowEnabledInput.checked,
             lineStyle: style.lineStyle,
             lineRouting: style.lineRouting,
             lineThickness: style.lineThickness
@@ -286,6 +288,7 @@ function quickCreateShape(shapeType) {
             height: height,
             strokeColor: style.strokeColor,
             fillColor: style.fillEnabled ? style.fillColor : null,
+            shadow: shadowEnabledInput.checked,
             lineStyle: currentLineStyle,
             lineRouting: undefined,
             lineThickness: currentLineThickness
@@ -1624,6 +1627,7 @@ document.querySelectorAll('.template-btn').forEach(btn => {
                 y: pos.y,
                 strokeColor: strokeColorInput.value,
                 fillColor: fillEnabledInput.checked ? fillColorInput.value : null,
+                shadow: shadowEnabledInput.checked,
                 lineStyle: currentLineStyle,
                 lineThickness: currentLineThickness
             };
@@ -1962,6 +1966,70 @@ function copySelection() {
     clipboard = [...elementsToCopy, ...childTextElements].map(el => ({...el}));
 }
 
+// Copy selection as image to clipboard
+async function copyAsImage() {
+    const elementsToCopy = selectedElements.length > 0
+        ? selectedElements
+        : (selectedElement ? [selectedElement] : []);
+
+    if (elementsToCopy.length === 0) return;
+
+    // Calculate bounding box of selected elements
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+    elementsToCopy.forEach(el => {
+        const bounds = getElementBounds(el);
+        minX = Math.min(minX, bounds.x);
+        minY = Math.min(minY, bounds.y);
+        maxX = Math.max(maxX, bounds.x + bounds.width);
+        maxY = Math.max(maxY, bounds.y + bounds.height);
+    });
+
+    // Add padding
+    const padding = 20;
+    minX -= padding;
+    minY -= padding;
+    const width = (maxX - minX) + padding * 2;
+    const height = (maxY - minY) + padding * 2;
+
+    // Create temporary canvas
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = width;
+    tempCanvas.height = height;
+    const tempCtx = tempCanvas.getContext('2d');
+
+    // Draw white background
+    tempCtx.fillStyle = '#FFFFFF';
+    tempCtx.fillRect(0, 0, width, height);
+
+    // Save current context and create temporary one
+    const savedCtx = ctx;
+    window.ctx = tempCtx;
+
+    // Translate to account for bounding box offset
+    tempCtx.translate(-minX, -minY);
+
+    // Draw each element
+    elementsToCopy.forEach(el => {
+        drawElement(el);
+    });
+
+    // Restore context
+    window.ctx = savedCtx;
+
+    // Convert to blob and copy to clipboard
+    try {
+        const blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/png'));
+        await navigator.clipboard.write([
+            new ClipboardItem({ 'image/png': blob })
+        ]);
+        console.log('Image copied to clipboard');
+    } catch (err) {
+        console.error('Failed to copy image to clipboard:', err);
+        alert('Failed to copy image to clipboard. Your browser may not support this feature.');
+    }
+}
+
 // Paste elements from clipboard
 function pasteSelection() {
     if (clipboard.length === 0) return;
@@ -2260,6 +2328,7 @@ function handleContextMenu(e) {
     const hasSelection = clickedElement || selectedElements.length > 0 || selectedElement;
 
     document.getElementById('contextCopy').style.display = hasSelection ? 'flex' : 'none';
+    document.getElementById('contextCopyAsImage').style.display = hasSelection ? 'flex' : 'none';
     document.getElementById('contextDuplicate').style.display = hasSelection ? 'flex' : 'none';
     document.getElementById('contextDelete').style.display = hasSelection ? 'flex' : 'none';
     document.getElementById('contextBringFront').style.display = hasSelection ? 'flex' : 'none';
@@ -2285,6 +2354,11 @@ document.addEventListener('click', () => {
 // Context menu actions
 document.getElementById('contextCopy')?.addEventListener('click', () => {
     copySelection();
+    document.getElementById('contextMenu').classList.remove('active');
+});
+
+document.getElementById('contextCopyAsImage')?.addEventListener('click', () => {
+    copyAsImage();
     document.getElementById('contextMenu').classList.remove('active');
 });
 
@@ -2955,6 +3029,7 @@ function handleMouseUp(e) {
                 height: height,
                 strokeColor: strokeColorInput.value,
                 fillColor: fillEnabledInput.checked ? fillColorInput.value : null,
+                shadow: shadowEnabledInput.checked,
                 lineStyle: currentLineStyle,
                 lineRouting: (currentTool === 'line' || currentTool === 'arrow') ? currentLineRouting : undefined,
                 lineThickness: currentLineThickness
@@ -5221,6 +5296,14 @@ function drawGlue(x, y, w, h, strokeColor, fillColor) {
 function drawElement(element) {
     const lineStyle = element.lineStyle || 'solid';
 
+    // Apply shadow if enabled
+    if (element.shadow) {
+        ctx.shadowOffsetX = 3;
+        ctx.shadowOffsetY = 3;
+        ctx.shadowBlur = 4;
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+    }
+
     switch (element.type) {
         case 'rectangle':
             drawRoughRect(element.x, element.y, element.width, element.height,
@@ -5680,6 +5763,14 @@ function drawElement(element) {
             drawK8sNamespace(element.x, element.y, element.width, element.height,
                             element.strokeColor, element.fillColor);
             break;
+    }
+
+    // Reset shadow
+    if (element.shadow) {
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = 'transparent';
     }
 }
 
@@ -7513,6 +7604,8 @@ function populateChangelog() {
 
     const changelog = {
         '2025-10-05': [
+            'Drop shadows for shapes - toggle with Shadow checkbox in toolbar',
+            'Copy as Image - right-click selected elements and copy as PNG to clipboard',
             'Quick create shapes with last used style (Shift+1-9/0) - persists across sessions',
             'Smart positioning: new shapes automatically offset to avoid overlapping existing objects',
             'Toolbar reorganized into labeled, color-coded groups (File, Tools, Style, View, Arrange, History, Export)',
