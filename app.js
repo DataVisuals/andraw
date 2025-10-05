@@ -1121,9 +1121,6 @@ document.addEventListener('click', (e) => {
     if (patternBtn && patternDropdown && !patternBtn.contains(e.target) && !patternDropdown.contains(e.target)) {
         patternDropdown.classList.remove('active');
     }
-    if (themeBtn && themeDropdown && !themeBtn.contains(e.target) && !themeDropdown.contains(e.target)) {
-        themeDropdown.classList.remove('active');
-    }
 });
 
 // Shape selection with preset styling
@@ -1905,86 +1902,6 @@ if (patternBtn && patternDropdown) {
             }
             patternDropdown.classList.remove('active');
             redraw();
-        });
-    });
-}
-
-// Color theme controls
-const colorThemes = {
-    professional: { stroke: '#2C3E50', fill: '#ECF0F1' },
-    ocean: { stroke: '#1e3a8a', fill: '#bfdbfe' },
-    sunset: { stroke: '#dc2626', fill: '#fef3c7' },
-    forest: { stroke: '#166534', fill: '#d1fae5' },
-    lavender: { stroke: '#7c3aed', fill: '#f3e8ff' },
-    slate: { stroke: '#475569', fill: '#f1f5f9' }
-};
-
-const themeBtn = document.getElementById('themeBtn');
-const themeDropdown = document.getElementById('themeDropdown');
-
-if (themeBtn && themeDropdown) {
-    themeBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        themeDropdown.classList.toggle('active');
-
-        // Close other dropdowns
-        if (rectangleDropdown) rectangleDropdown.classList.remove('active');
-        if (circleDropdown) circleDropdown.classList.remove('active');
-        if (shapeDropdown) shapeDropdown.classList.remove('active');
-        if (presetDropdown) presetDropdown.classList.remove('active');
-        fontDropdown.classList.remove('active');
-        lineOptionsDropdown.classList.remove('active');
-        const logoDropdown = document.getElementById('logoDropdown');
-        if (logoDropdown) logoDropdown.classList.remove('active');
-        const alignDropdown = document.getElementById('alignDropdown');
-        if (alignDropdown) alignDropdown.classList.remove('active');
-        const zoomDropdown = document.getElementById('zoomDropdown');
-        if (zoomDropdown) zoomDropdown.classList.remove('active');
-        const iconDropdown = document.getElementById('iconDropdown');
-        if (iconDropdown) iconDropdown.classList.remove('active');
-        const selectionDropdown = document.getElementById('selectionDropdown');
-        if (selectionDropdown) selectionDropdown.classList.remove('active');
-        const patternDropdown = document.getElementById('patternDropdown');
-        if (patternDropdown) patternDropdown.classList.remove('active');
-    });
-
-    // Event listeners for theme buttons
-    document.querySelectorAll('.theme-option-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const themeName = btn.dataset.theme;
-            const theme = colorThemes[themeName];
-
-            if (theme) {
-                // Apply theme colors to inputs
-                strokeColorInput.value = theme.stroke;
-                fillColorInput.value = theme.fill;
-                fillEnabledInput.checked = true;
-
-                // Update color icons
-                updateColorIcons();
-
-                // Apply theme to selected elements
-                const elementsToUpdate = selectedElements.length > 0
-                    ? selectedElements
-                    : (selectedElement ? [selectedElement] : []);
-
-                if (elementsToUpdate.length > 0) {
-                    elementsToUpdate.forEach(el => {
-                        // Apply to shapes, lines, and arrows
-                        if (el.strokeColor !== undefined) {
-                            el.strokeColor = theme.stroke;
-                        }
-                        if (el.type !== 'line' && el.type !== 'arrow' && el.type !== 'pen' && el.type !== 'text') {
-                            el.fillColor = theme.fill;
-                        }
-                    });
-                    saveHistory();
-                    redraw();
-                }
-
-                // Close dropdown
-                themeDropdown.classList.remove('active');
-            }
         });
     });
 }
@@ -8717,9 +8634,7 @@ function populateChangelog() {
             'Smart anchor points - arrows snap to 9 anchor points per shape (corners, sides, center)',
             'Anchor points visible when shapes selected or drawing arrows for precise connections',
             'Arrows remember anchor points - stay connected when shapes move or resize',
-            'Color themes/palettes - quick switching between 6 professional color combinations',
-            'Themes apply to selected elements instantly or set colors for new shapes',
-            'Themes include Professional, Ocean, Sunset, Forest, Lavender, and Slate',
+            'Style preset selector moved to Style group for better organization',
             'Redo support with Ctrl/⌘+Y keyboard shortcut',
             'Removed Undo button from toolbar (use Ctrl/⌘+Z keyboard shortcut)',
             'Drop shadows for shapes - toggle with Shadow checkbox in toolbar',
