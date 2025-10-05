@@ -970,8 +970,11 @@ svg.preset-preview {
     min-width: 280px;
     max-height: 400px;
     overflow: hidden;
-    display: flex;
     flex-direction: column;
+}
+
+.icon-dropdown.active {
+    display: flex;
 }
 
 .icon-search {
