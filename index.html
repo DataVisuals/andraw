@@ -55,110 +55,215 @@
                 <i class="fas fa-hand-paper"></i>
             </button>
             <div class="divider"></div>
+
+            <!-- Shape Selector -->
             <div class="shape-dropdown-container">
-                <button class="tool-btn" id="rectangleBtn" title="Rectangle (R)">
-                    <svg width="20" height="20" viewBox="0 0 20 20"><rect x="3" y="3" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                <button class="tool-btn" id="shapeBtn" title="Select Shape">
+                    <i class="fas fa-shapes"></i>
                     <i class="fas fa-caret-down" style="font-size: 10px; margin-left: 2px;"></i>
                 </button>
-                <div class="shape-dropdown" id="rectangleDropdown">
-                    <button class="shape-item" data-shape="rectangle" data-preset="slate">
-                        <svg width="24" height="24" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2" fill="#ECF0F1" stroke="#2C3E50" stroke-width="2"/></svg>
-                        <span>Slate</span>
+                <div class="shape-dropdown" id="shapeDropdown">
+                    <button class="shape-item" data-shape="rectangle">
+                        <svg width="24" height="24" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                        <span>Rectangle</span>
+                        <small>Shift+1</small>
                     </button>
-                    <button class="shape-item" data-shape="rectangle" data-preset="sage">
-                        <svg width="24" height="24" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2" fill="#D8E4BC" stroke="#556B2F" stroke-width="2"/></svg>
-                        <span>Sage</span>
+                    <button class="shape-item" data-shape="circle">
+                        <svg width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                        <span>Circle</span>
+                        <small>Shift+2</small>
                     </button>
-                    <button class="shape-item" data-shape="rectangle" data-preset="terracotta">
-                        <svg width="24" height="24" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2" fill="#F4DCC4" stroke="#A0522D" stroke-width="2"/></svg>
-                        <span>Terracotta</span>
+                    <button class="shape-item" data-shape="diamond">
+                        <svg width="24" height="24" viewBox="0 0 24 24"><path d="M12 3 L21 12 L12 21 L3 12 Z" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                        <span>Diamond</span>
+                        <small>Shift+3</small>
                     </button>
-                    <button class="shape-item" data-shape="rectangle" data-preset="ocean">
-                        <svg width="24" height="24" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2" fill="#B8D4E8" stroke="#2C5F7F" stroke-width="2"/></svg>
-                        <span>Ocean</span>
+                    <button class="shape-item" data-shape="parallelogram">
+                        <svg width="24" height="24" viewBox="0 0 24 24"><path d="M6 3 L21 3 L18 21 L3 21 Z" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                        <span>Parallelogram</span>
+                        <small>Shift+4</small>
                     </button>
-                    <button class="shape-item" data-shape="rectangle" data-preset="plum">
-                        <svg width="24" height="24" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2" fill="#E6D9ED" stroke="#6B4C7A" stroke-width="2"/></svg>
-                        <span>Plum</span>
+                    <button class="shape-item" data-shape="roundRect">
+                        <svg width="24" height="24" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="6" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                        <span>Rounded Rect</span>
+                        <small>Shift+5</small>
                     </button>
-                    <button class="shape-item" data-shape="rectangle" data-preset="charcoal">
-                        <svg width="24" height="24" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2" fill="#E8E6E3" stroke="#3D3D3D" stroke-width="2"/></svg>
-                        <span>Charcoal</span>
+                    <button class="shape-item" data-shape="triangle">
+                        <svg width="24" height="24" viewBox="0 0 24 24"><path d="M12 3 L21 21 L3 21 Z" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                        <span>Triangle</span>
+                        <small>Shift+6</small>
                     </button>
-                    <button class="shape-item" data-shape="rectangle" data-preset="forest">
-                        <svg width="24" height="24" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2" fill="#C8E6C9" stroke="#2D5016" stroke-width="2"/></svg>
-                        <span>Forest</span>
-                    </button>
-                    <button class="shape-item" data-shape="rectangle" data-preset="burgundy">
-                        <svg width="24" height="24" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2" fill="#F8E1E7" stroke="#6B2737" stroke-width="2"/></svg>
-                        <span>Burgundy</span>
-                    </button>
-                    <button class="shape-item" data-shape="rectangle" data-preset="navy">
-                        <svg width="24" height="24" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2" fill="#D1E7F0" stroke="#1A3A52" stroke-width="2"/></svg>
-                        <span>Navy</span>
-                    </button>
-                    <button class="shape-item" data-shape="rectangle" data-preset="copper">
-                        <svg width="24" height="24" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2" fill="#F5DEB3" stroke="#8B4513" stroke-width="2"/></svg>
-                        <span>Copper</span>
-                    </button>
-                    <button class="shape-item" data-shape="rectangle" data-preset="moss">
-                        <svg width="24" height="24" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2" fill="#E3EAC2" stroke="#4A5D23" stroke-width="2"/></svg>
-                        <span>Moss</span>
+                    <button class="shape-item" data-shape="hexagon">
+                        <svg width="24" height="24" viewBox="0 0 24 24"><path d="M8 3 L16 3 L21 12 L16 21 L8 21 L3 12 Z" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                        <span>Hexagon</span>
+                        <small>Shift+7</small>
                     </button>
                 </div>
             </div>
+
+            <!-- Style Preset Selector -->
             <div class="shape-dropdown-container">
-                <button class="tool-btn" id="circleBtn" title="Circle (C)">
-                    <svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                <button class="tool-btn" id="presetBtn" title="Style Preset">
+                    <i class="fas fa-palette"></i>
                     <i class="fas fa-caret-down" style="font-size: 10px; margin-left: 2px;"></i>
                 </button>
-                <div class="shape-dropdown" id="circleDropdown">
-                    <button class="shape-item" data-shape="circle" data-preset="slate">
-                        <svg width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#ECF0F1" stroke="#2C3E50" stroke-width="2"/></svg>
-                        <span>Slate</span>
+                <div class="shape-dropdown preset-grid-dropdown" id="presetDropdown">
+                    <!-- Sage variants -->
+                    <button class="preset-grid-item" data-preset="sage" title="Sage">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
                     </button>
-                    <button class="shape-item" data-shape="circle" data-preset="sage">
-                        <svg width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#D8E4BC" stroke="#556B2F" stroke-width="2"/></svg>
-                        <span>Sage</span>
+                    <button class="preset-grid-item" data-preset="sage-shadow" title="Sage + Shadow">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
                     </button>
-                    <button class="shape-item" data-shape="circle" data-preset="terracotta">
-                        <svg width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#F4DCC4" stroke="#A0522D" stroke-width="2"/></svg>
-                        <span>Terracotta</span>
+                    <button class="preset-grid-item" data-preset="sage-dashed" title="Sage + Dashed">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
                     </button>
-                    <button class="shape-item" data-shape="circle" data-preset="ocean">
-                        <svg width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#B8D4E8" stroke="#2C5F7F" stroke-width="2"/></svg>
-                        <span>Ocean</span>
+                    <button class="preset-grid-item" data-preset="sage-shadow-dashed" title="Sage + Shadow + Dashed">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
                     </button>
-                    <button class="shape-item" data-shape="circle" data-preset="plum">
-                        <svg width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#E6D9ED" stroke="#6B4C7A" stroke-width="2"/></svg>
-                        <span>Plum</span>
+
+                    <!-- Slate variants -->
+                    <button class="preset-grid-item" data-preset="slate" title="Slate">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
                     </button>
-                    <button class="shape-item" data-shape="circle" data-preset="charcoal">
-                        <svg width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#E8E6E3" stroke="#3D3D3D" stroke-width="2"/></svg>
-                        <span>Charcoal</span>
+                    <button class="preset-grid-item" data-preset="slate-shadow" title="Slate + Shadow">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
                     </button>
-                    <button class="shape-item" data-shape="circle" data-preset="forest">
-                        <svg width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#C8E6C9" stroke="#2D5016" stroke-width="2"/></svg>
-                        <span>Forest</span>
+                    <button class="preset-grid-item" data-preset="slate-dashed" title="Slate + Dashed">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
                     </button>
-                    <button class="shape-item" data-shape="circle" data-preset="burgundy">
-                        <svg width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#F8E1E7" stroke="#6B2737" stroke-width="2"/></svg>
-                        <span>Burgundy</span>
+                    <button class="preset-grid-item" data-preset="slate-shadow-dashed" title="Slate + Shadow + Dashed">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
                     </button>
-                    <button class="shape-item" data-shape="circle" data-preset="navy">
-                        <svg width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#D1E7F0" stroke="#1A3A52" stroke-width="2"/></svg>
-                        <span>Navy</span>
+
+                    <!-- Terracotta variants -->
+                    <button class="preset-grid-item" data-preset="terracotta" title="Terracotta">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
                     </button>
-                    <button class="shape-item" data-shape="circle" data-preset="copper">
-                        <svg width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#F5DEB3" stroke="#8B4513" stroke-width="2"/></svg>
-                        <span>Copper</span>
+                    <button class="preset-grid-item" data-preset="terracotta-shadow" title="Terracotta + Shadow">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
                     </button>
-                    <button class="shape-item" data-shape="circle" data-preset="moss">
-                        <svg width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#E3EAC2" stroke="#4A5D23" stroke-width="2"/></svg>
-                        <span>Moss</span>
+                    <button class="preset-grid-item" data-preset="terracotta-dashed" title="Terracotta + Dashed">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+                    <button class="preset-grid-item" data-preset="terracotta-shadow-dashed" title="Terracotta + Shadow + Dashed">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+
+                    <!-- Ocean variants -->
+                    <button class="preset-grid-item" data-preset="ocean" title="Ocean">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+                    <button class="preset-grid-item" data-preset="ocean-shadow" title="Ocean + Shadow">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+                    <button class="preset-grid-item" data-preset="ocean-dashed" title="Ocean + Dashed">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+                    <button class="preset-grid-item" data-preset="ocean-shadow-dashed" title="Ocean + Shadow + Dashed">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+
+                    <!-- Plum variants -->
+                    <button class="preset-grid-item" data-preset="plum" title="Plum">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+                    <button class="preset-grid-item" data-preset="plum-shadow" title="Plum + Shadow">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+                    <button class="preset-grid-item" data-preset="plum-dashed" title="Plum + Dashed">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+                    <button class="preset-grid-item" data-preset="plum-shadow-dashed" title="Plum + Shadow + Dashed">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+
+                    <!-- Charcoal variants -->
+                    <button class="preset-grid-item" data-preset="charcoal" title="Charcoal">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+                    <button class="preset-grid-item" data-preset="charcoal-shadow" title="Charcoal + Shadow">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+                    <button class="preset-grid-item" data-preset="charcoal-dashed" title="Charcoal + Dashed">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+                    <button class="preset-grid-item" data-preset="charcoal-shadow-dashed" title="Charcoal + Shadow + Dashed">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+
+                    <!-- Forest variants -->
+                    <button class="preset-grid-item" data-preset="forest" title="Forest">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+                    <button class="preset-grid-item" data-preset="forest-shadow" title="Forest + Shadow">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+                    <button class="preset-grid-item" data-preset="forest-dashed" title="Forest + Dashed">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+                    <button class="preset-grid-item" data-preset="forest-shadow-dashed" title="Forest + Shadow + Dashed">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+
+                    <!-- Burgundy variants -->
+                    <button class="preset-grid-item" data-preset="burgundy" title="Burgundy">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+                    <button class="preset-grid-item" data-preset="burgundy-shadow" title="Burgundy + Shadow">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+                    <button class="preset-grid-item" data-preset="burgundy-dashed" title="Burgundy + Dashed">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+                    <button class="preset-grid-item" data-preset="burgundy-shadow-dashed" title="Burgundy + Shadow + Dashed">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+
+                    <!-- Navy variants -->
+                    <button class="preset-grid-item" data-preset="navy" title="Navy">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+                    <button class="preset-grid-item" data-preset="navy-shadow" title="Navy + Shadow">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+                    <button class="preset-grid-item" data-preset="navy-dashed" title="Navy + Dashed">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+                    <button class="preset-grid-item" data-preset="navy-shadow-dashed" title="Navy + Shadow + Dashed">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+
+                    <!-- Copper variants -->
+                    <button class="preset-grid-item" data-preset="copper" title="Copper">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+                    <button class="preset-grid-item" data-preset="copper-shadow" title="Copper + Shadow">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+                    <button class="preset-grid-item" data-preset="copper-dashed" title="Copper + Dashed">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+                    <button class="preset-grid-item" data-preset="copper-shadow-dashed" title="Copper + Shadow + Dashed">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+
+                    <!-- Moss variants -->
+                    <button class="preset-grid-item" data-preset="moss" title="Moss">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+                    <button class="preset-grid-item" data-preset="moss-shadow" title="Moss + Shadow">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+                    <button class="preset-grid-item" data-preset="moss-dashed" title="Moss + Dashed">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
+                    </button>
+                    <button class="preset-grid-item" data-preset="moss-shadow-dashed" title="Moss + Shadow + Dashed">
+                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
                     </button>
                 </div>
             </div>
+
             <div class="divider"></div>
             <button class="tool-btn" data-tool="line" title="Line (L)">
                 <svg width="20" height="20" viewBox="0 0 20 20"><line x1="3" y1="17" x2="17" y2="3" stroke="currentColor" stroke-width="2"/></svg>
@@ -514,18 +619,6 @@
                     </button>
                 </div>
             </div>
-                </div>
-            </div>
-
-            <div class="divider"></div>
-
-            <!-- HISTORY GROUP -->
-            <div class="toolbar-group" data-group="history">
-                <div class="toolbar-group-label">History</div>
-                <div class="toolbar-group-content">
-            <button class="action-btn" id="undoBtn" title="Undo (Ctrl+Z)">
-                <i class="fas fa-undo"></i>
-            </button>
                 </div>
             </div>
 
@@ -1171,9 +1264,6 @@
                 <button id="prevPage" class="page-nav-btn" title="Previous Page">
                     <i class="fas fa-chevron-left"></i>
                 </button>
-                <button id="playPages" class="page-nav-btn" title="Play Slideshow (2s delay)">
-                    <i class="fas fa-play"></i>
-                </button>
                 <div class="page-info">
                     <span id="pageCounter">Page 1 of 1</span>
                 </div>
@@ -1238,6 +1328,7 @@
                         <div class="shortcut"><kbd>Ctrl/⌘+V</kbd><span>Paste</span></div>
                         <div class="shortcut"><kbd>Ctrl/⌘+D</kbd><span>Duplicate</span></div>
                         <div class="shortcut"><kbd>Ctrl/⌘+Z</kbd><span>Undo</span></div>
+                        <div class="shortcut"><kbd>Ctrl/⌘+Y</kbd><span>Redo</span></div>
                         <div class="shortcut"><kbd>Del</kbd><span>Delete</span></div>
                         <div class="shortcut"><kbd>Arrows</kbd><span>Move 1px</span></div>
                         <div class="shortcut"><kbd>Shift+Arrows</kbd><span>Move 10px</span></div>

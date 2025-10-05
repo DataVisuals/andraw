@@ -36,9 +36,6 @@ let canvasMode = 'infinite'; // Default to infinite canvas
 // Storybook mode state
 let pages = []; // Array of pages, each contains {elements, backgroundColor}
 let currentPageIndex = 0; // Current page being viewed
-let isPlayingPages = false; // Slideshow play state
-let playPagesInterval = null; // Interval timer for slideshow
-const SLIDESHOW_DELAY = 2000; // 2 seconds between pages
 
 // Pan/Scroll state
 let panOffsetX = 0;
@@ -329,6 +326,14 @@ const rectangleBtn = document.getElementById('rectangleBtn');
 const rectangleDropdown = document.getElementById('rectangleDropdown');
 const circleBtn = document.getElementById('circleBtn');
 const circleDropdown = document.getElementById('circleDropdown');
+
+// New unified shape and preset selectors
+const shapeBtn = document.getElementById('shapeBtn');
+const shapeDropdown = document.getElementById('shapeDropdown');
+const presetBtn = document.getElementById('presetBtn');
+const presetDropdown = document.getElementById('presetDropdown');
+let currentShapeType = 'rectangle'; // Track selected shape type
+let currentPreset = 'slate'; // Track selected preset
 
 // Style presets - tasteful, muted color combinations
 const stylePresets = {
@@ -670,57 +675,235 @@ bgColorInput.addEventListener('input', (e) => {
     redraw();
 });
 
-// Shape dropdown toggle for rectangle
-rectangleBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
+// Shape dropdown toggle for rectangle (legacy - kept for compatibility)
+if (rectangleBtn && rectangleDropdown) {
+    rectangleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
 
-    // Toggle dropdown open/close
-    const isOpen = rectangleDropdown.classList.contains('active');
-    rectangleDropdown.classList.toggle('active');
-    circleDropdown.classList.remove('active');
+        // Toggle dropdown open/close
+        const isOpen = rectangleDropdown.classList.contains('active');
+        rectangleDropdown.classList.toggle('active');
+        if (circleDropdown) circleDropdown.classList.remove('active');
 
-    // If we just opened the dropdown, don't activate the tool
-    if (isOpen) {
-        // Dropdown was open, now closed - activate rectangle tool with current colors
-        currentTool = 'rectangle';
-        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-        rectangleBtn.classList.add('active');
-        canvas.style.cursor = 'crosshair';
-        selectedElement = null;
-        selectedElements = [];
-        redraw();
-    }
-});
+        // If we just opened the dropdown, don't activate the tool
+        if (isOpen) {
+            // Dropdown was open, now closed - activate rectangle tool with current colors
+            currentTool = 'rectangle';
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            rectangleBtn.classList.add('active');
+            canvas.style.cursor = 'crosshair';
+            selectedElement = null;
+            selectedElements = [];
+            redraw();
+        }
+    });
+}
 
-// Shape dropdown toggle for circle
-circleBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
+// Shape dropdown toggle for circle (legacy - kept for compatibility)
+if (circleBtn && circleDropdown) {
+    circleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
 
-    // Toggle dropdown open/close
-    const isOpen = circleDropdown.classList.contains('active');
-    circleDropdown.classList.toggle('active');
-    rectangleDropdown.classList.remove('active');
+        // Toggle dropdown open/close
+        const isOpen = circleDropdown.classList.contains('active');
+        circleDropdown.classList.toggle('active');
+        if (rectangleDropdown) rectangleDropdown.classList.remove('active');
 
-    // If we just opened the dropdown, don't activate the tool
-    if (isOpen) {
-        // Dropdown was open, now closed - activate circle tool with current colors
-        currentTool = 'circle';
-        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-        circleBtn.classList.add('active');
-        canvas.style.cursor = 'crosshair';
-        selectedElement = null;
-        selectedElements = [];
-        redraw();
-    }
-});
+        // If we just opened the dropdown, don't activate the tool
+        if (isOpen) {
+            // Dropdown was open, now closed - activate circle tool with current colors
+            currentTool = 'circle';
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            circleBtn.classList.add('active');
+            canvas.style.cursor = 'crosshair';
+            selectedElement = null;
+            selectedElements = [];
+            redraw();
+        }
+    });
+}
 
 // Font dropdown toggle
 fontBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     fontDropdown.classList.toggle('active');
-    rectangleDropdown.classList.remove('active');
-    circleDropdown.classList.remove('active');
+    if (rectangleDropdown) rectangleDropdown.classList.remove('active');
+    if (circleDropdown) circleDropdown.classList.remove('active');
+    if (shapeDropdown) shapeDropdown.classList.remove('active');
+    if (presetDropdown) presetDropdown.classList.remove('active');
 });
+
+// New shape selector dropdown
+if (shapeBtn && shapeDropdown) {
+    shapeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        shapeDropdown.classList.toggle('active');
+        if (presetDropdown) presetDropdown.classList.remove('active');
+        if (rectangleDropdown) rectangleDropdown.classList.remove('active');
+        if (circleDropdown) circleDropdown.classList.remove('active');
+        fontDropdown.classList.remove('active');
+    });
+
+    // Handle shape selection
+    shapeDropdown.querySelectorAll('.shape-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            const shape = e.currentTarget.dataset.shape;
+            if (shape) {
+                currentShapeType = shape;
+                currentTool = shape;
+
+                // Activate the shape tool
+                document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                shapeBtn.classList.add('active');
+                canvas.style.cursor = 'crosshair';
+
+                // Apply current preset colors
+                if (stylePresets[currentPreset]) {
+                    strokeColorInput.value = stylePresets[currentPreset].stroke;
+                    fillColorInput.value = stylePresets[currentPreset].fill;
+                    fillEnabledInput.checked = true;
+                    updateColorIcons();
+                }
+
+                // Update preset previews to show the new shape
+                if (presetDropdown) {
+                    updatePresetPreviews();
+                }
+
+                selectedElement = null;
+                selectedElements = [];
+                shapeDropdown.classList.remove('active');
+                redraw();
+            }
+        });
+    });
+}
+
+// Function to get SVG path for a shape type
+function getShapeSVGPath(shapeType) {
+    const shapes = {
+        rectangle: '<rect x="3" y="6" width="18" height="12" />',
+        circle: '<circle cx="12" cy="12" r="9" />',
+        diamond: '<path d="M12 3 L21 12 L12 21 L3 12 Z" />',
+        parallelogram: '<path d="M6 6 L21 6 L18 18 L3 18 Z" />',
+        roundRect: '<rect x="3" y="6" width="18" height="12" rx="6" />',
+        triangle: '<path d="M12 3 L21 21 L3 21 Z" />',
+        hexagon: '<path d="M8 3 L16 3 L21 12 L16 21 L8 21 L3 12 Z" />'
+    };
+    return shapes[shapeType] || shapes.rectangle;
+}
+
+// Function to update preset previews based on current shape
+function updatePresetPreviews() {
+    const shapeType = currentShapeType || 'rectangle';
+    const shapePath = getShapeSVGPath(shapeType);
+
+    presetDropdown.querySelectorAll('.preset-grid-item').forEach(item => {
+        const preset = item.dataset.preset;
+        const svg = item.querySelector('.preset-preview');
+
+        if (preset && svg) {
+            // Parse preset name
+            const parts = preset.split('-');
+            const basePreset = parts[0];
+            const hasShadow = parts.includes('shadow');
+            const hasDashed = parts.includes('dashed');
+
+            const colors = stylePresets[basePreset];
+            if (colors) {
+                const strokeDasharray = hasDashed ? '2,2' : '';
+                const filter = hasShadow ? 'drop-shadow(1px 1px 2px rgba(0,0,0,0.3))' : '';
+
+                svg.innerHTML = shapePath;
+                svg.style.filter = filter;
+
+                const shape = svg.querySelector('rect, circle, path');
+                if (shape) {
+                    shape.setAttribute('fill', colors.fill);
+                    shape.setAttribute('stroke', colors.stroke);
+                    shape.setAttribute('stroke-width', '2');
+                    if (strokeDasharray) {
+                        shape.setAttribute('stroke-dasharray', strokeDasharray);
+                    }
+                }
+            }
+        }
+    });
+}
+
+// New style preset dropdown
+if (presetBtn && presetDropdown) {
+    presetBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        presetDropdown.classList.toggle('active');
+
+        // Update previews when opening
+        if (presetDropdown.classList.contains('active')) {
+            updatePresetPreviews();
+        }
+
+        if (shapeDropdown) shapeDropdown.classList.remove('active');
+        if (rectangleDropdown) rectangleDropdown.classList.remove('active');
+        if (circleDropdown) circleDropdown.classList.remove('active');
+        fontDropdown.classList.remove('active');
+    });
+
+    // Handle preset selection
+    presetDropdown.querySelectorAll('.preset-grid-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            const preset = e.currentTarget.dataset.preset;
+            if (preset) {
+                // Parse preset name to extract base preset and modifiers
+                const parts = preset.split('-');
+                const basePreset = parts[0]; // e.g., 'sage', 'slate', etc.
+                const hasShadow = parts.includes('shadow');
+                const hasDashed = parts.includes('dashed');
+
+                currentPreset = basePreset;
+
+                // Apply preset colors
+                if (stylePresets[basePreset]) {
+                    strokeColorInput.value = stylePresets[basePreset].stroke;
+                    fillColorInput.value = stylePresets[basePreset].fill;
+                    fillEnabledInput.checked = true;
+
+                    // Apply shadow if specified
+                    if (shadowEnabledInput) {
+                        shadowEnabledInput.checked = hasShadow;
+                    }
+
+                    // Apply line style if specified
+                    if (hasDashed) {
+                        currentLineStyle = 'dashed';
+                    } else {
+                        currentLineStyle = 'solid';
+                    }
+
+                    updateColorIcons();
+                }
+
+                // Apply to selected elements if any
+                const elementsToUpdate = selectedElements.length > 0 ? selectedElements : (selectedElement ? [selectedElement] : []);
+                if (elementsToUpdate.length > 0) {
+                    elementsToUpdate.forEach(el => {
+                        if (el.type !== 'text' && el.type !== 'line' && el.type !== 'arrow' && el.type !== 'pen') {
+                            el.strokeColor = stylePresets[basePreset].stroke;
+                            el.fillColor = stylePresets[basePreset].fill;
+                            el.fillEnabled = true;
+                            el.shadow = hasShadow;
+                            if (hasDashed) {
+                                el.lineStyle = 'dashed';
+                            }
+                        }
+                    });
+                    redraw();
+                }
+
+                presetDropdown.classList.remove('active');
+            }
+        });
+    });
+}
 
 // Close dropdowns when clicking outside
 document.addEventListener('click', (e) => {
@@ -735,14 +918,20 @@ document.addEventListener('click', (e) => {
     const selectionBtn = document.getElementById('selectionBtn');
     const selectionDropdown = document.getElementById('selectionDropdown');
 
-    if (!rectangleBtn.contains(e.target) && !rectangleDropdown.contains(e.target)) {
+    if (rectangleBtn && rectangleDropdown && !rectangleBtn.contains(e.target) && !rectangleDropdown.contains(e.target)) {
         rectangleDropdown.classList.remove('active');
     }
-    if (!circleBtn.contains(e.target) && !circleDropdown.contains(e.target)) {
+    if (circleBtn && circleDropdown && !circleBtn.contains(e.target) && !circleDropdown.contains(e.target)) {
         circleDropdown.classList.remove('active');
     }
     if (!fontBtn.contains(e.target) && !fontDropdown.contains(e.target)) {
         fontDropdown.classList.remove('active');
+    }
+    if (shapeBtn && shapeDropdown && !shapeBtn.contains(e.target) && !shapeDropdown.contains(e.target)) {
+        shapeDropdown.classList.remove('active');
+    }
+    if (presetBtn && presetDropdown && !presetBtn.contains(e.target) && !presetDropdown.contains(e.target)) {
+        presetDropdown.classList.remove('active');
     }
     if (logoBtn && logoDropdown && !logoBtn.contains(e.target) && !logoDropdown.contains(e.target)) {
         logoDropdown.classList.remove('active');
@@ -808,8 +997,10 @@ document.querySelectorAll('.shape-item').forEach(item => {
             }
 
             // Close dropdowns
-            rectangleDropdown.classList.remove('active');
-            circleDropdown.classList.remove('active');
+            if (rectangleDropdown) rectangleDropdown.classList.remove('active');
+            if (circleDropdown) circleDropdown.classList.remove('active');
+            if (shapeDropdown) shapeDropdown.classList.remove('active');
+            if (presetDropdown) presetDropdown.classList.remove('active');
 
             redraw();
         }
@@ -986,8 +1177,10 @@ lineOptionsBtn.addEventListener('click', (e) => {
     lineOptionsDropdown.classList.toggle('active');
 
     // Close other dropdowns
-    rectangleDropdown.classList.remove('active');
-    circleDropdown.classList.remove('active');
+    if (rectangleDropdown) rectangleDropdown.classList.remove('active');
+    if (circleDropdown) circleDropdown.classList.remove('active');
+    if (shapeDropdown) shapeDropdown.classList.remove('active');
+    if (presetDropdown) presetDropdown.classList.remove('active');
     fontDropdown.classList.remove('active');
     const logoDropdown = document.getElementById('logoDropdown');
     if (logoDropdown) logoDropdown.classList.remove('active');
@@ -1063,8 +1256,10 @@ if (alignBtn && alignDropdown) {
         alignDropdown.classList.toggle('active');
 
         // Close other dropdowns
-        rectangleDropdown.classList.remove('active');
-        circleDropdown.classList.remove('active');
+        if (rectangleDropdown) rectangleDropdown.classList.remove('active');
+        if (circleDropdown) circleDropdown.classList.remove('active');
+        if (shapeDropdown) shapeDropdown.classList.remove('active');
+        if (presetDropdown) presetDropdown.classList.remove('active');
         fontDropdown.classList.remove('active');
         lineOptionsDropdown.classList.remove('active');
         const logoDropdown = document.getElementById('logoDropdown');
@@ -1387,8 +1582,10 @@ if (zoomBtn && zoomDropdown) {
         zoomDropdown.classList.toggle('active');
 
         // Close other dropdowns
-        rectangleDropdown.classList.remove('active');
-        circleDropdown.classList.remove('active');
+        if (rectangleDropdown) rectangleDropdown.classList.remove('active');
+        if (circleDropdown) circleDropdown.classList.remove('active');
+        if (shapeDropdown) shapeDropdown.classList.remove('active');
+        if (presetDropdown) presetDropdown.classList.remove('active');
         fontDropdown.classList.remove('active');
         lineOptionsDropdown.classList.remove('active');
         const logoDropdown = document.getElementById('logoDropdown');
@@ -1502,8 +1699,10 @@ if (selectionBtn && selectionDropdown) {
         selectionDropdown.classList.toggle('active');
 
         // Close other dropdowns
-        rectangleDropdown.classList.remove('active');
-        circleDropdown.classList.remove('active');
+        if (rectangleDropdown) rectangleDropdown.classList.remove('active');
+        if (circleDropdown) circleDropdown.classList.remove('active');
+        if (shapeDropdown) shapeDropdown.classList.remove('active');
+        if (presetDropdown) presetDropdown.classList.remove('active');
         fontDropdown.classList.remove('active');
         lineOptionsDropdown.classList.remove('active');
         const logoDropdown = document.getElementById('logoDropdown');
@@ -1706,7 +1905,14 @@ document.addEventListener('keydown', (e) => {
         };
 
         if (quickCreateMap[e.code]) {
-            quickCreateShape(quickCreateMap[e.code]);
+            const shapeType = quickCreateMap[e.code];
+            if (shapeType === 'line' || shapeType === 'arrow' || shapeType === 'text') {
+                // Use original quick create for these types
+                quickCreateShape(shapeType);
+            } else {
+                // Use sage shape creation for fillable shapes
+                addSageShape(shapeType);
+            }
             e.preventDefault();
             return;
         }
@@ -1748,6 +1954,13 @@ document.addEventListener('keydown', (e) => {
     // Undo (Cmd/Ctrl+Z)
     if ((e.ctrlKey || e.metaKey) && key === 'z') {
         undo();
+        e.preventDefault();
+        return;
+    }
+
+    // Redo (Cmd/Ctrl+Y)
+    if ((e.ctrlKey || e.metaKey) && key === 'y') {
+        redo();
         e.preventDefault();
         return;
     }
@@ -1808,6 +2021,7 @@ document.addEventListener('keydown', (e) => {
         e.preventDefault();
         return;
     }
+
 
     // Arrow keys for fine-grained positioning
     if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
@@ -2212,6 +2426,163 @@ function toggleLockSelection() {
 
     saveHistory();
     redraw();
+}
+
+function addSageShape(shapeType) {
+    // Use provided shape type or last created or default to rectangle
+    if (!shapeType) {
+        shapeType = lastCreatedShape?.type || 'rectangle';
+    }
+
+    // Only work with fillable shapes
+    if (shapeType === 'line' || shapeType === 'arrow' || shapeType === 'pen' || shapeType === 'text') {
+        return;
+    }
+
+    // Sage color scheme
+    const sageStroke = '#556B2F';
+    const sageFill = '#D8E4BC';
+
+    // Standard shape size
+    const shapeWidth = 100;
+    const shapeHeight = 80;
+
+    // Create new shape at temporary position (layout will reposition)
+    const newShape = {
+        type: shapeType,
+        id: nextElementId++,
+        x: 50,
+        y: 50,
+        width: shapeWidth,
+        height: shapeHeight,
+        strokeColor: sageStroke,
+        fillColor: sageFill
+    };
+
+    elements.push(newShape);
+
+    // If last created shape had associated text, copy it with same text
+    if (lastCreatedShape) {
+        const associatedText = elements.find(el =>
+            el.type === 'text' && el.parentId === lastCreatedShape.id
+        );
+
+        if (associatedText) {
+            // Create centered text for new shape
+            const newText = {
+                ...associatedText,
+                id: nextElementId++,
+                parentId: newShape.id,
+                x: newShape.x + shapeWidth / 2,
+                y: newShape.y + shapeHeight / 2
+                // Keep the same text (don't increment)
+            };
+
+            elements.push(newText);
+        }
+    }
+
+    lastCreatedShape = newShape;
+
+    // Apply horizontal layout to arrange only sage shapes
+    layoutSageShapes();
+
+    saveHistory();
+    redraw();
+}
+
+function layoutSageShapes() {
+    const sageStroke = '#556B2F';
+    const sageFill = '#D8E4BC';
+
+    // Get only sage-colored shapes
+    const sageShapes = elements.filter(el =>
+        el.strokeColor === sageStroke &&
+        el.fillColor === sageFill &&
+        el.type !== 'line' &&
+        el.type !== 'arrow' &&
+        el.type !== 'text'
+    );
+
+    if (sageShapes.length === 0) return;
+
+    const spacing = 20;
+    const sideMargin = 50;
+    const canvasWidth = canvas.width - sideMargin * 2;
+    const canvasHeight = canvas.height;
+
+    // Sort by creation order (ID) to keep new shapes at the end
+    sageShapes.sort((a, b) => (a.id || 0) - (b.id || 0));
+
+    // First pass: group shapes into rows
+    const rows = [];
+    let currentRow = [];
+    let currentRowWidth = 0;
+
+    sageShapes.forEach((shape, index) => {
+        const shapeWidth = Math.abs(shape.width || 100);
+        const shapeHeight = Math.abs(shape.height || 80);
+
+        // Check if shape fits on current row
+        if (currentRowWidth + shapeWidth > canvasWidth && currentRow.length > 0) {
+            rows.push(currentRow);
+            currentRow = [];
+            currentRowWidth = 0;
+        }
+
+        currentRow.push(shape);
+        currentRowWidth += shapeWidth + (currentRow.length > 1 ? spacing : 0);
+    });
+
+    if (currentRow.length > 0) {
+        rows.push(currentRow);
+    }
+
+    // Calculate total height needed
+    const totalHeight = rows.reduce((sum, row, i) => {
+        const rowHeight = Math.max(...row.map(s => Math.abs(s.height || 80)));
+        return sum + rowHeight + (i > 0 ? spacing : 0);
+    }, 0);
+
+    // Start from vertical center
+    let currentY = (canvasHeight - totalHeight) / 2;
+
+    // Second pass: position shapes
+    rows.forEach((row) => {
+        const rowHeight = Math.max(...row.map(s => Math.abs(s.height || 80)));
+
+        // Calculate row width
+        const rowWidth = row.reduce((sum, shape, i) => {
+            return sum + Math.abs(shape.width || 100) + (i > 0 ? spacing : 0);
+        }, 0);
+
+        // Center row horizontally
+        let currentX = (canvas.width - rowWidth) / 2;
+
+        row.forEach((shape) => {
+            const shapeWidth = Math.abs(shape.width || 100);
+            const shapeHeight = Math.abs(shape.height || 80);
+
+            // Position shape
+            const deltaX = currentX - shape.x;
+            const deltaY = currentY - shape.y;
+            shape.x = currentX;
+            shape.y = currentY;
+
+            // Move and center associated text elements
+            elements.forEach(el => {
+                if (el.type === 'text' && el.parentId === shape.id) {
+                    // Center text on shape
+                    el.x = shape.x + shapeWidth / 2;
+                    el.y = shape.y + shapeHeight / 2;
+                }
+            });
+
+            currentX += shapeWidth + spacing;
+        });
+
+        currentY += rowHeight + spacing;
+    });
 }
 
 function duplicateLastShape() {
@@ -3021,7 +3392,7 @@ function handleMouseUp(e) {
     // Snap endpoint to shape edge for arrows and lines
     let endShape = null;
     if (currentTool === 'arrow' || currentTool === 'line') {
-        const snapped = findNearestShapeEdge(endX, endY);
+        const snapped = findNearestShapeEdge(endX, endY, 20, startX, startY);
         endX = snapped.x;
         endY = snapped.y;
         endShape = snapped.shape;
@@ -3225,13 +3596,14 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal) 
 
 // Get center points of all sides of a shape
 function getSideCenters(bounds, shapeType) {
-    const centerX = bounds.x + bounds.width / 2;
-    const centerY = bounds.y + bounds.height / 2;
+    const { x, y, width: w, height: h } = bounds;
+    const centerX = x + w / 2;
+    const centerY = y + h / 2;
 
     if (shapeType === 'circle') {
         // For circles, return points at cardinal directions
-        const rx = bounds.width / 2;
-        const ry = bounds.height / 2;
+        const rx = w / 2;
+        const ry = h / 2;
         return {
             top: { x: centerX, y: centerY - ry },
             bottom: { x: centerX, y: centerY + ry },
@@ -3241,24 +3613,47 @@ function getSideCenters(bounds, shapeType) {
     } else if (shapeType === 'diamond') {
         // For diamonds, the vertices are at the midpoints of the bounding box edges
         return {
-            top: { x: centerX, y: bounds.y },
-            bottom: { x: centerX, y: bounds.y + bounds.height },
-            left: { x: bounds.x, y: centerY },
-            right: { x: bounds.x + bounds.width, y: centerY }
+            top: { x: centerX, y },
+            bottom: { x: centerX, y: y + h },
+            left: { x, y: centerY },
+            right: { x: x + w, y: centerY }
+        };
+    } else if (shapeType === 'parallelogram') {
+        const skew = w * 0.15;
+        return {
+            top: { x: x + w / 2 + skew / 2, y },                    // midpoint of top edge
+            bottom: { x: x + w / 2 - skew / 2, y: y + h },          // midpoint of bottom edge
+            left: { x: x + skew / 2, y: centerY },                  // midpoint of left edge
+            right: { x: x + w - skew / 2, y: centerY }              // midpoint of right edge
+        };
+    } else if (shapeType === 'triangle') {
+        return {
+            top: { x: centerX, y },                                 // top vertex
+            bottom: { x: centerX, y: y + h },                       // midpoint of bottom edge
+            left: { x: x + w / 4, y: y + h / 2 },                  // midpoint of left edge
+            right: { x: x + w * 0.75, y: y + h / 2 }               // midpoint of right edge
+        };
+    } else if (shapeType === 'hexagon') {
+        const hw = w / 4;
+        return {
+            top: { x: centerX, y },                                 // midpoint of top edge
+            bottom: { x: centerX, y: y + h },                       // midpoint of bottom edge
+            left: { x, y: centerY },                                // left vertex
+            right: { x: x + w, y: centerY }                         // right vertex
         };
     } else {
         // For rectangles and other shapes
         return {
-            top: { x: centerX, y: bounds.y },
-            bottom: { x: centerX, y: bounds.y + bounds.height },
-            left: { x: bounds.x, y: centerY },
-            right: { x: bounds.x + bounds.width, y: centerY }
+            top: { x: centerX, y },
+            bottom: { x: centerX, y: y + h },
+            left: { x, y: centerY },
+            right: { x: x + w, y: centerY }
         };
     }
 }
 
 // Arrow snapping helpers
-function findNearestShapeEdge(x, y, snapDistance = 20) {
+function findNearestShapeEdge(x, y, snapDistance = 20, fromX = null, fromY = null) {
     let nearestPoint = null;
     let nearestShape = null;
     let minDistance = snapDistance;
@@ -3269,7 +3664,7 @@ function findNearestShapeEdge(x, y, snapDistance = 20) {
         }
 
         const bounds = getElementBounds(element);
-        const edgePoint = getNearestEdgePoint(x, y, bounds, element.type);
+        const edgePoint = getNearestEdgePoint(x, y, bounds, element.type, fromX, fromY);
 
         if (edgePoint) {
             const dist = Math.sqrt(Math.pow(x - edgePoint.x, 2) + Math.pow(y - edgePoint.y, 2));
@@ -3284,7 +3679,75 @@ function findNearestShapeEdge(x, y, snapDistance = 20) {
     return nearestPoint ? { ...nearestPoint, shape: nearestShape } : { x, y, shape: null };
 }
 
-function getNearestEdgePoint(x, y, bounds, shapeType) {
+function closestPointOnSegment(px, py, x1, y1, x2, y2) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const lengthSquared = dx * dx + dy * dy;
+
+    if (lengthSquared === 0) return { x: x1, y: y1 };
+
+    let t = ((px - x1) * dx + (py - y1) * dy) / lengthSquared;
+    t = Math.max(0, Math.min(1, t));
+
+    return {
+        x: x1 + t * dx,
+        y: y1 + t * dy
+    };
+}
+
+function getShapeVertices(bounds, shapeType) {
+    const { x, y, width: w, height: h } = bounds;
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+
+    switch (shapeType) {
+        case 'diamond':
+            return [
+                { x: cx, y },           // top
+                { x: x + w, y: cy },    // right
+                { x: cx, y: y + h },    // bottom
+                { x, y: cy }            // left
+            ];
+
+        case 'parallelogram':
+            const skew = w * 0.15;
+            return [
+                { x: x + skew, y },
+                { x: x + w, y },
+                { x: x + w - skew, y: y + h },
+                { x, y: y + h }
+            ];
+
+        case 'triangle':
+            return [
+                { x: x + w/2, y },
+                { x: x + w, y: y + h },
+                { x, y: y + h }
+            ];
+
+        case 'hexagon':
+            const hw = w / 4;
+            return [
+                { x: x + hw, y },
+                { x: x + w - hw, y },
+                { x: x + w, y: cy },
+                { x: x + w - hw, y: y + h },
+                { x: x + hw, y: y + h },
+                { x, y: cy }
+            ];
+
+        default:
+            // Rectangle and other shapes
+            return [
+                { x, y },
+                { x: x + w, y },
+                { x: x + w, y: y + h },
+                { x, y: y + h }
+            ];
+    }
+}
+
+function getNearestEdgePoint(x, y, bounds, shapeType, fromX = null, fromY = null) {
     const centerX = bounds.x + bounds.width / 2;
     const centerY = bounds.y + bounds.height / 2;
 
@@ -3297,35 +3760,66 @@ function getNearestEdgePoint(x, y, bounds, shapeType) {
             x: centerX + rx * Math.cos(angle),
             y: centerY + ry * Math.sin(angle)
         };
-    } else {
-        // For rectangles and other shapes, find nearest edge point
-        const left = bounds.x;
-        const right = bounds.x + bounds.width;
-        const top = bounds.y;
-        const bottom = bounds.y + bounds.height;
+    }
 
-        // Calculate distances to each edge
-        const distToLeft = Math.abs(x - left);
-        const distToRight = Math.abs(x - right);
-        const distToTop = Math.abs(y - top);
-        const distToBottom = Math.abs(y - bottom);
+    // For polygon shapes, get vertices and find closest point on any edge
+    const vertices = getShapeVertices(bounds, shapeType);
 
-        const minDist = Math.min(distToLeft, distToRight, distToTop, distToBottom);
+    // If we know where the arrow is coming from, choose the best edge based on direction
+    if (fromX !== null && fromY !== null && shapeType === 'triangle') {
+        // For triangles, find which edge is most aligned with the approach direction
+        const approachAngle = Math.atan2(y - fromY, x - fromX);
+        let bestEdge = 0;
+        let bestAlignment = -Infinity;
 
-        // Clamp to bounds
-        const clampedX = Math.max(left, Math.min(right, x));
-        const clampedY = Math.max(top, Math.min(bottom, y));
+        for (let i = 0; i < vertices.length; i++) {
+            const v1 = vertices[i];
+            const v2 = vertices[(i + 1) % vertices.length];
 
-        if (minDist === distToLeft) {
-            return { x: left, y: clampedY };
-        } else if (minDist === distToRight) {
-            return { x: right, y: clampedY };
-        } else if (minDist === distToTop) {
-            return { x: clampedX, y: top };
-        } else {
-            return { x: clampedX, y: bottom };
+            // Calculate the normal to this edge (perpendicular)
+            const edgeDx = v2.x - v1.x;
+            const edgeDy = v2.y - v1.y;
+            const edgeAngle = Math.atan2(edgeDy, edgeDx);
+
+            // Normal pointing inward (we want the arrow to approach from outside)
+            const normalAngle = edgeAngle + Math.PI / 2;
+
+            // Check alignment between approach direction and edge normal
+            const alignment = Math.cos(approachAngle - normalAngle);
+
+            if (alignment > bestAlignment) {
+                bestAlignment = alignment;
+                bestEdge = i;
+            }
+        }
+
+        // Snap to midpoint of the best edge
+        const v1 = vertices[bestEdge];
+        const v2 = vertices[(bestEdge + 1) % vertices.length];
+        return {
+            x: (v1.x + v2.x) / 2,
+            y: (v1.y + v2.y) / 2
+        };
+    }
+
+    // For other shapes or when we don't have a fromPoint, find closest point on any edge
+    let closestPoint = null;
+    let minDistance = Infinity;
+
+    for (let i = 0; i < vertices.length; i++) {
+        const v1 = vertices[i];
+        const v2 = vertices[(i + 1) % vertices.length];
+
+        const point = closestPointOnSegment(x, y, v1.x, v1.y, v2.x, v2.y);
+        const dist = Math.sqrt(Math.pow(x - point.x, 2) + Math.pow(y - point.y, 2));
+
+        if (dist < minDistance) {
+            minDistance = dist;
+            closestPoint = point;
         }
     }
+
+    return closestPoint || { x, y };
 }
 
 // Drawing functions with hand-drawn effect
@@ -5845,6 +6339,17 @@ function undo() {
     }
 }
 
+function redo() {
+    if (historyStep < history.length - 1) {
+        historyStep++;
+        elements = JSON.parse(JSON.stringify(history[historyStep]));
+        ensureElementIds(); // Ensure restored elements have IDs
+        selectedElement = null;
+        selectedElements = [];
+        redraw();
+    }
+}
+
 // Helper function to find which element a point is closest to
 function findClosestElement(x, y, excludeTypes = ['line', 'arrow', 'pen', 'text']) {
     let closest = null;
@@ -7171,10 +7676,7 @@ function escapeXML(text) {
                .replace(/'/g, '&apos;');
 }
 
-// Undo button
-document.getElementById('undoBtn').addEventListener('click', () => {
-    undo();
-});
+// Undo button - removed from UI, now keyboard-only (Ctrl/Cmd+Z)
 
 // Layout buttons
 document.getElementById('layoutHorizontalBtn').addEventListener('click', () => {
@@ -7483,8 +7985,10 @@ document.getElementById('logoBtn').addEventListener('click', (e) => {
     }
 
     // Close other dropdowns
-    rectangleDropdown.classList.remove('active');
-    circleDropdown.classList.remove('active');
+    if (rectangleDropdown) rectangleDropdown.classList.remove('active');
+    if (circleDropdown) circleDropdown.classList.remove('active');
+    if (shapeDropdown) shapeDropdown.classList.remove('active');
+    if (presetDropdown) presetDropdown.classList.remove('active');
     fontDropdown.classList.remove('active');
 });
 
@@ -7620,9 +8124,19 @@ function populateChangelog() {
     const changelogContent = document.querySelector('.changelog-content');
 
     const changelog = {
+        '2025-10-06': [
+            'Unified shape selector with all shapes and keyboard shortcuts (Shift+1-7)',
+            'Style preset selector reorganized into 4-column grid layout',
+            'Dynamic shape thumbnails in style presets - updates based on selected shape',
+            'Style presets now include shadow and dashed line variants',
+            'Removed slideshow feature from storybook mode',
+            'Fixed splash screen hanging issue on load'
+        ],
         '2025-10-05': [
+            'Redo support with Ctrl/⌘+Y keyboard shortcut',
+            'Removed Undo button from toolbar (use Ctrl/⌘+Z keyboard shortcut)',
             'Drop shadows for shapes - toggle with Shadow checkbox in toolbar',
-            'Copy as Image - right-click selected elements and copy as PNG to clipboard',
+            'Copy as Image - right-click selected elements and copy as PNG to clipboard (downloads in Safari)',
             'Quick create shapes with last used style (Shift+1-9/0) - persists across sessions',
             'Smart positioning: new shapes automatically offset to avoid overlapping existing objects',
             'Toolbar reorganized into labeled, color-coded groups (File, Tools, Style, View, Arrange, History, Export)',
@@ -7820,12 +8334,10 @@ document.getElementById('modeToggleBtn').addEventListener('click', () => {
 
 // Page Navigation Event Handlers
 document.getElementById('prevPage').addEventListener('click', () => {
-    if (isPlayingPages) stopSlideshow();
     loadPage(currentPageIndex - 1);
 });
 
 document.getElementById('nextPage').addEventListener('click', () => {
-    if (isPlayingPages) stopSlideshow();
     loadPage(currentPageIndex + 1);
 });
 
@@ -7833,89 +8345,28 @@ document.getElementById('addPage').addEventListener('click', () => {
     addNewPage();
 });
 
-// Play/pause slideshow
-document.getElementById('playPages').addEventListener('click', () => {
-    toggleSlideshow();
-});
-
-function toggleSlideshow() {
-    const playBtn = document.getElementById('playPages');
-    const playIcon = playBtn.querySelector('i');
-
-    if (isPlayingPages) {
-        // Stop playing
-        stopSlideshow();
-    } else {
-        // Start playing
-        startSlideshow();
-    }
-}
-
-function startSlideshow() {
-    if (canvasMode !== 'storybook' || pages.length <= 1) return;
-
-    isPlayingPages = true;
-    const playBtn = document.getElementById('playPages');
-    const playIcon = playBtn.querySelector('i');
-
-    // Change icon to pause
-    playIcon.classList.remove('fa-play');
-    playIcon.classList.add('fa-pause');
-    playBtn.title = 'Pause Slideshow';
-
-    // Start auto-advancing pages
-    playPagesInterval = setInterval(() => {
-        // Move to next page
-        const nextIndex = currentPageIndex + 1;
-
-        // If we're at the last page, stop playing
-        if (nextIndex >= pages.length) {
-            stopSlideshow();
-            return;
-        }
-
-        loadPage(nextIndex);
-    }, SLIDESHOW_DELAY);
-}
-
-function stopSlideshow() {
-    isPlayingPages = false;
-    const playBtn = document.getElementById('playPages');
-    const playIcon = playBtn.querySelector('i');
-
-    // Change icon back to play
-    playIcon.classList.remove('fa-pause');
-    playIcon.classList.add('fa-play');
-    playBtn.title = 'Play Slideshow (2s delay)';
-
-    // Clear interval
-    if (playPagesInterval) {
-        clearInterval(playPagesInterval);
-        playPagesInterval = null;
-    }
-}
-
 // Initialize canvas
 resizeCanvas();
 
-// Splash screen handling - run on window load to ensure everything is ready
-window.addEventListener('load', () => {
+// Initialize preset previews
+if (presetDropdown) {
+    updatePresetPreviews();
+}
+
+// Splash screen handling - hide immediately
+(function() {
     const splashScreen = document.getElementById('splashScreen');
     if (splashScreen) {
-        // Start fade out at 1 second
         setTimeout(() => {
             splashScreen.classList.add('fade-out');
-            splashScreen.style.pointerEvents = 'none';
-        }, 1000);
-
-        // Remove splash screen from DOM at 1.5 seconds (after fade completes)
-        setTimeout(() => {
-            if (splashScreen && splashScreen.parentNode) {
-                splashScreen.parentNode.removeChild(splashScreen);
-            }
-        }, 1500);
+            setTimeout(() => {
+                if (splashScreen.parentNode) {
+                    splashScreen.parentNode.removeChild(splashScreen);
+                }
+            }, 250);
+        }, 100);
     }
-});
+})();
 
 // Load last used styles from localStorage
 loadLastUsedStyles();
