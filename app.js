@@ -354,6 +354,121 @@ const stylePresets = {
     cerulean: { stroke: '#00395d', fill: '#00aeef' }    // Astronaut blue border, cerulean fill
 };
 
+// Diagram templates
+const diagramTemplates = {
+    orgChart: {
+        name: 'Organization Chart',
+        description: 'Hierarchical org chart structure',
+        elements: [
+            // CEO (centered)
+            { type: 'rectangle', x: -70, y: 0, width: 140, height: 60, text: 'CEO' },
+            // VPs (evenly spaced, centered under CEO)
+            { type: 'rectangle', x: -330, y: 100, width: 140, height: 60, text: 'VP Engineering' },
+            { type: 'rectangle', x: -70, y: 100, width: 140, height: 60, text: 'VP Marketing' },
+            { type: 'rectangle', x: 190, y: 100, width: 140, height: 60, text: 'VP Sales' },
+            // Team members under VP Engineering (centered under their VP)
+            { type: 'rectangle', x: -410, y: 200, width: 120, height: 50, text: 'Dev Team Lead' },
+            { type: 'rectangle', x: -270, y: 200, width: 120, height: 50, text: 'QA Lead' },
+            // Team members under VP Marketing (centered under their VP)
+            { type: 'rectangle', x: -130, y: 200, width: 120, height: 50, text: 'Content Lead' },
+            { type: 'rectangle', x: 10, y: 200, width: 120, height: 50, text: 'Social Media' },
+            // Team members under VP Sales (centered under their VP)
+            { type: 'rectangle', x: 150, y: 200, width: 120, height: 50, text: 'Sales Rep 1' },
+            { type: 'rectangle', x: 290, y: 200, width: 120, height: 50, text: 'Sales Rep 2' }
+        ],
+        connections: [
+            // CEO to VPs
+            { from: 0, to: 1 },
+            { from: 0, to: 2 },
+            { from: 0, to: 3 },
+            // VP Engineering to team
+            { from: 1, to: 4 },
+            { from: 1, to: 5 },
+            // VP Marketing to team
+            { from: 2, to: 6 },
+            { from: 2, to: 7 },
+            // VP Sales to team
+            { from: 3, to: 8 },
+            { from: 3, to: 9 }
+        ]
+    },
+    networkDiagram: {
+        name: 'Network Diagram',
+        description: 'Basic network topology',
+        elements: [
+            // Internet
+            { type: 'cloud', x: 0, y: 0, width: 120, height: 80, text: 'Internet' },
+            // Firewall
+            { type: 'rectangle', x: 0, y: 120, width: 100, height: 70, text: 'Firewall' },
+            // Router
+            { type: 'parallelogram', x: 0, y: 230, width: 100, height: 60, text: 'Router' },
+            // Switches
+            { type: 'rectangle', x: -150, y: 340, width: 100, height: 60, text: 'Switch 1' },
+            { type: 'rectangle', x: 150, y: 340, width: 100, height: 60, text: 'Switch 2' },
+            // Servers
+            { type: 'cylinder', x: -220, y: 450, width: 70, height: 90, text: 'DB Server' },
+            { type: 'cylinder', x: -80, y: 450, width: 70, height: 90, text: 'Web Server' },
+            // Workstations
+            { type: 'rectangle', x: 80, y: 460, width: 80, height: 60, text: 'PC 1' },
+            { type: 'rectangle', x: 220, y: 460, width: 80, height: 60, text: 'PC 2' }
+        ],
+        connections: [
+            { from: 0, to: 1, label: 'HTTPS' },
+            { from: 1, to: 2, label: 'Filtered' },
+            { from: 2, to: 3, label: 'VLAN 10' },
+            { from: 2, to: 4, label: 'VLAN 20' },
+            { from: 3, to: 5, label: 'SQL' },
+            { from: 3, to: 6, label: 'HTTP' },
+            { from: 4, to: 7, label: 'RDP' },
+            { from: 4, to: 8, label: 'RDP' }
+        ]
+    },
+    mindMap: {
+        name: 'Mind Map',
+        description: 'Radial mind map layout',
+        elements: [
+            // Central idea
+            { type: 'circle', x: 0, y: 0, width: 140, height: 140, text: 'Main Idea' },
+            // Primary branches (4 directions)
+            { type: 'roundRect', x: -300, y: -20, width: 120, height: 60, text: 'Topic 1' },
+            { type: 'roundRect', x: 180, y: -20, width: 120, height: 60, text: 'Topic 2' },
+            { type: 'roundRect', x: -300, y: 200, width: 120, height: 60, text: 'Topic 3' },
+            { type: 'roundRect', x: 180, y: 200, width: 120, height: 60, text: 'Topic 4' },
+            // Secondary branches for Topic 1
+            { type: 'roundRect', x: -450, y: -90, width: 100, height: 50, text: 'Sub 1A' },
+            { type: 'roundRect', x: -450, y: 40, width: 100, height: 50, text: 'Sub 1B' },
+            // Secondary branches for Topic 2
+            { type: 'roundRect', x: 330, y: -90, width: 100, height: 50, text: 'Sub 2A' },
+            { type: 'roundRect', x: 330, y: 40, width: 100, height: 50, text: 'Sub 2B' },
+            // Secondary branches for Topic 3
+            { type: 'roundRect', x: -450, y: 170, width: 100, height: 50, text: 'Sub 3A' },
+            { type: 'roundRect', x: -450, y: 250, width: 100, height: 50, text: 'Sub 3B' },
+            // Secondary branches for Topic 4
+            { type: 'roundRect', x: 330, y: 170, width: 100, height: 50, text: 'Sub 4A' },
+            { type: 'roundRect', x: 330, y: 250, width: 100, height: 50, text: 'Sub 4B' }
+        ],
+        connections: [
+            // Central to primary
+            { from: 0, to: 1 },
+            { from: 0, to: 2 },
+            { from: 0, to: 3 },
+            { from: 0, to: 4 },
+            // Topic 1 to subs
+            { from: 1, to: 5 },
+            { from: 1, to: 6 },
+            // Topic 2 to subs
+            { from: 2, to: 7 },
+            { from: 2, to: 8 },
+            // Topic 3 to subs
+            { from: 3, to: 9 },
+            { from: 3, to: 10 },
+            // Topic 4 to subs
+            { from: 4, to: 11 },
+            { from: 4, to: 12 }
+        ]
+    }
+};
+
 // Background color state
 let backgroundColor = '#FFFEF9';
 
@@ -830,6 +945,145 @@ if (shapeBtn && shapeDropdown) {
             }
         });
     });
+}
+
+// Function to insert a template at canvas center
+function insertTemplate(templateKey) {
+    const template = diagramTemplates[templateKey];
+    if (!template) return;
+
+    // Get canvas center in world coordinates
+    const centerX = (canvas.width / 2 - panOffsetX) / zoomLevel;
+    const centerY = (canvas.height / 2 - panOffsetY) / zoomLevel;
+
+    // Get current style settings
+    const currentStroke = strokeColorInput.value;
+    const currentFill = fillEnabledInput.checked ? fillColorInput.value : null;
+    const currentShadow = shadowEnabledInput.checked;
+
+    // Create all elements with proper IDs and positioning
+    const createdElements = [];
+    const idMapping = {}; // Map template index to new element ID
+
+    template.elements.forEach((templateEl, index) => {
+        const element = {
+            id: nextElementId++,
+            type: templateEl.type,
+            x: centerX + templateEl.x,
+            y: centerY + templateEl.y,
+            width: templateEl.width,
+            height: templateEl.height,
+            strokeColor: currentStroke,
+            fillColor: currentFill,
+            shadow: currentShadow,
+            lineStyle: currentLineStyle,
+            lineThickness: currentLineThickness
+        };
+
+        // Store the mapping for connections
+        idMapping[index] = element.id;
+
+        elements.push(element);
+        createdElements.push(element);
+
+        // If template element has text, create a text child
+        if (templateEl.text) {
+            const textElement = {
+                id: nextElementId++,
+                type: 'text',
+                x: element.x + element.width / 2,
+                y: element.y + element.height / 2,
+                text: templateEl.text,
+                textColor: currentStroke,
+                fontFamily: 'Comic Sans MS, cursive',
+                fontSize: 16,
+                bold: false,
+                italic: false,
+                parentId: element.id
+            };
+            elements.push(textElement);
+            createdElements.push(textElement);
+        }
+    });
+
+    // Create connections between elements
+    if (template.connections) {
+        template.connections.forEach(conn => {
+            const fromElement = elements.find(el => el.id === idMapping[conn.from]);
+            const toElement = elements.find(el => el.id === idMapping[conn.to]);
+
+            if (fromElement && toElement) {
+                const fromBounds = getElementBounds(fromElement);
+                const toBounds = getElementBounds(toElement);
+
+                // Get connection points using directional logic
+                const connectionPoints = getDirectionalConnection(
+                    fromBounds, fromElement.type,
+                    toBounds, toElement.type,
+                    false // Will be calculated automatically
+                );
+
+                if (connectionPoints) {
+                    // Check alignment for auto stepped routing
+                    const ALIGNMENT_THRESHOLD = 20;
+                    const isAlignedHorizontally = Math.abs(connectionPoints.from.y - connectionPoints.to.y) < ALIGNMENT_THRESHOLD;
+                    const isAlignedVertically = Math.abs(connectionPoints.from.x - connectionPoints.to.x) < ALIGNMENT_THRESHOLD;
+
+                    let routing = currentLineRouting;
+                    if (!isAlignedHorizontally && !isAlignedVertically) {
+                        routing = 'stepped';
+                    }
+
+                    const arrow = {
+                        id: nextElementId++,
+                        type: 'arrow',
+                        x: connectionPoints.from.x,
+                        y: connectionPoints.from.y,
+                        width: connectionPoints.to.x - connectionPoints.from.x,
+                        height: connectionPoints.to.y - connectionPoints.from.y,
+                        strokeColor: currentStroke,
+                        fillColor: null,
+                        lineStyle: currentLineStyle,
+                        lineRouting: routing,
+                        lineThickness: currentLineThickness,
+                        startShapeId: fromElement.id,
+                        endShapeId: toElement.id,
+                        startAnchor: connectionPoints.fromAnchor,
+                        endAnchor: connectionPoints.toAnchor
+                    };
+
+                    elements.push(arrow);
+                    createdElements.push(arrow);
+
+                    // Add label if specified
+                    if (conn.label) {
+                        const labelElement = {
+                            id: nextElementId++,
+                            type: 'text',
+                            x: 0, // Will be calculated dynamically based on parent arrow
+                            y: 0,
+                            text: conn.label,
+                            textColor: currentStroke,
+                            fontFamily: 'Comic Sans MS, cursive',
+                            fontSize: 14,
+                            bold: false,
+                            italic: false,
+                            parentId: arrow.id // Link to the arrow so it moves with it
+                        };
+                        elements.push(labelElement);
+                        createdElements.push(labelElement);
+                    }
+                }
+            }
+        });
+    }
+
+    // Select all created elements
+    selectedElements = createdElements.filter(el => el.type !== 'text' || !el.parentId);
+    selectedElement = null;
+
+    saveHistory();
+    redraw();
 }
 
 // Function to get SVG path for a shape type
@@ -2078,6 +2332,14 @@ document.querySelectorAll('.subcategory-header').forEach(header => {
 document.querySelectorAll('.template-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         const templateName = btn.dataset.template;
+
+        // Check if it's a diagram template first (multi-element)
+        if (diagramTemplates[templateName]) {
+            insertTemplate(templateName);
+            return;
+        }
+
+        // Otherwise treat as shape template (single element)
         const template = templates[templateName];
         if (template) {
             // Get current colors
@@ -3198,6 +3460,32 @@ function handleDoubleClick(e) {
         }
     }
 
+    // Check if double-clicked on an arrow or line
+    for (let i = elements.length - 1; i >= 0; i--) {
+        const element = elements[i];
+        if (element.type === 'arrow' || element.type === 'line') {
+            const bounds = getElementBounds(element);
+            // More generous hit detection for lines/arrows
+            const hitPadding = 10;
+            if (x >= bounds.x - hitPadding && x <= bounds.x + bounds.width + hitPadding &&
+                y >= bounds.y - hitPadding && y <= bounds.y + bounds.height + hitPadding) {
+                // Found an arrow/line - check if it has child text
+                const childText = elements.find(el => el.type === 'text' && el.parentId === element.id);
+
+                if (childText) {
+                    // Edit existing child text
+                    editTextElement(childText);
+                } else {
+                    // Create new label for this connector
+                    const midX = element.x + element.width / 2;
+                    const midY = element.y + element.height / 2;
+                    createTextInputForConnector(midX, midY, element);
+                }
+                return;
+            }
+        }
+    }
+
     // Check if double-clicked on a shape
     for (let i = elements.length - 1; i >= 0; i--) {
         const element = elements[i];
@@ -3256,18 +3544,60 @@ function editTextElement(textElement) {
     input.className = 'text-input';
     const rect = canvas.getBoundingClientRect();
 
-    // Check if this text is inside a shape (has a parent)
-    const isShapeText = textElement.parentId !== undefined;
+    // Check if this text has a parent (shape or connector)
+    const hasParent = textElement.parentId !== undefined;
 
-    if (isShapeText && textElement.parentId) {
-        // Center the input for shape text
-        input.style.textAlign = 'center';
+    if (hasParent && textElement.parentId) {
+        const parent = elements.find(el => el.id === textElement.parentId);
 
-        const parentShape = elements.find(el => el.id === textElement.parentId);
-        if (parentShape) {
-            const shapeWidth = Math.abs(parentShape.width || 100);
-            const centerX = parentShape.x + shapeWidth / 2;
-            const centerY = parentShape.y + Math.abs(parentShape.height || 100) / 2;
+        if (parent && (parent.type === 'arrow' || parent.type === 'line')) {
+            // Determine label position based on connector type
+            let labelX, labelY, defaultOffsetX = 0, defaultOffsetY = 0;
+
+            if (parent.lineRouting === 'stepped') {
+                const x1 = parent.x;
+                const y1 = parent.y;
+                const x2 = parent.x + parent.width;
+                const y2 = parent.y + parent.height;
+                const absWidth = Math.abs(parent.width);
+                const absHeight = Math.abs(parent.height);
+
+                if (absWidth > absHeight) {
+                    labelX = (x1 + x2) / 2;
+                    labelY = y1;
+                    defaultOffsetY = -20;
+                } else {
+                    labelX = x1;
+                    labelY = (y1 + y2) / 2;
+                    defaultOffsetX = 25;
+                }
+            } else {
+                const absWidth = Math.abs(parent.width);
+                const absHeight = Math.abs(parent.height);
+                labelX = parent.x + parent.width / 2;
+                labelY = parent.y + parent.height / 2;
+
+                if (absWidth > absHeight) {
+                    defaultOffsetY = -20;
+                } else {
+                    defaultOffsetX = 25;
+                }
+            }
+
+            const offsetX = textElement.offsetX !== undefined ? textElement.offsetX : defaultOffsetX;
+            const offsetY = textElement.offsetY !== undefined ? textElement.offsetY : defaultOffsetY;
+
+            input.style.textAlign = 'center';
+            input.style.left = (rect.left + panOffsetX + (labelX + offsetX) * zoomLevel - 50) + 'px';
+            input.style.top = (rect.top + panOffsetY + (labelY + offsetY) * zoomLevel - 12) + 'px';
+            input.style.width = '100px';
+        } else if (parent) {
+            // Shape text - center on shape
+            input.style.textAlign = 'center';
+
+            const shapeWidth = Math.abs(parent.width || 100);
+            const centerX = parent.x + shapeWidth / 2;
+            const centerY = parent.y + Math.abs(parent.height || 100) / 2;
 
             // Position textarea centered on shape
             const inputWidth = shapeWidth * 0.9;
@@ -3275,12 +3605,13 @@ function editTextElement(textElement) {
             input.style.top = (rect.top + panOffsetY + (centerY - 12) * zoomLevel) + 'px';
             input.style.width = (inputWidth * zoomLevel) + 'px';
         } else {
+            // Parent not found - fallback
             input.style.left = (rect.left + panOffsetX + textElement.x * zoomLevel) + 'px';
-            input.style.top = (rect.top + panOffsetY + textElement.y * zoomLevel) + 'px';
+            input.style.top = (rect.left + panOffsetY + textElement.y * zoomLevel) + 'px';
             input.style.width = '150px';
         }
     } else {
-        // Regular text positioning
+        // Regular text (no parent)
         input.style.left = (rect.left + panOffsetX + textElement.x * zoomLevel) + 'px';
         input.style.top = (rect.top + panOffsetY + textElement.y * zoomLevel) + 'px';
         input.style.minWidth = '200px';
@@ -4654,57 +4985,117 @@ function drawText(element) {
 
     const lineHeight = fontSize * 1.2;
 
-    // Check if this is text inside a shape (has a parent)
-    const isShapeText = element.parentId !== undefined;
+    // Check if this is text with a parent (shape or connector)
+    const hasParent = element.parentId !== undefined;
 
-    if (isShapeText) {
-        // Get parent shape to wrap and center text
-        const parentShape = elements.find(el => el.id === element.parentId);
-        if (parentShape) {
-            const shapeWidth = Math.abs(parentShape.width || 100);
-            const shapeHeight = Math.abs(parentShape.height || 100);
-            const centerX = parentShape.x + shapeWidth / 2;
-            const centerY = parentShape.y + shapeHeight / 2;
-            const maxWidth = shapeWidth * 0.9; // 90% of shape width for padding
+    if (hasParent) {
+        const parent = elements.find(el => el.id === element.parentId);
+        if (parent) {
+            // Check if parent is an arrow or line
+            if (parent.type === 'arrow' || parent.type === 'line') {
+                // Determine label position based on connector type
+                let labelX, labelY, defaultOffsetX = 0, defaultOffsetY = 0;
 
-            // Wrap text to fit shape width
-            const wrappedLines = [];
-            const inputLines = element.text.split('\n');
+                if (parent.lineRouting === 'stepped') {
+                    // For stepped lines, position on the first segment
+                    const x1 = parent.x;
+                    const y1 = parent.y;
+                    const x2 = parent.x + parent.width;
+                    const y2 = parent.y + parent.height;
 
-            inputLines.forEach(line => {
-                const words = line.split(' ');
-                let currentLine = '';
+                    // Get the path to determine first segment
+                    const absWidth = Math.abs(parent.width);
+                    const absHeight = Math.abs(parent.height);
 
-                words.forEach((word, i) => {
-                    const testLine = currentLine ? currentLine + ' ' + word : word;
-                    const metrics = ctx.measureText(testLine);
-
-                    if (metrics.width > maxWidth && currentLine) {
-                        wrappedLines.push(currentLine);
-                        currentLine = word;
+                    if (absWidth > absHeight) {
+                        // More horizontal - label on horizontal segment
+                        labelX = (x1 + x2) / 2;
+                        labelY = y1;
+                        defaultOffsetY = -20; // Offset upward
                     } else {
-                        currentLine = testLine;
+                        // More vertical - label on vertical segment
+                        labelX = x1;
+                        labelY = (y1 + y2) / 2;
+                        defaultOffsetX = 25; // Offset to the right
+                    }
+                } else {
+                    // Straight connectors - position at midpoint
+                    const absWidth = Math.abs(parent.width);
+                    const absHeight = Math.abs(parent.height);
+
+                    labelX = parent.x + parent.width / 2;
+                    labelY = parent.y + parent.height / 2;
+
+                    if (absWidth > absHeight) {
+                        // Horizontal - offset upward
+                        defaultOffsetY = -20;
+                    } else {
+                        // Vertical - offset to the right
+                        defaultOffsetX = 25;
+                    }
+                }
+
+                // Use custom offset if user has repositioned the label
+                const offsetX = element.offsetX !== undefined ? element.offsetX : defaultOffsetX;
+                const offsetY = element.offsetY !== undefined ? element.offsetY : defaultOffsetY;
+
+                // Measure text for centering
+                const metrics = ctx.measureText(element.text);
+                const textWidth = metrics.width;
+                const textHeight = fontSize;
+
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(element.text, labelX + offsetX, labelY + offsetY);
+                ctx.textAlign = 'start';
+                ctx.textBaseline = 'top'; // Reset
+            } else {
+                // Parent is a shape - center and wrap text
+                const shapeWidth = Math.abs(parent.width || 100);
+                const shapeHeight = Math.abs(parent.height || 100);
+                const centerX = parent.x + shapeWidth / 2;
+                const centerY = parent.y + shapeHeight / 2;
+                const maxWidth = shapeWidth * 0.9; // 90% of shape width for padding
+
+                // Wrap text to fit shape width
+                const wrappedLines = [];
+                const inputLines = element.text.split('\n');
+
+                inputLines.forEach(line => {
+                    const words = line.split(' ');
+                    let currentLine = '';
+
+                    words.forEach((word, i) => {
+                        const testLine = currentLine ? currentLine + ' ' + word : word;
+                        const metrics = ctx.measureText(testLine);
+
+                        if (metrics.width > maxWidth && currentLine) {
+                            wrappedLines.push(currentLine);
+                            currentLine = word;
+                        } else {
+                            currentLine = testLine;
+                        }
+                    });
+
+                    if (currentLine) {
+                        wrappedLines.push(currentLine);
                     }
                 });
 
-                if (currentLine) {
-                    wrappedLines.push(currentLine);
-                }
-            });
+                // Calculate total height and vertical centering
+                const totalHeight = wrappedLines.length * lineHeight;
+                const startY = centerY - totalHeight / 2;
 
-            // Calculate total height and vertical centering
-            const totalHeight = wrappedLines.length * lineHeight;
-            const startY = centerY - totalHeight / 2;
-
-            // Draw centered text
-            ctx.textAlign = 'center';
-            wrappedLines.forEach((line, index) => {
-                ctx.fillText(line, centerX, startY + (index * lineHeight));
-            });
-            ctx.textAlign = 'start'; // Reset
+                // Draw centered text
+                ctx.textAlign = 'center';
+                wrappedLines.forEach((line, index) => {
+                    ctx.fillText(line, centerX, startY + (index * lineHeight));
+                });
+                ctx.textAlign = 'start'; // Reset
+            }
         }
     } else {
-        // Regular text rendering
+        // Regular text rendering (no parent)
         const lines = element.text.split('\n');
         lines.forEach((line, index) => {
             ctx.fillText(line, element.x, element.y + (index * lineHeight));
@@ -5156,7 +5547,15 @@ function drawCylinder(x, y, w, h, strokeColor, fillColor) {
     ctx.lineTo(x + w, y + h - ellipseH/2);
     ctx.stroke();
 
-    // Bottom (visible arc)
+    // Bottom ellipse - fill it first if there's a fill color
+    if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.beginPath();
+        ctx.ellipse(x + w/2, y + h - ellipseH/2, w/2, ellipseH/2, 0, 0, Math.PI);
+        ctx.fill();
+    }
+
+    // Bottom (visible arc) - stroke
     ctx.beginPath();
     ctx.ellipse(x + w/2, y + h - ellipseH/2, w/2, ellipseH/2, 0, 0, Math.PI);
     ctx.stroke();
@@ -7732,55 +8131,113 @@ function getElementBounds(element) {
             ctx.font = `${italic}${bold}${fontSize}px ${fontFamily}`;
             const lineHeight = fontSize * 1.2;
 
-            // Check if this is text inside a shape
+            // Check if this is text with a parent (shape or connector)
             if (element.parentId) {
-                const parentShape = elements.find(el => el.id === element.parentId);
-                if (parentShape) {
-                    const shapeWidth = Math.abs(parentShape.width || 100);
-                    const shapeHeight = Math.abs(parentShape.height || 100);
-                    const centerX = parentShape.x + shapeWidth / 2;
-                    const centerY = parentShape.y + shapeHeight / 2;
-                    const maxWidth = shapeWidth * 0.9;
+                const parent = elements.find(el => el.id === element.parentId);
+                if (parent) {
+                    // Check if parent is an arrow or line
+                    if (parent.type === 'arrow' || parent.type === 'line') {
+                        // Determine label position based on connector type
+                        let labelX, labelY, defaultOffsetX = 0, defaultOffsetY = 0;
 
-                    // Calculate wrapped lines
-                    const wrappedLines = [];
-                    const inputLines = (element.text || '').split('\n');
+                        if (parent.lineRouting === 'stepped') {
+                            // For stepped lines, position on the first segment
+                            const x1 = parent.x;
+                            const y1 = parent.y;
+                            const x2 = parent.x + parent.width;
+                            const y2 = parent.y + parent.height;
 
-                    inputLines.forEach(line => {
-                        const words = line.split(' ');
-                        let currentLine = '';
+                            const absWidth = Math.abs(parent.width);
+                            const absHeight = Math.abs(parent.height);
 
-                        words.forEach((word) => {
-                            const testLine = currentLine ? currentLine + ' ' + word : word;
-                            const metrics = ctx.measureText(testLine);
-
-                            if (metrics.width > maxWidth && currentLine) {
-                                wrappedLines.push(currentLine);
-                                currentLine = word;
+                            if (absWidth > absHeight) {
+                                // More horizontal - label on horizontal segment
+                                labelX = (x1 + x2) / 2;
+                                labelY = y1;
+                                defaultOffsetY = -20;
                             } else {
-                                currentLine = testLine;
+                                // More vertical - label on vertical segment
+                                labelX = x1;
+                                labelY = (y1 + y2) / 2;
+                                defaultOffsetX = 25;
+                            }
+                        } else {
+                            // Straight connectors - position at midpoint
+                            const absWidth = Math.abs(parent.width);
+                            const absHeight = Math.abs(parent.height);
+
+                            labelX = parent.x + parent.width / 2;
+                            labelY = parent.y + parent.height / 2;
+
+                            if (absWidth > absHeight) {
+                                defaultOffsetY = -20;
+                            } else {
+                                defaultOffsetX = 25;
+                            }
+                        }
+
+                        // Use custom offset if present
+                        const offsetX = element.offsetX !== undefined ? element.offsetX : defaultOffsetX;
+                        const offsetY = element.offsetY !== undefined ? element.offsetY : defaultOffsetY;
+
+                        const metrics = ctx.measureText(element.text || '');
+                        const textWidth = metrics.width || 20;
+                        const textHeight = fontSize * 1.2;
+
+                        return {
+                            x: labelX + offsetX - textWidth / 2,
+                            y: labelY + offsetY - textHeight / 2,
+                            width: textWidth,
+                            height: textHeight
+                        };
+                    } else {
+                        // Parent is a shape - calculate wrapped text bounds
+                        const shapeWidth = Math.abs(parent.width || 100);
+                        const shapeHeight = Math.abs(parent.height || 100);
+                        const centerX = parent.x + shapeWidth / 2;
+                        const centerY = parent.y + shapeHeight / 2;
+                        const maxWidth = shapeWidth * 0.9;
+
+                        // Calculate wrapped lines
+                        const wrappedLines = [];
+                        const inputLines = (element.text || '').split('\n');
+
+                        inputLines.forEach(line => {
+                            const words = line.split(' ');
+                            let currentLine = '';
+
+                            words.forEach((word) => {
+                                const testLine = currentLine ? currentLine + ' ' + word : word;
+                                const metrics = ctx.measureText(testLine);
+
+                                if (metrics.width > maxWidth && currentLine) {
+                                    wrappedLines.push(currentLine);
+                                    currentLine = word;
+                                } else {
+                                    currentLine = testLine;
+                                }
+                            });
+
+                            if (currentLine) {
+                                wrappedLines.push(currentLine);
                             }
                         });
 
-                        if (currentLine) {
-                            wrappedLines.push(currentLine);
-                        }
-                    });
+                        const totalHeight = wrappedLines.length * lineHeight;
+                        const startY = centerY - totalHeight / 2;
 
-                    const totalHeight = wrappedLines.length * lineHeight;
-                    const startY = centerY - totalHeight / 2;
-
-                    // Return bounds that encompass the wrapped text
-                    return {
-                        x: centerX - maxWidth / 2,
-                        y: startY,
-                        width: maxWidth,
-                        height: totalHeight
-                    };
+                        // Return bounds that encompass the wrapped text
+                        return {
+                            x: centerX - maxWidth / 2,
+                            y: startY,
+                            width: maxWidth,
+                            height: totalHeight
+                        };
+                    }
                 }
             }
 
-            // Regular text (not in a shape)
+            // Regular text (not parented to anything)
             const lines = (element.text || '').split('\n');
             let maxWidth = 20; // Minimum width for empty text
 
@@ -8094,6 +8551,19 @@ function applySmartGuideSnapping(draggingElements, dx, dy) {
 }
 
 function moveElement(element, dx, dy) {
+    // Special handling for text elements with connector parents
+    if (element.type === 'text' && element.parentId) {
+        const parent = elements.find(el => el.id === element.parentId);
+        if (parent && (parent.type === 'arrow' || parent.type === 'line')) {
+            // For connector labels, update the offset instead of x,y
+            const currentOffsetX = element.offsetX !== undefined ? element.offsetX : 0;
+            const currentOffsetY = element.offsetY !== undefined ? element.offsetY : 0;
+            element.offsetX = currentOffsetX + dx;
+            element.offsetY = currentOffsetY + dy;
+            return; // Don't proceed with regular movement
+        }
+    }
+
     if (element.type === 'pen') {
         element.points = element.points.map(p => ({x: p.x + dx, y: p.y + dy}));
     } else {
@@ -8101,10 +8571,15 @@ function moveElement(element, dx, dy) {
         element.y += dy;
     }
 
-    // Also move any child text elements
+    // Also move any child text elements (except connector labels, which are handled above)
     if (element.id) {
         elements.forEach(el => {
             if (el.parentId === element.id && el.type === 'text') {
+                const parent = elements.find(p => p.id === el.parentId);
+                // Skip connector labels - they maintain their offset
+                if (parent && (parent.type === 'arrow' || parent.type === 'line')) {
+                    return;
+                }
                 el.x += dx;
                 el.y += dy;
             }
@@ -8370,6 +8845,108 @@ function createTextInputBelowShape(centerX, bottomY, shape) {
             }
 
             elements.push(textElement);
+            redraw();
+        }
+        input.remove();
+    };
+
+    // Add blur listener with a slight delay to prevent race conditions
+    setTimeout(() => {
+        input.addEventListener('blur', finishText);
+    }, 100);
+
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            finishText();
+        } else if (e.key === 'Escape') {
+            input.remove();
+        }
+    });
+}
+
+// Text input for connectors (arrows/lines)
+function createTextInputForConnector(midX, midY, connector) {
+    const input = document.createElement('textarea');
+    input.className = 'text-input';
+    input.style.textAlign = 'center';
+    input.value = 'Label'; // Pre-fill with "Label"
+    const rect = canvas.getBoundingClientRect();
+
+    // Determine label position based on connector type
+    let labelX, labelY, defaultOffsetX = 0, defaultOffsetY = 0;
+
+    if (connector.lineRouting === 'stepped') {
+        const x1 = connector.x;
+        const y1 = connector.y;
+        const x2 = connector.x + connector.width;
+        const y2 = connector.y + connector.height;
+        const absWidth = Math.abs(connector.width);
+        const absHeight = Math.abs(connector.height);
+
+        if (absWidth > absHeight) {
+            labelX = (x1 + x2) / 2;
+            labelY = y1;
+            defaultOffsetY = -20;
+        } else {
+            labelX = x1;
+            labelY = (y1 + y2) / 2;
+            defaultOffsetX = 25;
+        }
+    } else {
+        const absWidth = Math.abs(connector.width);
+        const absHeight = Math.abs(connector.height);
+        labelX = connector.x + connector.width / 2;
+        labelY = connector.y + connector.height / 2;
+
+        if (absWidth > absHeight) {
+            defaultOffsetY = -20;
+        } else {
+            defaultOffsetX = 25;
+        }
+    }
+
+    // Position with default offset
+    input.style.left = (rect.left + panOffsetX + (labelX + defaultOffsetX) * zoomLevel - 50) + 'px';
+    input.style.top = (rect.top + panOffsetY + (labelY + defaultOffsetY) * zoomLevel - 12) + 'px';
+    input.style.fontFamily = selectedFont;
+    input.style.fontSize = fontSizeSelect.value + 'px';
+    input.style.fontWeight = isBold ? 'bold' : 'normal';
+    input.style.fontStyle = isItalic ? 'italic' : 'normal';
+    input.style.color = textColorInput.value;
+    input.style.width = '100px';
+    input.rows = 1;
+    input.style.resize = 'both';
+    document.body.appendChild(input);
+
+    // Focus and select all text after a brief delay
+    setTimeout(() => {
+        input.focus();
+        input.select();
+    }, 10);
+
+    const finishText = () => {
+        const text = input.value.trim();
+        if (text) {
+            const fontSize = parseInt(fontSizeSelect.value);
+
+            const textElement = {
+                id: nextElementId++,
+                type: 'text',
+                x: 0, // Position calculated dynamically based on parent
+                y: 0,
+                text: text,
+                strokeColor: strokeColorInput.value,
+                textColor: textColorInput.value,
+                fontFamily: selectedFont,
+                fontSize: fontSize,
+                bold: isBold,
+                italic: isItalic,
+                parentId: connector.id // Link to parent connector
+            };
+
+            elements.push(textElement);
+            saveHistory();
             redraw();
         }
         input.remove();
