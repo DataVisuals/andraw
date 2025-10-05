@@ -36,6 +36,9 @@ let canvasMode = 'infinite'; // Default to infinite canvas
 // Storybook mode state
 let pages = []; // Array of pages, each contains {elements, backgroundColor}
 let currentPageIndex = 0; // Current page being viewed
+let isPlayingPages = false; // Slideshow play state
+let playPagesInterval = null; // Interval timer for slideshow
+const SLIDESHOW_DELAY = 2000; // 2 seconds between pages
 
 // Pan/Scroll state
 let panOffsetX = 0;
@@ -55,9 +58,24 @@ const fontBtnText = document.getElementById('fontBtnText');
 const fontDropdown = document.getElementById('fontDropdown');
 let selectedFont = 'Comic Sans MS, cursive'; // Default font
 const fontSizeSelect = document.getElementById('fontSizeSelect');
+const textColorInput = document.getElementById('textColor');
+const boldBtn = document.getElementById('boldBtn');
+const italicBtn = document.getElementById('italicBtn');
+let isBold = false;
+let isItalic = false;
 const bgColorInput = document.getElementById('bgColor');
-const lineStyleSelect = document.getElementById('lineStyleSelect');
-const lineRoutingSelect = document.getElementById('lineRoutingSelect');
+let currentLineStyle = 'solid';
+let currentLineRouting = 'straight';
+let currentLineThickness = 2;
+
+// Grid and snapping
+let showGrid = false;
+let snapToGrid = false;
+const gridSize = 20;
+
+// Clipboard for copy/paste
+let clipboard = [];
+
 const rectangleBtn = document.getElementById('rectangleBtn');
 const rectangleDropdown = document.getElementById('rectangleDropdown');
 const circleBtn = document.getElementById('circleBtn');
@@ -185,9 +203,6 @@ function ensureElementIds() {
             fixed++;
         }
     });
-    if (fixed > 0) {
-        console.log(`Assigned IDs to ${fixed} existing elements`);
-    }
 }
 
 // Template definitions
@@ -272,6 +287,21 @@ const templates = {
     glue: { type: 'glue', width: 100, height: 100 },
     // AWS Management
     cloudwatch: { type: 'cloudwatch', width: 100, height: 100 },
+
+    // Azure
+    'azure-vm': { type: 'rectangle', width: 100, height: 80 },
+    'azure-functions': { type: 'rectangle', width: 100, height: 80 },
+    'azure-storage': { type: 'cylinder', width: 80, height: 100 },
+    'azure-sql': { type: 'cylinder', width: 80, height: 100 },
+    'azure-vnet': { type: 'cloud', width: 120, height: 80 },
+
+    // GCP
+    'gcp-computeengine': { type: 'rectangle', width: 100, height: 80 },
+    'gcp-cloudfunctions': { type: 'rectangle', width: 100, height: 80 },
+    'gcp-storage': { type: 'cylinder', width: 80, height: 100 },
+    'gcp-cloudsql': { type: 'cylinder', width: 80, height: 100 },
+    'gcp-vpc': { type: 'cloud', width: 120, height: 80 },
+
     // Business
     user: { type: 'user', width: 60, height: 80 },
     users: { type: 'users', width: 100, height: 80 },
@@ -335,15 +365,31 @@ function getContrastColor(hexColor) {
 function updateColorLabel(inputId, labelId) {
     const input = document.getElementById(inputId);
     const label = document.getElementById(labelId);
+    if (!input || !label) return;
     const color = input.value;
     label.style.backgroundColor = color;
     label.style.color = getContrastColor(color);
 }
 
-// Initialize color labels
-updateColorLabel('strokeColor', 'strokeLabel');
-updateColorLabel('fillColor', 'fillLabel');
+function updateColorIcons() {
+    const strokeIcon = document.getElementById('strokeIcon');
+    const fillIcon = document.getElementById('fillIcon');
+    const textColorIcon = document.getElementById('textColorIcon');
+
+    if (strokeIcon && strokeColorInput) {
+        strokeIcon.style.borderColor = strokeColorInput.value;
+    }
+    if (fillIcon && fillColorInput) {
+        fillIcon.style.backgroundColor = fillColorInput.value;
+    }
+    if (textColorIcon && textColorInput) {
+        textColorIcon.style.color = textColorInput.value;
+    }
+}
+
+// Initialize color labels and icons (only for elements that exist)
 updateColorLabel('bgColor', 'bgLabel');
+updateColorIcons();
 
 // Background color change
 bgColorInput.addEventListener('input', (e) => {
@@ -355,15 +401,45 @@ bgColorInput.addEventListener('input', (e) => {
 // Shape dropdown toggle for rectangle
 rectangleBtn.addEventListener('click', (e) => {
     e.stopPropagation();
+
+    // Toggle dropdown open/close
+    const isOpen = rectangleDropdown.classList.contains('active');
     rectangleDropdown.classList.toggle('active');
     circleDropdown.classList.remove('active');
+
+    // If we just opened the dropdown, don't activate the tool
+    if (isOpen) {
+        // Dropdown was open, now closed - activate rectangle tool with current colors
+        currentTool = 'rectangle';
+        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+        rectangleBtn.classList.add('active');
+        canvas.style.cursor = 'crosshair';
+        selectedElement = null;
+        selectedElements = [];
+        redraw();
+    }
 });
 
 // Shape dropdown toggle for circle
 circleBtn.addEventListener('click', (e) => {
     e.stopPropagation();
+
+    // Toggle dropdown open/close
+    const isOpen = circleDropdown.classList.contains('active');
     circleDropdown.classList.toggle('active');
     rectangleDropdown.classList.remove('active');
+
+    // If we just opened the dropdown, don't activate the tool
+    if (isOpen) {
+        // Dropdown was open, now closed - activate circle tool with current colors
+        currentTool = 'circle';
+        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+        circleBtn.classList.add('active');
+        canvas.style.cursor = 'crosshair';
+        selectedElement = null;
+        selectedElements = [];
+        redraw();
+    }
 });
 
 // Font dropdown toggle
@@ -376,6 +452,17 @@ fontBtn.addEventListener('click', (e) => {
 
 // Close dropdowns when clicking outside
 document.addEventListener('click', (e) => {
+    const logoBtn = document.getElementById('logoBtn');
+    const logoDropdown = document.getElementById('logoDropdown');
+    const lineOptionsBtn = document.getElementById('lineOptionsBtn');
+    const lineOptionsDropdown = document.getElementById('lineOptionsDropdown');
+    const alignBtn = document.getElementById('alignBtn');
+    const alignDropdown = document.getElementById('alignDropdown');
+    const zoomBtn = document.getElementById('zoomBtn');
+    const zoomDropdown = document.getElementById('zoomDropdown');
+    const selectionBtn = document.getElementById('selectionBtn');
+    const selectionDropdown = document.getElementById('selectionDropdown');
+
     if (!rectangleBtn.contains(e.target) && !rectangleDropdown.contains(e.target)) {
         rectangleDropdown.classList.remove('active');
     }
@@ -384,6 +471,21 @@ document.addEventListener('click', (e) => {
     }
     if (!fontBtn.contains(e.target) && !fontDropdown.contains(e.target)) {
         fontDropdown.classList.remove('active');
+    }
+    if (logoBtn && logoDropdown && !logoBtn.contains(e.target) && !logoDropdown.contains(e.target)) {
+        logoDropdown.classList.remove('active');
+    }
+    if (lineOptionsBtn && lineOptionsDropdown && !lineOptionsBtn.contains(e.target) && !lineOptionsDropdown.contains(e.target)) {
+        lineOptionsDropdown.classList.remove('active');
+    }
+    if (alignBtn && alignDropdown && !alignBtn.contains(e.target) && !alignDropdown.contains(e.target)) {
+        alignDropdown.classList.remove('active');
+    }
+    if (zoomBtn && zoomDropdown && !zoomBtn.contains(e.target) && !zoomDropdown.contains(e.target)) {
+        zoomDropdown.classList.remove('active');
+    }
+    if (selectionBtn && selectionDropdown && !selectionBtn.contains(e.target) && !selectionDropdown.contains(e.target)) {
+        selectionDropdown.classList.remove('active');
     }
 });
 
@@ -399,9 +501,8 @@ document.querySelectorAll('.shape-item').forEach(item => {
             fillColorInput.value = stylePresets[preset].fill;
             fillEnabledInput.checked = true;
 
-            // Update color labels
-            updateColorLabel('strokeColor', 'strokeLabel');
-            updateColorLabel('fillColor', 'fillLabel');
+            // Update color icons
+            updateColorIcons();
 
             // If there are selected elements, apply the preset to them
             if (selectedElements.length > 0) {
@@ -477,7 +578,7 @@ document.querySelectorAll('.font-item').forEach(item => {
 
 // Fill color change - update selected element
 fillColorInput.addEventListener('input', (e) => {
-    updateColorLabel('fillColor', 'fillLabel');
+    updateColorIcons();
     const elementsToUpdate = selectedElements.length > 0 ? selectedElements : (selectedElement ? [selectedElement] : []);
     if (elementsToUpdate.length > 0 && fillEnabledInput.checked) {
         elementsToUpdate.forEach(el => {
@@ -492,7 +593,7 @@ fillColorInput.addEventListener('input', (e) => {
 
 // Stroke color change - update selected element
 strokeColorInput.addEventListener('input', (e) => {
-    updateColorLabel('strokeColor', 'strokeLabel');
+    updateColorIcons();
     const elementsToUpdate = selectedElements.length > 0 ? selectedElements : (selectedElement ? [selectedElement] : []);
     if (elementsToUpdate.length > 0) {
         elementsToUpdate.forEach(el => {
@@ -511,6 +612,73 @@ fillEnabledInput.addEventListener('change', (e) => {
             if (el.type !== 'line' && el.type !== 'arrow' && el.type !== 'pen') {
                 el.fillColor = e.target.checked ? fillColorInput.value : null;
             }
+        });
+        saveHistory();
+        redraw();
+    }
+});
+
+// Text color change - update selected text elements
+textColorInput.addEventListener('input', (e) => {
+    updateColorIcons();
+    const elementsToUpdate = selectedElements.length > 0 ? selectedElements : (selectedElement ? [selectedElement] : []);
+    if (elementsToUpdate.length > 0) {
+        elementsToUpdate.forEach(el => {
+            if (el.type === 'text') {
+                el.textColor = e.target.value;
+            }
+            // Also update child text elements
+            elements.forEach(child => {
+                if (child.type === 'text' && child.parentId === el.id) {
+                    child.textColor = e.target.value;
+                }
+            });
+        });
+        saveHistory();
+        redraw();
+    }
+});
+
+// Bold button toggle
+boldBtn.addEventListener('click', () => {
+    isBold = !isBold;
+    boldBtn.classList.toggle('active', isBold);
+
+    const elementsToUpdate = selectedElements.length > 0 ? selectedElements : (selectedElement ? [selectedElement] : []);
+    if (elementsToUpdate.length > 0) {
+        elementsToUpdate.forEach(el => {
+            if (el.type === 'text') {
+                el.bold = isBold;
+            }
+            // Also update child text elements
+            elements.forEach(child => {
+                if (child.type === 'text' && child.parentId === el.id) {
+                    child.bold = isBold;
+                }
+            });
+        });
+        saveHistory();
+        redraw();
+    }
+});
+
+// Italic button toggle
+italicBtn.addEventListener('click', () => {
+    isItalic = !isItalic;
+    italicBtn.classList.toggle('active', isItalic);
+
+    const elementsToUpdate = selectedElements.length > 0 ? selectedElements : (selectedElement ? [selectedElement] : []);
+    if (elementsToUpdate.length > 0) {
+        elementsToUpdate.forEach(el => {
+            if (el.type === 'text') {
+                el.italic = isItalic;
+            }
+            // Also update child text elements
+            elements.forEach(child => {
+                if (child.type === 'text' && child.parentId === el.id) {
+                    child.italic = isItalic;
+                }
+            });
         });
         saveHistory();
         redraw();
@@ -537,33 +705,567 @@ fontSizeSelect.addEventListener('change', (e) => {
     }
 });
 
-// Line style change - update selected line/arrow elements
-lineStyleSelect.addEventListener('change', (e) => {
-    const elementsToUpdate = selectedElements.length > 0 ? selectedElements : (selectedElement ? [selectedElement] : []);
-    if (elementsToUpdate.length > 0) {
-        elementsToUpdate.forEach(el => {
-            if (el.type === 'line' || el.type === 'arrow' || el.type === 'pen' || el.type === 'rectangle' || el.type === 'circle') {
-                el.lineStyle = e.target.value;
-            }
-        });
-        saveHistory();
-        redraw();
-    }
+// Line options dropdown (combined style + routing)
+const lineOptionsBtn = document.getElementById('lineOptionsBtn');
+const lineOptionsDropdown = document.getElementById('lineOptionsDropdown');
+
+lineOptionsBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    lineOptionsDropdown.classList.toggle('active');
+
+    // Close other dropdowns
+    rectangleDropdown.classList.remove('active');
+    circleDropdown.classList.remove('active');
+    fontDropdown.classList.remove('active');
+    const logoDropdown = document.getElementById('logoDropdown');
+    if (logoDropdown) logoDropdown.classList.remove('active');
 });
 
-// Line routing change - update selected line/arrow elements
-lineRoutingSelect.addEventListener('change', (e) => {
-    const elementsToUpdate = selectedElements.length > 0 ? selectedElements : (selectedElement ? [selectedElement] : []);
-    if (elementsToUpdate.length > 0) {
-        elementsToUpdate.forEach(el => {
-            if (el.type === 'line' || el.type === 'arrow') {
-                el.lineRouting = e.target.value;
+// Update line options button icon
+function updateLineOptionsButtonIcon(style, routing, thickness = 2) {
+    const btnSvg = lineOptionsBtn.querySelector('svg');
+    if (!btnSvg) return;
+
+    let dashArray = '';
+    if (style === 'dashed') {
+        dashArray = thickness <= 2 ? 'stroke-dasharray="4,3"' : `stroke-dasharray="${thickness * 2},${thickness + 1}"`;
+    } else if (style === 'dotted') {
+        dashArray = thickness <= 2 ? 'stroke-dasharray="1,3"' : `stroke-dasharray="1,${thickness + 1}"`;
+    }
+
+    if (routing === 'straight') {
+        btnSvg.innerHTML = `<line x1="2" y1="10" x2="18" y2="10" stroke="currentColor" stroke-width="${thickness}" ${dashArray}/>`;
+    } else {
+        btnSvg.innerHTML = `<path d="M 2 14 L 8 14 L 8 6 L 18 6" stroke="currentColor" stroke-width="${thickness}" fill="none" ${dashArray}/>`;
+    }
+}
+
+// Line option button handlers
+// Integrated line combo button handlers (style + routing + thickness)
+document.querySelectorAll('.line-combo-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const style = btn.dataset.style;
+        const routing = btn.dataset.routing;
+        const thickness = parseInt(btn.dataset.thickness);
+
+        // Update button states
+        document.querySelectorAll('.line-combo-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        // Update current state
+        currentLineStyle = style;
+        currentLineRouting = routing;
+        currentLineThickness = thickness;
+
+        // Update the button icon
+        updateLineOptionsButtonIcon(style, routing, thickness);
+
+        // Update selected elements
+        const elementsToUpdate = selectedElements.length > 0 ? selectedElements : (selectedElement ? [selectedElement] : []);
+        if (elementsToUpdate.length > 0) {
+            elementsToUpdate.forEach(el => {
+                if (el.type === 'line' || el.type === 'arrow' || el.type === 'pen' || el.type === 'rectangle' || el.type === 'circle') {
+                    el.lineStyle = style;
+                    el.lineThickness = thickness;
+                }
+                if (el.type === 'line' || el.type === 'arrow') {
+                    el.lineRouting = routing;
+                }
+            });
+            saveHistory();
+            redraw();
+        }
+
+        // Close dropdown
+        lineOptionsDropdown.classList.remove('active');
+    });
+});
+
+// Alignment and distribution dropdown
+const alignBtn = document.getElementById('alignBtn');
+const alignDropdown = document.getElementById('alignDropdown');
+
+if (alignBtn && alignDropdown) {
+    alignBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        alignDropdown.classList.toggle('active');
+
+        // Close other dropdowns
+        rectangleDropdown.classList.remove('active');
+        circleDropdown.classList.remove('active');
+        fontDropdown.classList.remove('active');
+        lineOptionsDropdown.classList.remove('active');
+        const logoDropdown = document.getElementById('logoDropdown');
+        if (logoDropdown) logoDropdown.classList.remove('active');
+    });
+
+    // Helper function to update child text positions when parent moves
+    function updateChildTextPositions(element, dx, dy) {
+        if (!element.id) return;
+
+        // Find all text elements that are children of this element
+        elements.forEach(el => {
+            if (el.type === 'text' && el.parentId === element.id) {
+                el.x += dx;
+                el.y += dy;
             }
+        });
+    }
+
+    // Alignment functions
+    function alignLeft() {
+        if (selectedElements.length < 2) return;
+
+        // Build a set of selected element IDs that are shapes (non-text)
+        const selectedShapeIds = new Set(
+            selectedElements.filter(el => el.type !== 'text' && el.id).map(el => el.id)
+        );
+
+        // Filter out text elements that have a parent shape in the selection
+        // This allows standalone text to be aligned, but child text moves with parents
+        const elementsToAlign = selectedElements.filter(el => {
+            if (el.type === 'text' && el.parentId && selectedShapeIds.has(el.parentId)) {
+                return false; // Skip child text - it will move with parent
+            }
+            return true; // Include shapes and standalone text
+        });
+
+        if (elementsToAlign.length < 2) return;
+
+        const minX = Math.min(...elementsToAlign.map(el => el.x));
+        elementsToAlign.forEach(el => {
+            const oldX = el.x;
+            el.x = minX;
+            updateChildTextPositions(el, el.x - oldX, 0);
         });
         saveHistory();
         redraw();
+        alignDropdown.classList.remove('active');
     }
-});
+
+    function alignCenter() {
+        if (selectedElements.length < 2) return;
+
+        const selectedShapeIds = new Set(
+            selectedElements.filter(el => el.type !== 'text' && el.id).map(el => el.id)
+        );
+
+        const elementsToAlign = selectedElements.filter(el => {
+            if (el.type === 'text' && el.parentId && selectedShapeIds.has(el.parentId)) {
+                return false;
+            }
+            return true;
+        });
+
+        if (elementsToAlign.length < 2) return;
+
+        const centerX = elementsToAlign.reduce((sum, el) => sum + (el.x + (el.width || 0) / 2), 0) / elementsToAlign.length;
+        elementsToAlign.forEach(el => {
+            const oldX = el.x;
+            el.x = centerX - (el.width || 0) / 2;
+            updateChildTextPositions(el, el.x - oldX, 0);
+        });
+        saveHistory();
+        redraw();
+        alignDropdown.classList.remove('active');
+    }
+
+    function alignRight() {
+        if (selectedElements.length < 2) return;
+
+        const selectedShapeIds = new Set(
+            selectedElements.filter(el => el.type !== 'text' && el.id).map(el => el.id)
+        );
+
+        const elementsToAlign = selectedElements.filter(el => {
+            if (el.type === 'text' && el.parentId && selectedShapeIds.has(el.parentId)) {
+                return false;
+            }
+            return true;
+        });
+
+        if (elementsToAlign.length < 2) return;
+
+        const maxX = Math.max(...elementsToAlign.map(el => el.x + (el.width || 0)));
+        elementsToAlign.forEach(el => {
+            const oldX = el.x;
+            el.x = maxX - (el.width || 0);
+            updateChildTextPositions(el, el.x - oldX, 0);
+        });
+        saveHistory();
+        redraw();
+        alignDropdown.classList.remove('active');
+    }
+
+    function alignTop() {
+        if (selectedElements.length < 2) return;
+
+        const selectedShapeIds = new Set(
+            selectedElements.filter(el => el.type !== 'text' && el.id).map(el => el.id)
+        );
+
+        const elementsToAlign = selectedElements.filter(el => {
+            if (el.type === 'text' && el.parentId && selectedShapeIds.has(el.parentId)) {
+                return false;
+            }
+            return true;
+        });
+
+        if (elementsToAlign.length < 2) return;
+
+        const minY = Math.min(...elementsToAlign.map(el => el.y));
+        elementsToAlign.forEach(el => {
+            const oldY = el.y;
+            el.y = minY;
+            updateChildTextPositions(el, 0, el.y - oldY);
+        });
+        saveHistory();
+        redraw();
+        alignDropdown.classList.remove('active');
+    }
+
+    function alignMiddle() {
+        if (selectedElements.length < 2) return;
+
+        const selectedShapeIds = new Set(
+            selectedElements.filter(el => el.type !== 'text' && el.id).map(el => el.id)
+        );
+
+        const elementsToAlign = selectedElements.filter(el => {
+            if (el.type === 'text' && el.parentId && selectedShapeIds.has(el.parentId)) {
+                return false;
+            }
+            return true;
+        });
+
+        if (elementsToAlign.length < 2) return;
+
+        const centerY = elementsToAlign.reduce((sum, el) => sum + (el.y + (el.height || 0) / 2), 0) / elementsToAlign.length;
+        elementsToAlign.forEach(el => {
+            const oldY = el.y;
+            el.y = centerY - (el.height || 0) / 2;
+            updateChildTextPositions(el, 0, el.y - oldY);
+        });
+        saveHistory();
+        redraw();
+        alignDropdown.classList.remove('active');
+    }
+
+    function alignBottom() {
+        if (selectedElements.length < 2) return;
+
+        const selectedShapeIds = new Set(
+            selectedElements.filter(el => el.type !== 'text' && el.id).map(el => el.id)
+        );
+
+        const elementsToAlign = selectedElements.filter(el => {
+            if (el.type === 'text' && el.parentId && selectedShapeIds.has(el.parentId)) {
+                return false;
+            }
+            return true;
+        });
+
+        if (elementsToAlign.length < 2) return;
+
+        const maxY = Math.max(...elementsToAlign.map(el => el.y + (el.height || 0)));
+        elementsToAlign.forEach(el => {
+            const oldY = el.y;
+            el.y = maxY - (el.height || 0);
+            updateChildTextPositions(el, 0, el.y - oldY);
+        });
+        saveHistory();
+        redraw();
+        alignDropdown.classList.remove('active');
+    }
+
+    function distributeHorizontally() {
+        if (selectedElements.length < 3) return;
+
+        const selectedShapeIds = new Set(
+            selectedElements.filter(el => el.type !== 'text' && el.id).map(el => el.id)
+        );
+
+        const elementsToDistribute = selectedElements.filter(el => {
+            if (el.type === 'text' && el.parentId && selectedShapeIds.has(el.parentId)) {
+                return false;
+            }
+            return true;
+        });
+
+        if (elementsToDistribute.length < 3) return;
+
+        // Build a map of shapes to their child text for this operation
+        const shapeToText = new Map();
+        elementsToDistribute.forEach(shape => {
+            if (shape.id) {
+                const childText = elements.find(el => el.type === 'text' && el.parentId === shape.id);
+                if (childText) {
+                    shapeToText.set(shape.id, childText);
+                }
+            }
+        });
+
+        // Sort by x position
+        const sorted = [...elementsToDistribute].sort((a, b) => a.x - b.x);
+        const leftmost = sorted[0].x;
+        const rightmost = sorted[sorted.length - 1].x + (sorted[sorted.length - 1].width || 0);
+        const totalWidth = rightmost - leftmost;
+        const totalElementWidth = sorted.reduce((sum, el) => sum + (el.width || 0), 0);
+        const gap = (totalWidth - totalElementWidth) / (sorted.length - 1);
+
+        let currentX = leftmost;
+        sorted.forEach(el => {
+            const dx = currentX - el.x;
+            el.x = currentX;
+
+            // Move child text by the same delta
+            if (el.id && shapeToText.has(el.id)) {
+                const childText = shapeToText.get(el.id);
+                childText.x += dx;
+            }
+
+            currentX += (el.width || 0) + gap;
+        });
+
+        saveHistory();
+        redraw();
+        alignDropdown.classList.remove('active');
+    }
+
+    function distributeVertically() {
+        if (selectedElements.length < 3) return;
+
+        const selectedShapeIds = new Set(
+            selectedElements.filter(el => el.type !== 'text' && el.id).map(el => el.id)
+        );
+
+        const elementsToDistribute = selectedElements.filter(el => {
+            if (el.type === 'text' && el.parentId && selectedShapeIds.has(el.parentId)) {
+                return false;
+            }
+            return true;
+        });
+
+        if (elementsToDistribute.length < 3) return;
+
+        // Build a map of shapes to their child text for this operation
+        const shapeToText = new Map();
+        elementsToDistribute.forEach(shape => {
+            if (shape.id) {
+                const childText = elements.find(el => el.type === 'text' && el.parentId === shape.id);
+                if (childText) {
+                    shapeToText.set(shape.id, childText);
+                }
+            }
+        });
+
+        // Sort by y position
+        const sorted = [...elementsToDistribute].sort((a, b) => a.y - b.y);
+        const topmost = sorted[0].y;
+        const bottommost = sorted[sorted.length - 1].y + (sorted[sorted.length - 1].height || 0);
+        const totalHeight = bottommost - topmost;
+        const totalElementHeight = sorted.reduce((sum, el) => sum + (el.height || 0), 0);
+        const gap = (totalHeight - totalElementHeight) / (sorted.length - 1);
+
+        let currentY = topmost;
+        sorted.forEach(el => {
+            const dy = currentY - el.y;
+            el.y = currentY;
+
+            // Move child text by the same delta
+            if (el.id && shapeToText.has(el.id)) {
+                const childText = shapeToText.get(el.id);
+                childText.y += dy;
+            }
+
+            currentY += (el.height || 0) + gap;
+        });
+
+        saveHistory();
+        redraw();
+        alignDropdown.classList.remove('active');
+    }
+
+    // Event listeners for alignment buttons
+    document.getElementById('alignLeft')?.addEventListener('click', alignLeft);
+    document.getElementById('alignCenter')?.addEventListener('click', alignCenter);
+    document.getElementById('alignRight')?.addEventListener('click', alignRight);
+    document.getElementById('alignTop')?.addEventListener('click', alignTop);
+    document.getElementById('alignMiddle')?.addEventListener('click', alignMiddle);
+    document.getElementById('alignBottom')?.addEventListener('click', alignBottom);
+    document.getElementById('distributeH')?.addEventListener('click', distributeHorizontally);
+    document.getElementById('distributeV')?.addEventListener('click', distributeVertically);
+}
+
+// Zoom controls dropdown
+const zoomBtn = document.getElementById('zoomBtn');
+const zoomDropdown = document.getElementById('zoomDropdown');
+
+if (zoomBtn && zoomDropdown) {
+    zoomBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        zoomDropdown.classList.toggle('active');
+
+        // Close other dropdowns
+        rectangleDropdown.classList.remove('active');
+        circleDropdown.classList.remove('active');
+        fontDropdown.classList.remove('active');
+        lineOptionsDropdown.classList.remove('active');
+        const logoDropdown = document.getElementById('logoDropdown');
+        if (logoDropdown) logoDropdown.classList.remove('active');
+        const alignDropdown = document.getElementById('alignDropdown');
+        if (alignDropdown) alignDropdown.classList.remove('active');
+    });
+
+    // Zoom to fit all elements
+    function zoomToFit() {
+        if (elements.length === 0) {
+            zoomLevel = 1;
+            panOffsetX = 0;
+            panOffsetY = 0;
+            redraw();
+            zoomDropdown.classList.remove('active');
+            return;
+        }
+
+        // Calculate bounding box of all elements
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+        elements.forEach(el => {
+            if (el.type === 'text') {
+                minX = Math.min(minX, el.x);
+                minY = Math.min(minY, el.y);
+                maxX = Math.max(maxX, el.x + 100);
+                maxY = Math.max(maxY, el.y + 20);
+            } else if (el.type === 'line' || el.type === 'arrow') {
+                minX = Math.min(minX, el.x1, el.x2);
+                minY = Math.min(minY, el.y1, el.y2);
+                maxX = Math.max(maxX, el.x1, el.x2);
+                maxY = Math.max(maxY, el.y1, el.y2);
+            } else if (el.type === 'pen') {
+                el.points.forEach(p => {
+                    minX = Math.min(minX, p.x);
+                    minY = Math.min(minY, p.y);
+                    maxX = Math.max(maxX, p.x);
+                    maxY = Math.max(maxY, p.y);
+                });
+            } else {
+                minX = Math.min(minX, el.x);
+                minY = Math.min(minY, el.y);
+                maxX = Math.max(maxX, el.x + (el.width || 0));
+                maxY = Math.max(maxY, el.y + (el.height || 0));
+            }
+        });
+
+        const padding = 50;
+        const contentWidth = maxX - minX + padding * 2;
+        const contentHeight = maxY - minY + padding * 2;
+
+        const scaleX = canvas.width / contentWidth;
+        const scaleY = canvas.height / contentHeight;
+        const newZoom = Math.min(scaleX, scaleY, 2); // Cap at 2x zoom
+
+        zoomLevel = newZoom;
+        panOffsetX = -(minX - padding) * zoomLevel;
+        panOffsetY = -(minY - padding) * zoomLevel;
+
+        redraw();
+        zoomDropdown.classList.remove('active');
+    }
+
+    // Reset zoom to 100%
+    function resetZoom() {
+        zoomLevel = 1;
+        panOffsetX = 0;
+        panOffsetY = 0;
+        redraw();
+        zoomDropdown.classList.remove('active');
+    }
+
+    // Set zoom to specific percentage
+    function setZoom(percentage) {
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+
+        const worldX = (centerX - panOffsetX) / zoomLevel;
+        const worldY = (centerY - panOffsetY) / zoomLevel;
+
+        zoomLevel = percentage / 100;
+
+        panOffsetX = centerX - worldX * zoomLevel;
+        panOffsetY = centerY - worldY * zoomLevel;
+
+        redraw();
+        zoomDropdown.classList.remove('active');
+    }
+
+    // Event listeners for zoom buttons
+    document.getElementById('zoomFit')?.addEventListener('click', zoomToFit);
+    document.getElementById('zoomReset')?.addEventListener('click', resetZoom);
+    document.getElementById('zoom50')?.addEventListener('click', () => setZoom(50));
+    document.getElementById('zoom100')?.addEventListener('click', () => setZoom(100));
+    document.getElementById('zoom150')?.addEventListener('click', () => setZoom(150));
+    document.getElementById('zoom200')?.addEventListener('click', () => setZoom(200));
+}
+
+// Selection controls dropdown
+const selectionBtn = document.getElementById('selectionBtn');
+const selectionDropdown = document.getElementById('selectionDropdown');
+
+if (selectionBtn && selectionDropdown) {
+    selectionBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectionDropdown.classList.toggle('active');
+
+        // Close other dropdowns
+        rectangleDropdown.classList.remove('active');
+        circleDropdown.classList.remove('active');
+        fontDropdown.classList.remove('active');
+        lineOptionsDropdown.classList.remove('active');
+        const logoDropdown = document.getElementById('logoDropdown');
+        if (logoDropdown) logoDropdown.classList.remove('active');
+        const alignDropdown = document.getElementById('alignDropdown');
+        if (alignDropdown) alignDropdown.classList.remove('active');
+        const zoomDropdown = document.getElementById('zoomDropdown');
+        if (zoomDropdown) zoomDropdown.classList.remove('active');
+    });
+
+    // Event listeners for selection buttons
+    document.getElementById('selectAllBtn')?.addEventListener('click', () => {
+        selectAll();
+        selectionDropdown.classList.remove('active');
+    });
+
+    document.getElementById('lockSelectionBtn')?.addEventListener('click', () => {
+        toggleLockSelection();
+        selectionDropdown.classList.remove('active');
+    });
+
+    document.getElementById('selectRectangles')?.addEventListener('click', () => {
+        selectByType('rectangle');
+        selectionDropdown.classList.remove('active');
+    });
+
+    document.getElementById('selectCircles')?.addEventListener('click', () => {
+        selectByType('circle');
+        selectionDropdown.classList.remove('active');
+    });
+
+    document.getElementById('selectLines')?.addEventListener('click', () => {
+        selectByType('line');
+        selectionDropdown.classList.remove('active');
+    });
+
+    document.getElementById('selectArrows')?.addEventListener('click', () => {
+        selectByType('arrow');
+        selectionDropdown.classList.remove('active');
+    });
+
+    document.getElementById('selectText')?.addEventListener('click', () => {
+        selectByType('text');
+        selectionDropdown.classList.remove('active');
+    });
+}
 
 // Template category collapse/expand
 document.querySelectorAll('.category-header').forEach(header => {
@@ -578,6 +1280,15 @@ document.querySelectorAll('.category-header').forEach(header => {
             items.classList.add('active');
             header.classList.remove('collapsed');
         }
+
+        // Redraw and reposition any active text inputs after template panel size changes
+        setTimeout(() => {
+            // Remove any active text inputs - they'll be recreated if user clicks again
+            document.querySelectorAll('.text-input').forEach(input => {
+                input.remove();
+            });
+            redraw();
+        }, 300); // Match CSS transition time
     });
 });
 
@@ -594,6 +1305,15 @@ document.querySelectorAll('.subcategory-header').forEach(header => {
             items.classList.add('active');
             header.classList.remove('collapsed');
         }
+
+        // Redraw and reposition any active text inputs after template panel size changes
+        setTimeout(() => {
+            // Remove any active text inputs - they'll be recreated if user clicks again
+            document.querySelectorAll('.text-input').forEach(input => {
+                input.remove();
+            });
+            redraw();
+        }, 300); // Match CSS transition time
     });
 });
 
@@ -606,8 +1326,12 @@ document.querySelectorAll('.template-btn').forEach(btn => {
             // Calculate center in world coordinates (accounting for pan and zoom)
             const viewportCenterWorldX = (canvas.width / 2 - panOffsetX) / zoomLevel;
             const viewportCenterWorldY = (canvas.height / 2 - panOffsetY) / zoomLevel;
-            const centerX = viewportCenterWorldX - template.width / 2;
-            const centerY = viewportCenterWorldY - template.height / 2;
+            const rawCenterX = viewportCenterWorldX - template.width / 2;
+            const rawCenterY = viewportCenterWorldY - template.height / 2;
+
+            // Apply grid snapping
+            const centerX = snapToGridValue(rawCenterX);
+            const centerY = snapToGridValue(rawCenterY);
 
             const element = {
                 ...template,
@@ -616,9 +1340,9 @@ document.querySelectorAll('.template-btn').forEach(btn => {
                 y: centerY,
                 strokeColor: strokeColorInput.value,
                 fillColor: fillEnabledInput.checked ? fillColorInput.value : null,
-                lineStyle: lineStyleSelect.value
+                lineStyle: currentLineStyle,
+                lineThickness: currentLineThickness
             };
-            console.log(`Created template element: type=${element.type}, id=${element.id}`);
             elements.push(element);
             lastCreatedShape = element; // Track for 'M' key duplication
             duplicationDirection = null; // Reset direction for new shape
@@ -677,7 +1401,7 @@ document.addEventListener('keydown', (e) => {
         return;
     }
 
-    // Escape key closes help panel
+    // Escape key closes help panel and modals
     if (e.key === 'Escape') {
         const helpPanel = document.getElementById('helpPanel');
         if (helpPanel.classList.contains('active')) {
@@ -685,10 +1409,17 @@ document.addEventListener('keydown', (e) => {
             e.preventDefault();
             return;
         }
+
+        const exportModal = document.getElementById('exportModal');
+        if (exportModal.classList.contains('active')) {
+            exportModal.classList.remove('active');
+            e.preventDefault();
+            return;
+        }
     }
 
     // 'c' key enters connect mode for drawing arrows between selected elements
-    if (key === 'c') {
+    if (key === 'c' && !e.ctrlKey && !e.metaKey) {
         isConnectMode = true;
         currentTool = 'select';
         isRectangleSelecting = false;
@@ -698,11 +1429,24 @@ document.addEventListener('keydown', (e) => {
         return;
     }
 
+    // 'g' key toggles grid, Shift+G toggles snap
+    if (key === 'g' && !e.ctrlKey && !e.metaKey) {
+        if (e.shiftKey) {
+            // Shift+G toggles snap
+            document.getElementById('snapToggleBtn').click();
+        } else {
+            // G toggles grid
+            document.getElementById('gridToggleBtn').click();
+        }
+        e.preventDefault();
+        return;
+    }
+
     const toolMap = {
         'v': 'select', 'r': 'rectangle',
         'l': 'line', 'a': 'arrow', 'p': 'pen', 't': 'text', 'h': 'hand'
     };
-    if (toolMap[key]) {
+    if (toolMap[key] && !e.ctrlKey && !e.metaKey) {
         // Handle rectangle dropdown button
         if (key === 'r') {
             rectangleBtn.click();
@@ -716,9 +1460,152 @@ document.addEventListener('keydown', (e) => {
         e.preventDefault();
     }
 
+    // Copy (Cmd/Ctrl+C)
+    if ((e.ctrlKey || e.metaKey) && key === 'c' && !isConnectMode) {
+        copySelection();
+        e.preventDefault();
+        return;
+    }
+
+    // Paste (Cmd/Ctrl+V)
+    if ((e.ctrlKey || e.metaKey) && key === 'v') {
+        pasteSelection();
+        e.preventDefault();
+        return;
+    }
+
+    // Duplicate (Cmd/Ctrl+D)
+    if ((e.ctrlKey || e.metaKey) && key === 'd') {
+        duplicateSelection();
+        e.preventDefault();
+        return;
+    }
+
+    // Select All (Cmd/Ctrl+A)
+    if ((e.ctrlKey || e.metaKey) && key === 'a') {
+        selectAll();
+        e.preventDefault();
+        return;
+    }
+
+    // Lock/Unlock selection (Cmd/Ctrl+L)
+    if ((e.ctrlKey || e.metaKey) && key === 'l') {
+        toggleLockSelection();
+        e.preventDefault();
+        return;
+    }
+
     // 'M' key duplicates the last created shape
     if (key === 'm' && lastCreatedShape) {
         duplicateLastShape();
+        e.preventDefault();
+        return;
+    }
+
+    // Arrow keys for fine-grained positioning
+    if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
+        const elementsToMove = selectedElements.length > 0
+            ? selectedElements
+            : (selectedElement ? [selectedElement] : []);
+
+        if (elementsToMove.length === 0) return;
+
+        const moveDistance = e.shiftKey ? 10 : 1;
+        let dx = 0, dy = 0;
+
+        switch (key) {
+            case 'arrowup':
+                dy = -moveDistance;
+                break;
+            case 'arrowdown':
+                dy = moveDistance;
+                break;
+            case 'arrowleft':
+                dx = -moveDistance;
+                break;
+            case 'arrowright':
+                dx = moveDistance;
+                break;
+        }
+
+        // Build a set of selected element IDs and their child text IDs
+        const selectedIds = new Set(elementsToMove.map(el => el.id).filter(id => id));
+        const childTextIds = new Set();
+
+        elementsToMove.forEach(el => {
+            if (el.type !== 'text' && el.id) {
+                elements.forEach(child => {
+                    if (child.type === 'text' && child.parentId === el.id) {
+                        childTextIds.add(child.id);
+                    }
+                });
+            }
+        });
+
+        // Move elements (but skip child text - they'll move with their parents)
+        elementsToMove.forEach(el => {
+            // Skip this element if it's a child text of a selected parent
+            if (el.type === 'text' && el.parentId && selectedIds.has(el.parentId)) {
+                return;
+            }
+
+            if (el.type === 'pen') {
+                el.points = el.points.map(p => ({x: p.x + dx, y: p.y + dy}));
+            } else {
+                el.x += dx;
+                el.y += dy;
+            }
+
+            // Update child text positions if this is a shape
+            if (el.type !== 'text' && el.id) {
+                elements.forEach(child => {
+                    if (child.type === 'text' && child.parentId === el.id) {
+                        child.x += dx;
+                        child.y += dy;
+                    }
+                });
+
+                // Update connected arrows/lines
+                elements.forEach(connector => {
+                    if (connector.type === 'arrow' || connector.type === 'line') {
+                        const connectedToStart = connector.startShapeId === el.id;
+                        const connectedToEnd = connector.endShapeId === el.id;
+
+                        if (connectedToStart || connectedToEnd) {
+                            const startShape = connector.startShapeId ? elements.find(e => e.id === connector.startShapeId) : null;
+                            const endShape = connector.endShapeId ? elements.find(e => e.id === connector.endShapeId) : null;
+
+                            if (startShape && endShape) {
+                                const startBounds = getElementBounds(startShape);
+                                const endBounds = getElementBounds(endShape);
+
+                                const centerToCenter = {
+                                    dx: (endBounds.x + endBounds.width / 2) - (startBounds.x + startBounds.width / 2),
+                                    dy: (endBounds.y + endBounds.height / 2) - (startBounds.y + startBounds.height / 2)
+                                };
+                                const isHorizontal = Math.abs(centerToCenter.dx) > Math.abs(centerToCenter.dy);
+
+                                const connectionPoints = getDirectionalConnection(
+                                    startBounds, startShape.type,
+                                    endBounds, endShape.type,
+                                    isHorizontal
+                                );
+
+                                if (connectionPoints) {
+                                    connector.x = connectionPoints.from.x;
+                                    connector.y = connectionPoints.from.y;
+                                    connector.width = connectionPoints.to.x - connectionPoints.from.x;
+                                    connector.height = connectionPoints.to.y - connectionPoints.from.y;
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+
+        saveHistory();
+        redraw();
         e.preventDefault();
         return;
     }
@@ -744,6 +1631,147 @@ document.addEventListener('keydown', (e) => {
 });
 
 // Function to duplicate the last created shape
+// Copy selected elements to clipboard
+function copySelection() {
+    const elementsToCopy = selectedElements.length > 0
+        ? selectedElements
+        : (selectedElement ? [selectedElement] : []);
+
+    if (elementsToCopy.length === 0) return;
+
+    clipboard = elementsToCopy.map(el => ({...el}));
+}
+
+// Paste elements from clipboard
+function pasteSelection() {
+    if (clipboard.length === 0) return;
+
+    const pasteOffset = snapToGrid ? gridSize : 20;
+    const idMap = new Map(); // Maps old IDs to new IDs for parent references
+    const pastedElements = [];
+
+    clipboard.forEach(el => {
+        const newElement = {
+            ...el,
+            id: nextElementId++,
+            x: el.x + pasteOffset,
+            y: el.y + pasteOffset
+        };
+
+        // Store ID mapping for text parent references
+        if (el.id) {
+            idMap.set(el.id, newElement.id);
+        }
+
+        pastedElements.push(newElement);
+    });
+
+    // Update parent IDs for text elements
+    pastedElements.forEach(el => {
+        if (el.type === 'text' && el.parentId && idMap.has(el.parentId)) {
+            el.parentId = idMap.get(el.parentId);
+        }
+    });
+
+    elements.push(...pastedElements);
+
+    // Select the pasted elements
+    selectedElements = pastedElements;
+    selectedElement = null;
+
+    saveHistory();
+    redraw();
+}
+
+// Duplicate selected elements in place
+function duplicateSelection() {
+    const elementsToDuplicate = selectedElements.length > 0
+        ? selectedElements
+        : (selectedElement ? [selectedElement] : []);
+
+    if (elementsToDuplicate.length === 0) return;
+
+    const duplicateOffset = snapToGrid ? gridSize : 20;
+    const idMap = new Map();
+    const duplicatedElements = [];
+
+    elementsToDuplicate.forEach(el => {
+        const newElement = {
+            ...el,
+            id: nextElementId++,
+            x: el.x + duplicateOffset,
+            y: el.y + duplicateOffset
+        };
+
+        // Store ID mapping
+        if (el.id) {
+            idMap.set(el.id, newElement.id);
+        }
+
+        duplicatedElements.push(newElement);
+    });
+
+    // Update parent IDs for text elements
+    duplicatedElements.forEach(el => {
+        if (el.type === 'text' && el.parentId && idMap.has(el.parentId)) {
+            el.parentId = idMap.get(el.parentId);
+        }
+    });
+
+    elements.push(...duplicatedElements);
+
+    // Select the duplicated elements
+    selectedElements = duplicatedElements;
+    selectedElement = null;
+
+    saveHistory();
+    redraw();
+}
+
+// Select all elements
+function selectAll() {
+    selectedElements = elements.filter(el => !el.locked);
+    selectedElement = null;
+    currentTool = 'select';
+    const selectBtn = document.querySelector('[data-tool="select"]');
+    if (selectBtn) selectBtn.click();
+    redraw();
+}
+
+// Select elements by type
+function selectByType(type) {
+    selectedElements = elements.filter(el => el.type === type && !el.locked);
+    selectedElement = null;
+    currentTool = 'select';
+    const selectBtn = document.querySelector('[data-tool="select"]');
+    if (selectBtn) selectBtn.click();
+    redraw();
+}
+
+// Toggle lock on selected elements
+function toggleLockSelection() {
+    const elementsToLock = selectedElements.length > 0
+        ? selectedElements
+        : (selectedElement ? [selectedElement] : []);
+
+    if (elementsToLock.length === 0) return;
+
+    const allLocked = elementsToLock.every(el => el.locked);
+    elementsToLock.forEach(el => {
+        el.locked = !allLocked;
+    });
+
+    // Clear selection after locking (locked elements can't be selected)
+    // Keep selection after unlocking
+    if (!allLocked) {
+        selectedElements = [];
+        selectedElement = null;
+    }
+
+    saveHistory();
+    redraw();
+}
+
 function duplicateLastShape() {
     if (!lastCreatedShape) return;
 
@@ -760,7 +1788,6 @@ function duplicateLastShape() {
         const isNearTop = lastCreatedShape.y < canvas.height * 0.3; // In top 30%
 
         duplicationDirection = (isCentered && isNearTop) ? 'vertical' : 'horizontal';
-        console.log(`Set duplication direction: ${duplicationDirection}`);
     }
 
     const shouldPlaceVertically = duplicationDirection === 'vertical';
@@ -782,8 +1809,6 @@ function duplicateLastShape() {
         newShape.x = lastCreatedShape.x + Math.abs(lastCreatedShape.width || 100) + spacing;
     }
 
-    console.log(`Duplicating shape ${lastCreatedShape.id}, placing ${shouldPlaceVertically ? 'vertically' : 'horizontally'}`);
-
     elements.push(newShape);
 
     // If there was associated text, duplicate it too
@@ -801,7 +1826,6 @@ function duplicateLastShape() {
         };
 
         elements.push(newText);
-        console.log(`Duplicated text element with new text: "${newText.text}"`);
     }
 
     lastCreatedShape = newShape; // Update to new shape for chaining
@@ -848,7 +1872,107 @@ document.addEventListener('keyup', (e) => {
 canvas.addEventListener('mousedown', handleMouseDown);
 canvas.addEventListener('mousemove', handleMouseMove);
 canvas.addEventListener('mouseup', handleMouseUp);
+canvas.addEventListener('dblclick', handleDoubleClick);
 canvas.addEventListener('wheel', handleWheel, { passive: false });
+
+function handleDoubleClick(e) {
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left - panOffsetX) / zoomLevel;
+    const y = (e.clientY - rect.top - panOffsetY) / zoomLevel;
+
+    // Check if double-clicked on a text element first
+    for (let i = elements.length - 1; i >= 0; i--) {
+        const element = elements[i];
+        if (element.type === 'text') {
+            const bounds = getElementBounds(element);
+            if (x >= bounds.x && x <= bounds.x + bounds.width &&
+                y >= bounds.y && y <= bounds.y + bounds.height) {
+                // Found text element - make it editable
+                editTextElement(element);
+                return;
+            }
+        }
+    }
+
+    // Check if double-clicked on a shape
+    for (let i = elements.length - 1; i >= 0; i--) {
+        const element = elements[i];
+        if (element.type !== 'text' && element.type !== 'line' && element.type !== 'arrow' && element.type !== 'pen') {
+            const bounds = getElementBounds(element);
+            if (x >= bounds.x && x <= bounds.x + bounds.width &&
+                y >= bounds.y && y <= bounds.y + bounds.height) {
+                // Found a shape - check if it has child text
+                const childText = elements.find(el => el.type === 'text' && el.parentId === element.id);
+
+                if (childText) {
+                    // Edit existing child text
+                    editTextElement(childText);
+                } else {
+                    // Create new centered text for this shape
+                    const centerX = element.x + (element.width || 0) / 2;
+                    const centerY = element.y + (element.height || 0) / 2;
+                    createTextInputForShape(centerX, centerY, element);
+                }
+                return;
+            }
+        }
+    }
+}
+
+function editTextElement(textElement) {
+    // Create input at text element position
+    const input = document.createElement('textarea');
+    input.className = 'text-input';
+    const rect = canvas.getBoundingClientRect();
+    input.style.left = (rect.left + panOffsetX + textElement.x * zoomLevel) + 'px';
+    input.style.top = (rect.top + panOffsetY + textElement.y * zoomLevel) + 'px';
+    input.style.fontFamily = textElement.fontFamily || 'Comic Sans MS, cursive';
+    input.style.fontSize = (textElement.fontSize || 16) + 'px';
+    input.style.fontWeight = textElement.bold ? 'bold' : 'normal';
+    input.style.fontStyle = textElement.italic ? 'italic' : 'normal';
+    input.style.color = textElement.textColor || textElement.strokeColor;
+    input.value = textElement.text;
+    input.rows = 1;
+    document.body.appendChild(input);
+
+    // Focus and select all text
+    setTimeout(() => {
+        input.focus();
+        input.select();
+    }, 10);
+
+    const finishEdit = () => {
+        const newText = input.value.trim();
+        if (newText) {
+            // Update existing element
+            textElement.text = newText;
+            saveHistory();
+            redraw();
+        } else {
+            // Remove element if text is empty
+            const index = elements.indexOf(textElement);
+            if (index > -1) {
+                elements.splice(index, 1);
+                saveHistory();
+                redraw();
+            }
+        }
+        input.remove();
+    };
+
+    // Add blur listener
+    setTimeout(() => {
+        input.addEventListener('blur', finishEdit);
+    }, 100);
+
+    // Add Enter key listener
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            input.blur();
+        }
+    });
+}
 
 function handleWheel(e) {
     // Disable zoom in storybook mode
@@ -889,14 +2013,18 @@ function handleMouseDown(e) {
     let y = (e.clientY - rect.top - panOffsetY) / zoomLevel;
 
     // Snap to shape edge for arrows and lines
+    let startShape = null;
     if (currentTool === 'arrow' || currentTool === 'line') {
         const snapped = findNearestShapeEdge(x, y);
         x = snapped.x;
         y = snapped.y;
+        startShape = snapped.shape;
     }
 
     startX = x;
     startY = y;
+    // Store start shape for later use in mouseup
+    window.tempStartShape = startShape;
 
     if (currentTool === 'select') {
         // In connect mode, always start rectangle selection
@@ -964,7 +2092,8 @@ function handleMouseDown(e) {
                 type: 'pen',
                 points: [{x: startX, y: startY}],
                 strokeColor: strokeColorInput.value,
-                lineStyle: lineStyleSelect.value
+                lineStyle: currentLineStyle,
+                lineThickness: currentLineThickness
             });
         }
     }
@@ -1005,18 +2134,32 @@ function handleMouseMove(e) {
             selectionRect.height = currentY - selectionRect.y;
             redraw();
         } else if (dragMode === 'move') {
-            const dx = currentX - startX;
-            const dy = currentY - startY;
+            // Apply grid snapping to current position if snap is enabled
+            const snappedCurrentX = snapToGrid ? snapToGridValue(currentX) : currentX;
+            const snappedCurrentY = snapToGrid ? snapToGridValue(currentY) : currentY;
+
+            const dx = snappedCurrentX - startX;
+            const dy = snappedCurrentY - startY;
 
             // Move all selected elements
             if (selectedElements.length > 0) {
-                selectedElements.forEach(el => moveElement(el, dx, dy));
+                // Create a set of parent IDs from selected elements
+                const selectedIds = new Set(selectedElements.map(el => el.id).filter(id => id));
+
+                selectedElements.forEach(el => {
+                    // Only move this element if it's not a text child of another selected element
+                    if (el.type === 'text' && el.parentId && selectedIds.has(el.parentId)) {
+                        // Skip - this text will be moved with its parent
+                    } else {
+                        moveElement(el, dx, dy);
+                    }
+                });
             } else if (selectedElement) {
                 moveElement(selectedElement, dx, dy);
             }
 
-            startX = currentX;
-            startY = currentY;
+            startX = snappedCurrentX;
+            startY = snappedCurrentY;
             redraw();
         } else if (dragMode === 'resize' && selectedElement) {
             resizeElement(selectedElement, currentX, currentY, resizeHandle);
@@ -1064,6 +2207,9 @@ function handleMouseUp(e) {
         const selH = Math.abs(selectionRect.height);
 
         selectedElements = elements.filter(el => {
+            // Skip locked elements
+            if (el.locked) return false;
+
             const bounds = getElementBounds(el);
             // Check if element is within selection rectangle
             const inRect = selX <= bounds.x + bounds.width &&
@@ -1079,14 +2225,11 @@ function handleMouseUp(e) {
             return inRect;
         });
 
-        console.log(`Rectangle selection: selected ${selectedElements.length} elements`, selectedElements.map(el => ({ type: el.type, id: el.id })));
-
         selectionRect = null;
         isDrawing = false;
 
         // Connect mode: draw arrows between selected elements
         if (isConnectMode && selectedElements.length > 1) {
-            console.log('Connecting elements in connect mode');
             connectSelectedElements();
             selectedElements = [];
             isConnectMode = false;
@@ -1099,30 +2242,49 @@ function handleMouseUp(e) {
     }
 
     // Snap endpoint to shape edge for arrows and lines
+    let endShape = null;
     if (currentTool === 'arrow' || currentTool === 'line') {
         const snapped = findNearestShapeEdge(endX, endY);
         endX = snapped.x;
         endY = snapped.y;
+        endShape = snapped.shape;
     }
 
     if (currentTool !== 'select' && currentTool !== 'pen' && currentTool !== 'text') {
-        const width = endX - startX;
-        const height = endY - startY;
+        // Apply grid snapping to element position and size
+        const snappedStartX = snapToGridValue(startX);
+        const snappedStartY = snapToGridValue(startY);
+        const snappedEndX = snapToGridValue(endX);
+        const snappedEndY = snapToGridValue(endY);
+        const width = snappedEndX - snappedStartX;
+        const height = snappedEndY - snappedStartY;
 
         if (Math.abs(width) > 5 || Math.abs(height) > 5) {
             const element = {
                 id: nextElementId++,
                 type: currentTool,
-                x: startX,
-                y: startY,
+                x: snappedStartX,
+                y: snappedStartY,
                 width: width,
                 height: height,
                 strokeColor: strokeColorInput.value,
                 fillColor: fillEnabledInput.checked ? fillColorInput.value : null,
-                lineStyle: lineStyleSelect.value,
-                lineRouting: (currentTool === 'line' || currentTool === 'arrow') ? lineRoutingSelect.value : undefined
+                lineStyle: currentLineStyle,
+                lineRouting: (currentTool === 'line' || currentTool === 'arrow') ? currentLineRouting : undefined,
+                lineThickness: currentLineThickness
             };
-            console.log(`Created drawn element: type=${element.type}, id=${element.id}`);
+
+            // Store connection information for arrows and lines
+            if (currentTool === 'arrow' || currentTool === 'line') {
+                const startShape = window.tempStartShape;
+                if (startShape && startShape.id) {
+                    element.startShapeId = startShape.id;
+                }
+                if (endShape && endShape.id) {
+                    element.endShapeId = endShape.id;
+                }
+            }
+
             elements.push(element);
             lastCreatedShape = element; // Track for 'M' key duplication
             duplicationDirection = null; // Reset direction for new shape
@@ -1234,7 +2396,8 @@ function connectSelectedElements() {
         );
 
         if (connectionPoints) {
-            elements.push({
+            const arrow = {
+                id: nextElementId++,
                 type: 'arrow',
                 x: connectionPoints.from.x,
                 y: connectionPoints.from.y,
@@ -1242,9 +2405,20 @@ function connectSelectedElements() {
                 height: connectionPoints.to.y - connectionPoints.from.y,
                 strokeColor: strokeColorInput.value,
                 fillColor: null,
-                lineStyle: lineStyleSelect.value,
-                lineRouting: lineRoutingSelect.value
-            });
+                lineStyle: currentLineStyle,
+                lineRouting: currentLineRouting,
+                lineThickness: currentLineThickness
+            };
+
+            // Store connection IDs so arrows update when shapes move
+            if (from.element.id) {
+                arrow.startShapeId = from.element.id;
+            }
+            if (to.element.id) {
+                arrow.endShapeId = to.element.id;
+            }
+
+            elements.push(arrow);
         }
     }
 }
@@ -1306,6 +2480,7 @@ function getSideCenters(bounds, shapeType) {
 // Arrow snapping helpers
 function findNearestShapeEdge(x, y, snapDistance = 20) {
     let nearestPoint = null;
+    let nearestShape = null;
     let minDistance = snapDistance;
 
     for (const element of elements) {
@@ -1321,11 +2496,12 @@ function findNearestShapeEdge(x, y, snapDistance = 20) {
             if (dist < minDistance) {
                 minDistance = dist;
                 nearestPoint = edgePoint;
+                nearestShape = element;
             }
         }
     }
 
-    return nearestPoint || { x, y };
+    return nearestPoint ? { ...nearestPoint, shape: nearestShape } : { x, y, shape: null };
 }
 
 function getNearestEdgePoint(x, y, bounds, shapeType) {
@@ -1373,9 +2549,9 @@ function getNearestEdgePoint(x, y, bounds, shapeType) {
 }
 
 // Drawing functions with hand-drawn effect
-function drawRoughLine(x1, y1, x2, y2, color, lineStyle = 'solid') {
+function drawRoughLine(x1, y1, x2, y2, color, lineStyle = 'solid', lineThickness = 2) {
     ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = lineThickness;
     applyLineStyle(lineStyle);
 
     ctx.beginPath();
@@ -1389,7 +2565,7 @@ function drawRoughLine(x1, y1, x2, y2, color, lineStyle = 'solid') {
     ctx.setLineDash([]);
 }
 
-function drawRoughRect(x, y, w, h, strokeColor, fillColor, lineStyle = 'solid') {
+function drawRoughRect(x, y, w, h, strokeColor, fillColor, lineStyle = 'solid', lineThickness = 2) {
     const radius = Math.min(10, Math.abs(w) / 4, Math.abs(h) / 4);
 
     // Draw fill first with rounded corners
@@ -1402,7 +2578,7 @@ function drawRoughRect(x, y, w, h, strokeColor, fillColor, lineStyle = 'solid') 
 
     // Draw rough outline with rounded corners
     ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = lineThickness;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     applyLineStyle(lineStyle);
@@ -1417,7 +2593,7 @@ function drawRoughRect(x, y, w, h, strokeColor, fillColor, lineStyle = 'solid') 
     ctx.setLineDash([]);
 }
 
-function drawRoughCircle(x, y, w, h, strokeColor, fillColor, lineStyle = 'solid') {
+function drawRoughCircle(x, y, w, h, strokeColor, fillColor, lineStyle = 'solid', lineThickness = 2) {
     const cx = x + w / 2;
     const cy = y + h / 2;
     const rx = Math.abs(w) / 2;
@@ -1431,7 +2607,7 @@ function drawRoughCircle(x, y, w, h, strokeColor, fillColor, lineStyle = 'solid'
     }
 
     ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = lineThickness;
     applyLineStyle(lineStyle);
 
     // Draw multiple slightly offset ellipses
@@ -1444,15 +2620,15 @@ function drawRoughCircle(x, y, w, h, strokeColor, fillColor, lineStyle = 'solid'
     ctx.setLineDash([]);
 }
 
-function drawArrow(x1, y1, x2, y2, color, lineStyle = 'solid') {
-    drawRoughLine(x1, y1, x2, y2, color, lineStyle);
+function drawArrow(x1, y1, x2, y2, color, lineStyle = 'solid', lineThickness = 2) {
+    drawRoughLine(x1, y1, x2, y2, color, lineStyle, lineThickness);
 
     // Draw arrowhead (always solid)
     const headLength = 15;
     const angle = Math.atan2(y2 - y1, x2 - x1);
 
     ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = lineThickness;
     ctx.setLineDash([]);
     ctx.beginPath();
     ctx.moveTo(x2, y2);
@@ -1473,20 +2649,32 @@ function getSteppedPath(x1, y1, x2, y2) {
     const points = [];
     points.push({x: x1, y: y1});
 
-    // Create a simple 3-segment stepped path
-    const midX = (x1 + x2) / 2;
-    points.push({x: midX, y: y1});
-    points.push({x: midX, y: y2});
-    points.push({x: x2, y: y2});
+    const dx = Math.abs(x2 - x1);
+    const dy = Math.abs(y2 - y1);
+
+    // Determine if this is primarily a horizontal or vertical connection
+    if (dx > dy) {
+        // Horizontal flow: go horizontal first, then vertical, then horizontal
+        const midX = (x1 + x2) / 2;
+        points.push({x: midX, y: y1});
+        points.push({x: midX, y: y2});
+        points.push({x: x2, y: y2});
+    } else {
+        // Vertical flow: go vertical first, then horizontal, then vertical
+        const midY = (y1 + y2) / 2;
+        points.push({x: x1, y: midY});
+        points.push({x: x2, y: midY});
+        points.push({x: x2, y: y2});
+    }
 
     return points;
 }
 
-function drawSteppedLine(x1, y1, x2, y2, color, lineStyle = 'solid') {
+function drawSteppedLine(x1, y1, x2, y2, color, lineStyle = 'solid', lineThickness = 2) {
     const points = getSteppedPath(x1, y1, x2, y2);
 
     ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = lineThickness;
     applyLineStyle(lineStyle);
 
     // Draw the stepped path with rough effect
@@ -1502,12 +2690,12 @@ function drawSteppedLine(x1, y1, x2, y2, color, lineStyle = 'solid') {
     ctx.setLineDash([]);
 }
 
-function drawSteppedArrow(x1, y1, x2, y2, color, lineStyle = 'solid') {
+function drawSteppedArrow(x1, y1, x2, y2, color, lineStyle = 'solid', lineThickness = 2) {
     const points = getSteppedPath(x1, y1, x2, y2);
 
     // Draw the stepped line portion
     ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = lineThickness;
     applyLineStyle(lineStyle);
 
     for (let i = 0; i < points.length - 1; i++) {
@@ -1528,7 +2716,7 @@ function drawSteppedArrow(x1, y1, x2, y2, color, lineStyle = 'solid') {
     const headLength = 15;
 
     ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = lineThickness;
     ctx.beginPath();
     ctx.moveTo(lastPoint.x, lastPoint.y);
     ctx.lineTo(
@@ -1543,11 +2731,11 @@ function drawSteppedArrow(x1, y1, x2, y2, color, lineStyle = 'solid') {
     ctx.stroke();
 }
 
-function drawPen(points, color, lineStyle = 'solid') {
+function drawPen(points, color, lineStyle = 'solid', lineThickness = 2) {
     if (points.length < 2) return;
 
     ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = lineThickness;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     applyLineStyle(lineStyle);
@@ -1564,8 +2752,10 @@ function drawPen(points, color, lineStyle = 'solid') {
 function drawText(element) {
     const fontFamily = element.fontFamily || 'Comic Sans MS, cursive';
     const fontSize = element.fontSize || 16;
-    ctx.font = `${fontSize}px ${fontFamily}`;
-    ctx.fillStyle = element.strokeColor;
+    const bold = element.bold ? 'bold ' : '';
+    const italic = element.italic ? 'italic ' : '';
+    ctx.font = `${italic}${bold}${fontSize}px ${fontFamily}`;
+    ctx.fillStyle = element.textColor || element.strokeColor;
     ctx.textBaseline = 'top';
     ctx.fillText(element.text, element.x, element.y);
 }
@@ -2904,36 +4094,36 @@ function drawElement(element) {
     switch (element.type) {
         case 'rectangle':
             drawRoughRect(element.x, element.y, element.width, element.height,
-                         element.strokeColor, element.fillColor, lineStyle);
+                         element.strokeColor, element.fillColor, lineStyle, element.lineThickness || 2);
             break;
         case 'circle':
             drawRoughCircle(element.x, element.y, element.width, element.height,
-                          element.strokeColor, element.fillColor, lineStyle);
+                          element.strokeColor, element.fillColor, lineStyle, element.lineThickness || 2);
             break;
         case 'line':
             if (element.lineRouting === 'stepped') {
                 drawSteppedLine(element.x, element.y,
                                element.x + element.width, element.y + element.height,
-                               element.strokeColor, lineStyle);
+                               element.strokeColor, lineStyle, element.lineThickness || 2);
             } else {
                 drawRoughLine(element.x, element.y,
                              element.x + element.width, element.y + element.height,
-                             element.strokeColor, lineStyle);
+                             element.strokeColor, lineStyle, element.lineThickness || 2);
             }
             break;
         case 'arrow':
             if (element.lineRouting === 'stepped') {
                 drawSteppedArrow(element.x, element.y,
                                 element.x + element.width, element.y + element.height,
-                                element.strokeColor, lineStyle);
+                                element.strokeColor, lineStyle, element.lineThickness || 2);
             } else {
                 drawArrow(element.x, element.y,
                          element.x + element.width, element.y + element.height,
-                         element.strokeColor, lineStyle);
+                         element.strokeColor, lineStyle, element.lineThickness || 2);
             }
             break;
         case 'pen':
-            drawPen(element.points, element.strokeColor, lineStyle);
+            drawPen(element.points, element.strokeColor, lineStyle, element.lineThickness || 2);
             break;
         case 'text':
             drawText(element);
@@ -3293,7 +4483,8 @@ function drawPreview(x, y) {
         height: height,
         strokeColor: strokeColorInput.value,
         fillColor: fillEnabledInput.checked ? fillColorInput.value : null,
-        lineStyle: lineStyleSelect.value
+        lineStyle: currentLineStyle,
+        lineThickness: currentLineThickness
     };
 
     drawElement(previewElement);
@@ -3413,6 +4604,10 @@ function reconnectVertical(connections) {
 function layoutHorizontal() {
     if (elements.length === 0) return;
 
+    // Store current selection to preserve it
+    const previousSelection = [...selectedElements];
+    const previousSingleSelection = selectedElement;
+
     // Detect connections before layout
     const connections = detectConnections();
 
@@ -3501,17 +4696,12 @@ function layoutHorizontal() {
             const deltaY = newCenterY - oldCenterY;
 
             // Move child text elements with their parent shape
-            console.log(`layoutHorizontal: Moving shape ${element.id} (${element.type}), delta=(${deltaX.toFixed(2)}, ${deltaY.toFixed(2)})`);
-            let childrenMoved = 0;
             elements.forEach(el => {
                 if (el.type === 'text' && el.parentId === element.id) {
-                    console.log(`  Moving child text ${el.id} with parent ${element.id}`);
                     el.x += deltaX;
                     el.y += deltaY;
-                    childrenMoved++;
                 }
             });
-            console.log(`  Total children moved: ${childrenMoved}`);
 
             x += Math.abs(element.width || 100) + horizontalSpacing;
         });
@@ -3522,12 +4712,26 @@ function layoutHorizontal() {
     // Reconnect arrows in horizontal orientation
     reconnectHorizontal(connections);
 
+    // Restore and show selection
+    selectedElements = previousSelection;
+    selectedElement = previousSingleSelection;
+
+    // Switch to select mode so selection is visible
+    currentTool = 'select';
+    document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+    const selectBtn = document.querySelector('[data-tool="select"]');
+    if (selectBtn) selectBtn.classList.add('active');
+
     saveHistory();
     redraw();
 }
 
 function layoutVertical() {
     if (elements.length === 0) return;
+
+    // Store current selection to preserve it
+    const previousSelection = [...selectedElements];
+    const previousSingleSelection = selectedElement;
 
     // Detect connections before layout
     const connections = detectConnections();
@@ -3617,17 +4821,12 @@ function layoutVertical() {
             const deltaY = newCenterY - oldCenterY;
 
             // Move child text elements with their parent shape
-            console.log(`layoutVertical: Moving shape ${element.id} (${element.type}), delta=(${deltaX.toFixed(2)}, ${deltaY.toFixed(2)})`);
-            let childrenMoved = 0;
             elements.forEach(el => {
                 if (el.type === 'text' && el.parentId === element.id) {
-                    console.log(`  Moving child text ${el.id} with parent ${element.id}`);
                     el.x += deltaX;
                     el.y += deltaY;
-                    childrenMoved++;
                 }
             });
-            console.log(`  Total children moved: ${childrenMoved}`);
 
             y += Math.abs(element.height || 100) + verticalSpacing;
         });
@@ -3638,8 +4837,50 @@ function layoutVertical() {
     // Reconnect arrows in vertical orientation
     reconnectVertical(connections);
 
+    // Restore and show selection
+    selectedElements = previousSelection;
+    selectedElement = previousSingleSelection;
+
+    // Switch to select mode so selection is visible
+    currentTool = 'select';
+    document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+    const selectBtn = document.querySelector('[data-tool="select"]');
+    if (selectBtn) selectBtn.classList.add('active');
+
     saveHistory();
     redraw();
+}
+
+// Grid drawing function
+function drawGrid() {
+    const startX = Math.floor(-panOffsetX / zoomLevel / gridSize) * gridSize;
+    const startY = Math.floor(-panOffsetY / zoomLevel / gridSize) * gridSize;
+    const endX = startX + Math.ceil(canvas.width / zoomLevel / gridSize) * gridSize + gridSize;
+    const endY = startY + Math.ceil(canvas.height / zoomLevel / gridSize) * gridSize + gridSize;
+
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+    ctx.lineWidth = 1 / zoomLevel;
+    ctx.beginPath();
+
+    // Vertical lines
+    for (let x = startX; x <= endX; x += gridSize) {
+        ctx.moveTo(x, startY);
+        ctx.lineTo(x, endY);
+    }
+
+    // Horizontal lines
+    for (let y = startY; y <= endY; y += gridSize) {
+        ctx.moveTo(startX, y);
+        ctx.lineTo(endX, y);
+    }
+
+    ctx.stroke();
+}
+
+// Snap to grid helper
+function snapToGridValue(value) {
+    if (!snapToGrid) return value;
+    return Math.round(value / gridSize) * gridSize;
 }
 
 function redraw() {
@@ -3652,8 +4893,38 @@ function redraw() {
     ctx.translate(panOffsetX, panOffsetY);
     ctx.scale(zoomLevel, zoomLevel);
 
+    // Draw grid if enabled
+    if (showGrid) {
+        drawGrid();
+    }
+
     elements.forEach(element => {
         drawElement(element);
+
+        // Draw lock indicator for locked elements
+        if (element.locked) {
+            const bounds = getElementBounds(element);
+            const lockSize = 12;
+            const lockX = bounds.x + bounds.width - lockSize - 4;
+            const lockY = bounds.y + 4;
+
+            // Draw lock icon background
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.fillRect(lockX - 2, lockY - 2, lockSize + 4, lockSize + 4);
+
+            // Draw lock icon (simple representation)
+            ctx.strokeStyle = '#f44336';
+            ctx.fillStyle = '#f44336';
+            ctx.lineWidth = 1.5;
+
+            // Lock body
+            ctx.fillRect(lockX + 2, lockY + 5, lockSize - 4, 7);
+
+            // Lock shackle
+            ctx.beginPath();
+            ctx.arc(lockX + lockSize / 2, lockY + 4, 3, Math.PI, 0, true);
+            ctx.stroke();
+        }
     });
 
     // Draw selection boxes for multi-select
@@ -3713,12 +4984,14 @@ function getElementBounds(element) {
         case 'text':
             const fontFamily = element.fontFamily || 'Comic Sans MS, cursive';
             const fontSize = element.fontSize || 16;
-            ctx.font = `${fontSize}px ${fontFamily}`;
-            const metrics = ctx.measureText(element.text);
+            const bold = element.bold ? 'bold ' : '';
+            const italic = element.italic ? 'italic ' : '';
+            ctx.font = `${italic}${bold}${fontSize}px ${fontFamily}`;
+            const metrics = ctx.measureText(element.text || '');
             return {
                 x: element.x,
                 y: element.y,
-                width: metrics.width,
+                width: Math.max(metrics.width, 20), // Minimum width for empty text
                 height: fontSize * 1.2
             };
         default:
@@ -3733,6 +5006,9 @@ function getElementBounds(element) {
 
 function getElementAtPoint(x, y) {
     for (let i = elements.length - 1; i >= 0; i--) {
+        // Skip locked elements
+        if (elements[i].locked) continue;
+
         const bounds = getElementBounds(elements[i]);
         if (x >= bounds.x && x <= bounds.x + bounds.width &&
             y >= bounds.y && y <= bounds.y + bounds.height) {
@@ -3765,8 +5041,6 @@ function getResizeHandle(x, y) {
 }
 
 function moveElement(element, dx, dy) {
-    console.log(`moveElement called: type=${element.type}, id=${element.id}, dx=${dx.toFixed(2)}, dy=${dy.toFixed(2)}`);
-
     if (element.type === 'pen') {
         element.points = element.points.map(p => ({x: p.x + dx, y: p.y + dy}));
     } else {
@@ -3776,26 +5050,53 @@ function moveElement(element, dx, dy) {
 
     // Also move any child text elements
     if (element.id) {
-        const childrenMoved = [];
-        const childrenFound = [];
         elements.forEach(el => {
-            if (el.type === 'text' && el.parentId) {
-                childrenFound.push({ id: el.id, parentId: el.parentId, text: el.text });
-            }
             if (el.parentId === element.id && el.type === 'text') {
-                console.log(`  Found child text: id=${el.id}, parentId=${el.parentId}, text="${el.text}"`);
                 el.x += dx;
                 el.y += dy;
-                childrenMoved.push(el.id);
             }
         });
-        if (childrenMoved.length > 0) {
-            console.log(`  Moved ${childrenMoved.length} child text elements with parent ${element.id}`);
-        } else {
-            console.log(`  No child text found for parent ${element.id}. All text elements with parents:`, childrenFound);
-        }
-    } else {
-        console.warn(`  Element has no ID, cannot move children`, element);
+
+        // Update connected arrows/lines
+        elements.forEach(connector => {
+            if (connector.type === 'arrow' || connector.type === 'line') {
+                // Check if this connector is connected to the element we just moved
+                const connectedToStart = connector.startShapeId === element.id;
+                const connectedToEnd = connector.endShapeId === element.id;
+
+                if (connectedToStart || connectedToEnd) {
+                    // Find both shapes this connector connects
+                    const startShape = connector.startShapeId ? elements.find(el => el.id === connector.startShapeId) : null;
+                    const endShape = connector.endShapeId ? elements.find(el => el.id === connector.endShapeId) : null;
+
+                    if (startShape && endShape) {
+                        const startBounds = getElementBounds(startShape);
+                        const endBounds = getElementBounds(endShape);
+
+                        // Determine flow direction
+                        const centerToCenter = {
+                            dx: (endBounds.x + endBounds.width / 2) - (startBounds.x + startBounds.width / 2),
+                            dy: (endBounds.y + endBounds.height / 2) - (startBounds.y + startBounds.height / 2)
+                        };
+                        const isHorizontal = Math.abs(centerToCenter.dx) > Math.abs(centerToCenter.dy);
+
+                        // Get proper connection points
+                        const connectionPoints = getDirectionalConnection(
+                            startBounds, startShape.type,
+                            endBounds, endShape.type,
+                            isHorizontal
+                        );
+
+                        if (connectionPoints) {
+                            connector.x = connectionPoints.from.x;
+                            connector.y = connectionPoints.from.y;
+                            connector.width = connectionPoints.to.x - connectionPoints.from.x;
+                            connector.height = connectionPoints.to.y - connectionPoints.from.y;
+                        }
+                    }
+                }
+            }
+        });
     }
 }
 
@@ -3837,6 +5138,9 @@ function createTextInput(x, y) {
     input.style.top = (rect.top + panOffsetY + y * zoomLevel) + 'px';
     input.style.fontFamily = selectedFont;
     input.style.fontSize = fontSizeSelect.value + 'px';
+    input.style.fontWeight = isBold ? 'bold' : 'normal';
+    input.style.fontStyle = isItalic ? 'italic' : 'normal';
+    input.style.color = textColorInput.value;
     input.rows = 1;
     document.body.appendChild(input);
 
@@ -3852,8 +5156,11 @@ function createTextInput(x, y) {
                 y: y,
                 text: text,
                 strokeColor: strokeColorInput.value,
+                textColor: textColorInput.value,
                 fontFamily: selectedFont,
-                fontSize: parseInt(fontSizeSelect.value)
+                fontSize: parseInt(fontSizeSelect.value),
+                bold: isBold,
+                italic: isItalic
             });
             redraw();
         }
@@ -3877,8 +5184,6 @@ function createTextInput(x, y) {
 
 // Text input for shapes (centered)
 function createTextInputForShape(centerX, centerY, shape) {
-    console.log(`createTextInputForShape called: shape.type=${shape?.type}, shape.id=${shape?.id}`);
-
     const input = document.createElement('textarea');
     input.className = 'text-input';
     input.style.textAlign = 'center';
@@ -3889,6 +5194,9 @@ function createTextInputForShape(centerX, centerY, shape) {
     input.style.top = (rect.top + panOffsetY + centerY * zoomLevel - 12) + 'px';
     input.style.fontFamily = selectedFont;
     input.style.fontSize = fontSizeSelect.value + 'px';
+    input.style.fontWeight = isBold ? 'bold' : 'normal';
+    input.style.fontStyle = isItalic ? 'italic' : 'normal';
+    input.style.color = textColorInput.value;
     input.style.width = '100px';
     input.rows = 1;
     document.body.appendChild(input);
@@ -3915,16 +5223,16 @@ function createTextInputForShape(centerX, centerY, shape) {
                 y: centerY - fontSize / 2, // Adjust for vertical centering
                 text: text,
                 strokeColor: strokeColorInput.value,
+                textColor: textColorInput.value,
                 fontFamily: selectedFont,
-                fontSize: fontSize
+                fontSize: fontSize,
+                bold: isBold,
+                italic: isItalic
             };
 
             // Link to parent shape if it has an ID
             if (shape && shape.id) {
                 textElement.parentId = shape.id;
-                console.log(`Text element ${textElement.id} linked to parent shape ${shape.id}`);
-            } else {
-                console.warn(`Shape has no ID, text element ${textElement.id} not linked`, shape);
             }
 
             elements.push(textElement);
@@ -3950,8 +5258,6 @@ function createTextInputForShape(centerX, centerY, shape) {
 
 // Text input for shapes (positioned below)
 function createTextInputBelowShape(centerX, bottomY, shape) {
-    console.log(`createTextInputBelowShape called: shape.type=${shape?.type}, shape.id=${shape?.id}`);
-
     const input = document.createElement('textarea');
     input.className = 'text-input';
     input.style.textAlign = 'center';
@@ -3960,6 +5266,9 @@ function createTextInputBelowShape(centerX, bottomY, shape) {
     input.style.top = (rect.top + panOffsetY + bottomY * zoomLevel - 12) + 'px';
     input.style.fontFamily = selectedFont;
     input.style.fontSize = fontSizeSelect.value + 'px';
+    input.style.fontWeight = isBold ? 'bold' : 'normal';
+    input.style.fontStyle = isItalic ? 'italic' : 'normal';
+    input.style.color = textColorInput.value;
     input.style.width = '100px';
     input.rows = 1;
     document.body.appendChild(input);
@@ -3983,16 +5292,16 @@ function createTextInputBelowShape(centerX, bottomY, shape) {
                 y: bottomY - 8, // Position below shape
                 text: text,
                 strokeColor: strokeColorInput.value,
+                textColor: textColorInput.value,
                 fontFamily: selectedFont,
-                fontSize: fontSize
+                fontSize: fontSize,
+                bold: isBold,
+                italic: isItalic
             };
 
             // Link to parent shape if it has an ID
             if (shape && shape.id) {
                 textElement.parentId = shape.id;
-                console.log(`Text element ${textElement.id} linked to parent shape ${shape.id}`);
-            } else {
-                console.warn(`Shape has no ID, text element ${textElement.id} not linked`, shape);
             }
 
             elements.push(textElement);
@@ -4123,7 +5432,10 @@ function elementToSVG(element) {
         case 'text':
             const textFontFamily = element.fontFamily || 'Comic Sans MS, cursive';
             const textFontSize = element.fontSize || 16;
-            return `<text x="${element.x}" y="${element.y + textFontSize}" font-family="${textFontFamily}" font-size="${textFontSize}" fill="${stroke}">${escapeXML(element.text)}</text>`;
+            const textColor = element.textColor || stroke;
+            const fontWeight = element.bold ? 'bold' : 'normal';
+            const fontStyle = element.italic ? 'italic' : 'normal';
+            return `<text x="${element.x}" y="${element.y + textFontSize}" font-family="${textFontFamily}" font-size="${textFontSize}" font-weight="${fontWeight}" font-style="${fontStyle}" fill="${textColor}">${escapeXML(element.text)}</text>`;
 
         case 'diamond':
             const dcx = element.x + element.width / 2;
@@ -4189,6 +5501,34 @@ document.getElementById('layoutVerticalBtn').addEventListener('click', () => {
     layoutVertical();
 });
 
+// Grid and snapping toggles
+document.getElementById('gridToggleBtn').addEventListener('click', () => {
+    showGrid = !showGrid;
+    const btn = document.getElementById('gridToggleBtn');
+    if (showGrid) {
+        btn.classList.add('active');
+    } else {
+        btn.classList.remove('active');
+    }
+    redraw();
+});
+
+document.getElementById('snapToggleBtn').addEventListener('click', () => {
+    snapToGrid = !snapToGrid;
+    const btn = document.getElementById('snapToggleBtn');
+    if (snapToGrid) {
+        btn.classList.add('active');
+        // Auto-enable grid when snap is enabled
+        if (!showGrid) {
+            showGrid = true;
+            document.getElementById('gridToggleBtn').classList.add('active');
+        }
+    } else {
+        btn.classList.remove('active');
+    }
+    redraw();
+});
+
 // Export/Import
 document.getElementById('clearBtn').addEventListener('click', () => {
     if (confirm('Clear canvas?')) {
@@ -4204,24 +5544,66 @@ document.getElementById('clearBtn').addEventListener('click', () => {
     }
 });
 
-document.getElementById('exportImage').addEventListener('click', () => {
-    const format = document.getElementById('exportFormatSelect').value;
+// Export button - show format selection modal
+const exportImageBtn = document.getElementById('exportImage');
+if (exportImageBtn) {
+    exportImageBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const exportModal = document.getElementById('exportModal');
+        if (exportModal) {
+            exportModal.classList.add('active');
+        }
+    });
+}
 
-    if (format === 'svg') {
-        exportAsSVG();
-    } else if (format === 'png') {
-        const link = document.createElement('a');
-        link.download = 'drawing.png';
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-    } else if (format === 'jpg') {
-        const link = document.createElement('a');
-        link.download = 'drawing.jpg';
-        link.href = canvas.toDataURL('image/jpeg', 0.95);
-        link.click();
-    } else if (format === 'pptx') {
-        exportAsPowerPoint();
-    }
+// Export modal close button
+const exportModalCloseBtn = document.getElementById('exportModalClose');
+if (exportModalCloseBtn) {
+    exportModalCloseBtn.addEventListener('click', () => {
+        const exportModal = document.getElementById('exportModal');
+        if (exportModal) {
+            exportModal.classList.remove('active');
+        }
+    });
+}
+
+// Close modal on background click
+const exportModal = document.getElementById('exportModal');
+if (exportModal) {
+    exportModal.addEventListener('click', (e) => {
+        if (e.target.id === 'exportModal') {
+            e.target.classList.remove('active');
+        }
+    });
+}
+
+// Export format selection handlers
+document.querySelectorAll('.export-format-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const format = btn.dataset.format;
+        const exportModal = document.getElementById('exportModal');
+
+        if (format === 'svg') {
+            exportAsSVG();
+        } else if (format === 'png') {
+            const link = document.createElement('a');
+            link.download = 'drawing.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        } else if (format === 'jpg') {
+            const link = document.createElement('a');
+            link.download = 'drawing.jpg';
+            link.href = canvas.toDataURL('image/jpeg', 0.95);
+            link.click();
+        } else if (format === 'pptx') {
+            exportAsPowerPoint();
+        }
+
+        // Close modal after export
+        if (exportModal) {
+            exportModal.classList.remove('active');
+        }
+    });
 });
 
 function exportAsPowerPoint() {
@@ -4274,6 +5656,154 @@ function exportAsPowerPoint() {
     pres.writeFile({ fileName: 'drawing.pptx' });
 }
 
+// Saved Diagrams Management (localStorage)
+function getSavedDiagrams() {
+    try {
+        const saved = localStorage.getItem('andraw_saved_diagrams');
+        return saved ? JSON.parse(saved) : {};
+    } catch (error) {
+        console.error('Error getting saved diagrams:', error);
+        return {};
+    }
+}
+
+function saveDiagramToStorage(name, data) {
+    try {
+        const diagrams = getSavedDiagrams();
+        diagrams[name] = {
+            data: data,
+            savedAt: new Date().toISOString()
+        };
+        localStorage.setItem('andraw_saved_diagrams', JSON.stringify(diagrams));
+        populateSavedDiagramsDropdown();
+        return true;
+    } catch (error) {
+        console.error('Error saving diagram:', error);
+        alert('Failed to save diagram to browser storage: ' + error.message);
+        return false;
+    }
+}
+
+function loadDiagram(name) {
+    try {
+        const diagrams = getSavedDiagrams();
+        if (!diagrams[name]) {
+            alert('Diagram not found');
+            return;
+        }
+
+        const data = diagrams[name].data;
+
+        // Version 2: Multiple pages
+        if (data.version === 2 && data.pages && data.pages.length > 0) {
+            pages = data.pages;
+            currentPageIndex = data.currentPageIndex || 0;
+
+            // Ensure currentPageIndex is valid
+            if (currentPageIndex >= pages.length) {
+                currentPageIndex = 0;
+            }
+
+            canvasMode = 'storybook';
+
+            // Load the current page elements directly
+            const page = pages[currentPageIndex];
+            if (page && page.elements) {
+                elements = JSON.parse(JSON.stringify(page.elements));
+                backgroundColor = page.backgroundColor || '#FFFEF9';
+                bgColorInput.value = backgroundColor;
+            } else {
+                elements = [];
+                backgroundColor = '#FFFEF9';
+                bgColorInput.value = '#FFFEF9';
+            }
+
+            updateModeUI();
+        }
+        // Old format: single page
+        else if (Array.isArray(data)) {
+            elements = data;
+            backgroundColor = '#FFFEF9';
+            bgColorInput.value = '#FFFEF9';
+            pages = [{ elements: JSON.parse(JSON.stringify(elements)), backgroundColor }];
+            currentPageIndex = 0;
+            canvasMode = 'infinite';
+        } else {
+            elements = data.elements || [];
+            backgroundColor = data.backgroundColor || '#FFFEF9';
+            bgColorInput.value = backgroundColor;
+            pages = [{ elements: JSON.parse(JSON.stringify(elements)), backgroundColor }];
+            currentPageIndex = 0;
+            canvasMode = 'infinite';
+        }
+
+        selectedElement = null;
+        selectedElements = [];
+        updatePageCounter();
+        redraw();
+
+        // Close dropdown
+        document.getElementById('logoDropdown').classList.remove('active');
+    } catch (error) {
+        console.error('Error loading diagram:', error);
+        alert('Failed to load diagram: ' + error.message);
+    }
+}
+
+function deleteDiagram(name) {
+    if (confirm(`Delete "${name}" from browser storage?`)) {
+        try {
+            const diagrams = getSavedDiagrams();
+            delete diagrams[name];
+            localStorage.setItem('andraw_saved_diagrams', JSON.stringify(diagrams));
+            populateSavedDiagramsDropdown();
+        } catch (error) {
+            console.error('Error deleting diagram:', error);
+            alert('Failed to delete diagram: ' + error.message);
+        }
+    }
+}
+
+function populateSavedDiagramsDropdown() {
+    const diagrams = getSavedDiagrams();
+    const list = document.getElementById('savedDiagramsList');
+    const names = Object.keys(diagrams).sort((a, b) => {
+        return new Date(diagrams[b].savedAt) - new Date(diagrams[a].savedAt);
+    });
+
+    if (names.length === 0) {
+        list.innerHTML = '<div class="no-diagrams">No saved diagrams</div>';
+    } else {
+        list.innerHTML = names.map(name => `
+            <div class="saved-diagram-item">
+                <div class="saved-diagram-name" onclick="loadDiagram('${name.replace(/'/g, "\\'")}')" title="${name}">
+                    <i class="fas fa-file"></i> ${name}
+                </div>
+                <button class="saved-diagram-delete" onclick="event.stopPropagation(); deleteDiagram('${name.replace(/'/g, "\\'")}')" title="Delete">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `).join('');
+    }
+}
+
+// Logo dropdown toggle
+document.getElementById('logoBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const dropdown = document.getElementById('logoDropdown');
+    dropdown.classList.toggle('active');
+
+    // Populate when opening
+    if (dropdown.classList.contains('active')) {
+        populateSavedDiagramsDropdown();
+    }
+
+    // Close other dropdowns
+    rectangleDropdown.classList.remove('active');
+    circleDropdown.classList.remove('active');
+    fontDropdown.classList.remove('active');
+});
+
 document.getElementById('exportJSON').addEventListener('click', () => {
     // Save current page before exporting
     saveCurrentPage();
@@ -4286,10 +5816,19 @@ document.getElementById('exportJSON').addEventListener('click', () => {
         backgroundColor: backgroundColor,
         elements: elements
     };
+
+    // Prompt for filename
+    const filename = prompt('Enter a name for this diagram:', 'drawing');
+    if (!filename) return; // User cancelled
+
+    // Save to browser storage for quick access
+    saveDiagramToStorage(filename, data);
+
+    // Also download as file
     const json = JSON.stringify(data, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const link = document.createElement('a');
-    link.download = 'drawing.json';
+    link.download = `${filename}.json`;
     link.href = URL.createObjectURL(blob);
     link.click();
 });
@@ -4306,12 +5845,34 @@ document.getElementById('fileInput').addEventListener('change', (e) => {
             try {
                 const data = JSON.parse(event.target.result);
 
+                // Save to localStorage for quick access (extract name from filename)
+                const filename = file.name.replace('.json', '');
+                saveDiagramToStorage(filename, data);
+
                 // Version 2: Multiple pages
-                if (data.version === 2 && data.pages) {
+                if (data.version === 2 && data.pages && data.pages.length > 0) {
                     pages = data.pages;
                     currentPageIndex = data.currentPageIndex || 0;
+
+                    // Ensure currentPageIndex is valid
+                    if (currentPageIndex >= pages.length) {
+                        currentPageIndex = 0;
+                    }
+
                     canvasMode = 'storybook'; // Switch to storybook mode
-                    loadPage(currentPageIndex);
+
+                    // Load the current page elements directly
+                    const page = pages[currentPageIndex];
+                    if (page && page.elements) {
+                        elements = JSON.parse(JSON.stringify(page.elements));
+                        backgroundColor = page.backgroundColor || '#FFFEF9';
+                        bgColorInput.value = backgroundColor;
+                    } else {
+                        elements = [];
+                        backgroundColor = '#FFFEF9';
+                        bgColorInput.value = '#FFFEF9';
+                    }
+
                     updateModeUI();
                 }
                 // Old format: single page (array or object)
@@ -4321,23 +5882,29 @@ document.getElementById('fileInput').addEventListener('change', (e) => {
                     bgColorInput.value = '#FFFEF9';
                     pages = [{ elements: JSON.parse(JSON.stringify(elements)), backgroundColor }];
                     currentPageIndex = 0;
+                    canvasMode = 'infinite';
                 } else {
                     elements = data.elements || [];
                     backgroundColor = data.backgroundColor || '#FFFEF9';
                     bgColorInput.value = backgroundColor;
                     pages = [{ elements: JSON.parse(JSON.stringify(elements)), backgroundColor }];
                     currentPageIndex = 0;
+                    canvasMode = 'infinite';
                 }
 
                 selectedElement = null;
+                selectedElements = [];
                 updatePageCounter();
                 redraw();
             } catch (err) {
                 alert('Invalid JSON file');
+                console.error('Error loading file:', err);
             }
         };
         reader.readAsText(file);
     }
+    // Reset file input so the same file can be loaded again
+    e.target.value = '';
 });
 
 // Help panel toggle
@@ -4472,10 +6039,12 @@ document.getElementById('modeToggleBtn').addEventListener('click', () => {
 
 // Page Navigation Event Handlers
 document.getElementById('prevPage').addEventListener('click', () => {
+    if (isPlayingPages) stopSlideshow();
     loadPage(currentPageIndex - 1);
 });
 
 document.getElementById('nextPage').addEventListener('click', () => {
+    if (isPlayingPages) stopSlideshow();
     loadPage(currentPageIndex + 1);
 });
 
@@ -4483,8 +6052,89 @@ document.getElementById('addPage').addEventListener('click', () => {
     addNewPage();
 });
 
+// Play/pause slideshow
+document.getElementById('playPages').addEventListener('click', () => {
+    toggleSlideshow();
+});
+
+function toggleSlideshow() {
+    const playBtn = document.getElementById('playPages');
+    const playIcon = playBtn.querySelector('i');
+
+    if (isPlayingPages) {
+        // Stop playing
+        stopSlideshow();
+    } else {
+        // Start playing
+        startSlideshow();
+    }
+}
+
+function startSlideshow() {
+    if (canvasMode !== 'storybook' || pages.length <= 1) return;
+
+    isPlayingPages = true;
+    const playBtn = document.getElementById('playPages');
+    const playIcon = playBtn.querySelector('i');
+
+    // Change icon to pause
+    playIcon.classList.remove('fa-play');
+    playIcon.classList.add('fa-pause');
+    playBtn.title = 'Pause Slideshow';
+
+    // Start auto-advancing pages
+    playPagesInterval = setInterval(() => {
+        // Move to next page
+        const nextIndex = currentPageIndex + 1;
+
+        // If we're at the last page, stop playing
+        if (nextIndex >= pages.length) {
+            stopSlideshow();
+            return;
+        }
+
+        loadPage(nextIndex);
+    }, SLIDESHOW_DELAY);
+}
+
+function stopSlideshow() {
+    isPlayingPages = false;
+    const playBtn = document.getElementById('playPages');
+    const playIcon = playBtn.querySelector('i');
+
+    // Change icon back to play
+    playIcon.classList.remove('fa-pause');
+    playIcon.classList.add('fa-play');
+    playBtn.title = 'Play Slideshow (2s delay)';
+
+    // Clear interval
+    if (playPagesInterval) {
+        clearInterval(playPagesInterval);
+        playPagesInterval = null;
+    }
+}
+
 // Initialize canvas
 resizeCanvas();
+
+// Splash screen handling - run on window load to ensure everything is ready
+window.addEventListener('load', () => {
+    const splashScreen = document.getElementById('splashScreen');
+    if (splashScreen) {
+        // Start fade out at 1 second
+        setTimeout(() => {
+            splashScreen.classList.add('fade-out');
+            splashScreen.style.pointerEvents = 'none';
+        }, 1000);
+
+        // Remove splash screen from DOM at 1.5 seconds (after fade completes)
+        setTimeout(() => {
+            if (splashScreen && splashScreen.parentNode) {
+                splashScreen.parentNode.removeChild(splashScreen);
+            }
+        }, 1500);
+    }
+});
 
 // Ensure all elements have IDs (for backward compatibility)
 ensureElementIds();
