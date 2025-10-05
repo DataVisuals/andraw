@@ -1939,7 +1939,7 @@ function editTextElement(textElement) {
     input.style.fontStyle = textElement.italic ? 'italic' : 'normal';
     input.style.color = textElement.textColor || textElement.strokeColor;
     input.value = textElement.text;
-    input.rows = 3;
+    input.rows = 1;
     input.style.minWidth = '200px';
     input.style.resize = 'both';
     document.body.appendChild(input);
@@ -5167,7 +5167,7 @@ function createTextInput(x, y) {
     input.style.fontWeight = isBold ? 'bold' : 'normal';
     input.style.fontStyle = isItalic ? 'italic' : 'normal';
     input.style.color = textColorInput.value;
-    input.rows = 3;
+    input.rows = 1;
     input.style.minWidth = '200px';
     input.style.resize = 'both';
     document.body.appendChild(input);
@@ -5226,7 +5226,7 @@ function createTextInputForShape(centerX, centerY, shape) {
     input.style.fontStyle = isItalic ? 'italic' : 'normal';
     input.style.color = textColorInput.value;
     input.style.width = '150px';
-    input.rows = 3;
+    input.rows = 1;
     input.style.resize = 'both';
     document.body.appendChild(input);
 
@@ -5300,7 +5300,7 @@ function createTextInputBelowShape(centerX, bottomY, shape) {
     input.style.fontStyle = isItalic ? 'italic' : 'normal';
     input.style.color = textColorInput.value;
     input.style.width = '150px';
-    input.rows = 3;
+    input.rows = 1;
     input.style.resize = 'both';
     document.body.appendChild(input);
 
