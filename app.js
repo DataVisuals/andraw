@@ -1960,6 +1960,25 @@ if (themeBtn && themeDropdown) {
                 // Update color icons
                 updateColorIcons();
 
+                // Apply theme to selected elements
+                const elementsToUpdate = selectedElements.length > 0
+                    ? selectedElements
+                    : (selectedElement ? [selectedElement] : []);
+
+                if (elementsToUpdate.length > 0) {
+                    elementsToUpdate.forEach(el => {
+                        // Apply to shapes, lines, and arrows
+                        if (el.strokeColor !== undefined) {
+                            el.strokeColor = theme.stroke;
+                        }
+                        if (el.type !== 'line' && el.type !== 'arrow' && el.type !== 'pen' && el.type !== 'text') {
+                            el.fillColor = theme.fill;
+                        }
+                    });
+                    saveHistory();
+                    redraw();
+                }
+
                 // Close dropdown
                 themeDropdown.classList.remove('active');
             }
@@ -8701,6 +8720,7 @@ function populateChangelog() {
             'Anchor points visible when shapes selected or drawing arrows for precise connections',
             'Arrows remember anchor points - stay connected when shapes move or resize',
             'Color themes/palettes - quick switching between 6 professional color combinations',
+            'Themes apply to selected elements instantly or set colors for new shapes',
             'Themes include Professional, Ocean, Sunset, Forest, Lavender, and Slate',
             'Redo support with Ctrl/⌘+Y keyboard shortcut',
             'Removed Undo button from toolbar (use Ctrl/⌘+Z keyboard shortcut)',
