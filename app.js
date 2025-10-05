@@ -2761,16 +2761,16 @@ function layoutSageShapes() {
 function duplicateLastShape() {
     if (!lastCreatedShape) return;
 
-    // Find any text element associated with the last created shape
+    // Find any text element associated with the last created shape (for shapes with labels)
     const associatedText = elements.find(el =>
         el.type === 'text' && el.parentId === lastCreatedShape.id
     );
 
     // Determine direction only on first duplication, then keep consistent
     if (!duplicationDirection) {
-        // Determine if shape is centered horizontally and near top
-        const shapeCenterX = lastCreatedShape.x + Math.abs(lastCreatedShape.width || 0) / 2;
-        const isCentered = Math.abs(shapeCenterX - canvas.width / 2) < canvas.width * 0.15; // Within 15% of center
+        // Determine if element is centered horizontally and near top
+        const elementCenterX = lastCreatedShape.x + Math.abs(lastCreatedShape.width || 0) / 2;
+        const isCentered = Math.abs(elementCenterX - canvas.width / 2) < canvas.width * 0.15; // Within 15% of center
         const isNearTop = lastCreatedShape.y < canvas.height * 0.3; // In top 30%
 
         duplicationDirection = (isCentered && isNearTop) ? 'vertical' : 'horizontal';
@@ -2778,34 +2778,71 @@ function duplicateLastShape() {
 
     const shouldPlaceVertically = duplicationDirection === 'vertical';
 
-    // Calculate spacing based on shape size
+    // Calculate spacing based on element size
     const spacing = 20;
 
-    // Create duplicate shape
-    const newShape = {
+    // Create duplicate element
+    const newElement = {
         ...lastCreatedShape,
         id: nextElementId++
     };
 
-    if (shouldPlaceVertically) {
-        // Place below
-        newShape.y = lastCreatedShape.y + Math.abs(lastCreatedShape.height || 100) + spacing;
+    // Handle different element types
+    if (lastCreatedShape.type === 'text') {
+        // For text, use approximate height based on font size
+        const textHeight = lastCreatedShape.fontSize || 16;
+        if (shouldPlaceVertically) {
+            newElement.y = lastCreatedShape.y + textHeight * 1.5 + spacing;
+        } else {
+            // For text, estimate width or just offset by fixed amount
+            newElement.x = lastCreatedShape.x + 100 + spacing;
+        }
+    } else if (lastCreatedShape.type === 'pen') {
+        // For pen paths, offset the entire path
+        if (shouldPlaceVertically) {
+            const bounds = getElementBounds(lastCreatedShape);
+            newElement.points = lastCreatedShape.points.map(p => ({
+                x: p.x,
+                y: p.y + bounds.height + spacing
+            }));
+        } else {
+            const bounds = getElementBounds(lastCreatedShape);
+            newElement.points = lastCreatedShape.points.map(p => ({
+                x: p.x + bounds.width + spacing,
+                y: p.y
+            }));
+        }
+    } else if (lastCreatedShape.type === 'line' || lastCreatedShape.type === 'arrow') {
+        // For lines and arrows, offset both endpoints
+        const lineHeight = Math.abs(lastCreatedShape.height || 100);
+        const lineWidth = Math.abs(lastCreatedShape.width || 100);
+        if (shouldPlaceVertically) {
+            newElement.y = lastCreatedShape.y + lineHeight + spacing;
+        } else {
+            newElement.x = lastCreatedShape.x + lineWidth + spacing;
+        }
     } else {
-        // Place to the right
-        newShape.x = lastCreatedShape.x + Math.abs(lastCreatedShape.width || 100) + spacing;
+        // For shapes with width/height (rectangle, circle, icon, etc.)
+        if (shouldPlaceVertically) {
+            // Place below
+            newElement.y = lastCreatedShape.y + Math.abs(lastCreatedShape.height || 100) + spacing;
+        } else {
+            // Place to the right
+            newElement.x = lastCreatedShape.x + Math.abs(lastCreatedShape.width || 100) + spacing;
+        }
     }
 
-    elements.push(newShape);
+    elements.push(newElement);
 
     // If there was associated text, duplicate it too
     if (associatedText) {
-        const deltaX = newShape.x - lastCreatedShape.x;
-        const deltaY = newShape.y - lastCreatedShape.y;
+        const deltaX = newElement.x - lastCreatedShape.x;
+        const deltaY = newElement.y - lastCreatedShape.y;
 
         const newText = {
             ...associatedText,
             id: nextElementId++,
-            parentId: newShape.id,
+            parentId: newElement.id,
             x: associatedText.x + deltaX,
             y: associatedText.y + deltaY,
             text: `Thing ${thingCounter++}` // Auto-increment text
@@ -2814,7 +2851,7 @@ function duplicateLastShape() {
         elements.push(newText);
     }
 
-    lastCreatedShape = newShape; // Update to new shape for chaining
+    lastCreatedShape = newElement; // Update to new element for chaining
     saveHistory();
     redraw();
 }
@@ -3318,19 +3355,25 @@ function handleMouseDown(e) {
             color: textColorInput.value // Use text color for icon color
         };
         elements.push(icon);
+        lastCreatedShape = icon; // Track for 'M' key duplication
+        duplicationDirection = null; // Reset direction for new icon
         saveHistory();
         redraw();
         return;
     } else {
         isDrawing = true;
         if (currentTool === 'pen') {
-            elements.push({
+            const penElement = {
+                id: nextElementId++,
                 type: 'pen',
                 points: [{x: startX, y: startY}],
                 strokeColor: strokeColorInput.value,
                 lineStyle: currentLineStyle,
                 lineThickness: currentLineThickness
-            });
+            };
+            elements.push(penElement);
+            // Will set lastCreatedShape when pen finishes (on mouseup)
+            window.tempPenElement = penElement;
         }
     }
 }
@@ -3651,6 +3694,11 @@ function handleMouseUp(e) {
 
     // Save history after pen tool finishes drawing
     if (currentTool === 'pen' && isDrawing) {
+        if (window.tempPenElement) {
+            lastCreatedShape = window.tempPenElement;
+            duplicationDirection = null;
+            window.tempPenElement = null;
+        }
         saveHistory();
     }
 
@@ -7526,7 +7574,8 @@ function createTextInput(x, y) {
     const finishText = () => {
         const text = input.value.trim();
         if (text) {
-            elements.push({
+            const textElement = {
+                id: nextElementId++,
                 type: 'text',
                 x: x,
                 y: y,
@@ -7537,7 +7586,10 @@ function createTextInput(x, y) {
                 fontSize: parseInt(fontSizeSelect.value),
                 bold: isBold,
                 italic: isItalic
-            });
+            };
+            elements.push(textElement);
+            lastCreatedShape = textElement; // Track for 'M' key duplication
+            duplicationDirection = null;
             redraw();
         }
         input.remove();
