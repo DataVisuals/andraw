@@ -5969,6 +5969,7 @@ function populateChangelog() {
 
     const changelog = {
         '2025-10-05': [
+            'Multi-line text editing with wrapping (Shift+Enter for line breaks)',
             'Grid toggle (G) and snap to grid (Shift+G)',
             'Copy/paste/duplicate (Cmd+C/V/D) with parent-child preservation',
             'Alignment tools (left/center/right/top/middle/bottom)',
@@ -5977,7 +5978,8 @@ function populateChangelog() {
             'Selection tools (Select All, Lock/Unlock, Select by Type)',
             'Arrow key positioning (1px or 10px with Shift)',
             'Layout buttons now preserve selection',
-            'Fixed copy/paste keyboard shortcuts'
+            'Fixed copy/paste keyboard shortcuts',
+            'What\'s New changelog panel (⭐ button)'
         ],
         '2025-10-04': [
             'New selection icons and improved styling',
