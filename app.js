@@ -2020,13 +2020,30 @@ async function copyAsImage() {
     // Convert to blob and copy to clipboard
     try {
         const blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/png'));
-        await navigator.clipboard.write([
-            new ClipboardItem({ 'image/png': blob })
-        ]);
-        console.log('Image copied to clipboard');
+
+        // Try modern Clipboard API first
+        if (navigator.clipboard && navigator.clipboard.write) {
+            await navigator.clipboard.write([
+                new ClipboardItem({ 'image/png': blob })
+            ]);
+            console.log('Image copied to clipboard');
+        } else {
+            throw new Error('Clipboard API not supported');
+        }
     } catch (err) {
-        console.error('Failed to copy image to clipboard:', err);
-        alert('Failed to copy image to clipboard. Your browser may not support this feature.');
+        console.error('Clipboard API failed, using download fallback:', err);
+
+        // Fallback: Download the image
+        const url = tempCanvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = 'andraw-selection.png';
+        link.href = url;
+        link.click();
+
+        // Show a helpful message
+        setTimeout(() => {
+            alert('Your browser doesn\'t support copying images to clipboard.\nThe image has been downloaded instead.');
+        }, 100);
     }
 }
 
