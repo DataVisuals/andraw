@@ -10306,6 +10306,182 @@ document.getElementById('addPage').addEventListener('click', () => {
 });
 
 // ============================================================================
+// PAGE MANAGER
+// ============================================================================
+
+const pageManagerPanel = document.getElementById('pageManagerPanel');
+const pageManagerBtn = document.getElementById('pageManagerBtn');
+const pagesList = document.getElementById('pagesList');
+
+// Open page manager
+pageManagerBtn.addEventListener('click', () => {
+    pageManagerPanel.classList.add('active');
+    populatePagesList();
+});
+
+// Close page manager on escape
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && pageManagerPanel.classList.contains('active')) {
+        pageManagerPanel.classList.remove('active');
+        e.preventDefault();
+    }
+});
+
+// Close page manager on background click
+pageManagerPanel.addEventListener('click', (e) => {
+    if (e.target === pageManagerPanel) {
+        pageManagerPanel.classList.remove('active');
+    }
+});
+
+// Add blank page button
+document.getElementById('addBlankPageBtn').addEventListener('click', () => {
+    addBlankPage();
+    populatePagesList();
+});
+
+// Duplicate page button
+document.getElementById('duplicatePageBtn').addEventListener('click', () => {
+    addNewPage();
+    populatePagesList();
+});
+
+function addBlankPage() {
+    // Save current page
+    saveCurrentPage();
+
+    // Create blank page
+    const newPage = {
+        elements: [],
+        backgroundColor: '#FFFEF9'
+    };
+
+    // Add new page after current
+    pages.splice(currentPageIndex + 1, 0, newPage);
+
+    // Navigate to new page
+    loadPage(currentPageIndex + 1);
+}
+
+function populatePagesList() {
+    pagesList.innerHTML = '';
+
+    pages.forEach((page, index) => {
+        const pageItem = document.createElement('div');
+        pageItem.className = 'page-item';
+        if (index === currentPageIndex) {
+            pageItem.classList.add('active');
+        }
+
+        pageItem.innerHTML = `
+            <div class="page-item-header">
+                <div class="page-item-title">Page ${index + 1}</div>
+                <div class="page-item-actions">
+                    ${index > 0 ? '<button class="page-item-btn" data-action="moveUp" title="Move Up"><i class="fas fa-arrow-up"></i></button>' : ''}
+                    ${index < pages.length - 1 ? '<button class="page-item-btn" data-action="moveDown" title="Move Down"><i class="fas fa-arrow-down"></i></button>' : ''}
+                    ${pages.length > 1 ? '<button class="page-item-btn delete" data-action="delete" title="Delete Page"><i class="fas fa-trash"></i></button>' : ''}
+                </div>
+            </div>
+            <div class="page-item-thumbnail">
+                ${page.elements.length} element${page.elements.length !== 1 ? 's' : ''}
+            </div>
+        `;
+
+        // Click to navigate to page
+        pageItem.addEventListener('click', (e) => {
+            if (!e.target.closest('.page-item-btn')) {
+                loadPage(index);
+                pageManagerPanel.classList.remove('active');
+            }
+        });
+
+        // Action buttons
+        pageItem.querySelectorAll('.page-item-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const action = btn.dataset.action;
+
+                if (action === 'moveUp') {
+                    movePageUp(index);
+                } else if (action === 'moveDown') {
+                    movePageDown(index);
+                } else if (action === 'delete') {
+                    deletePage(index);
+                }
+            });
+        });
+
+        pagesList.appendChild(pageItem);
+    });
+}
+
+function movePageUp(index) {
+    if (index > 0) {
+        // Save current page before moving
+        saveCurrentPage();
+
+        // Swap pages
+        [pages[index], pages[index - 1]] = [pages[index - 1], pages[index]];
+
+        // Adjust current page index if needed
+        if (currentPageIndex === index) {
+            currentPageIndex = index - 1;
+        } else if (currentPageIndex === index - 1) {
+            currentPageIndex = index;
+        }
+
+        populatePagesList();
+        updatePageCounter();
+        redraw();
+    }
+}
+
+function movePageDown(index) {
+    if (index < pages.length - 1) {
+        // Save current page before moving
+        saveCurrentPage();
+
+        // Swap pages
+        [pages[index], pages[index + 1]] = [pages[index + 1], pages[index]];
+
+        // Adjust current page index if needed
+        if (currentPageIndex === index) {
+            currentPageIndex = index + 1;
+        } else if (currentPageIndex === index + 1) {
+            currentPageIndex = index;
+        }
+
+        populatePagesList();
+        updatePageCounter();
+        redraw();
+    }
+}
+
+function deletePage(index) {
+    if (pages.length > 1 && confirm(`Delete Page ${index + 1}?`)) {
+        pages.splice(index, 1);
+
+        // Adjust current page index
+        if (currentPageIndex >= pages.length) {
+            currentPageIndex = pages.length - 1;
+        } else if (currentPageIndex > index) {
+            currentPageIndex--;
+        }
+
+        // Load the adjusted page
+        const page = pages[currentPageIndex];
+        elements = JSON.parse(JSON.stringify(page.elements));
+        backgroundColor = page.backgroundColor;
+        bgColorInput.value = backgroundColor;
+        updateColorLabel('bgColor', 'bgLabel');
+
+        populatePagesList();
+        updatePageCounter();
+        redraw();
+    }
+}
+
+// ============================================================================
 // SETTINGS DIALOG
 // ============================================================================
 

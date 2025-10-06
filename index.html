@@ -1366,6 +1366,9 @@
                 <button id="addPage" class="page-nav-btn page-add-btn" title="Add New Page (Clone Current)">
                     <i class="fas fa-plus"></i>
                 </button>
+                <button id="pageManagerBtn" class="page-nav-btn" title="Page Manager - Reorder & Manage Pages">
+                    <i class="fas fa-th-list"></i>
+                </button>
             </div>
         </div>
 
@@ -1450,6 +1453,27 @@
                 </div>
                 <div class="help-footer">
                     Press <kbd>?</kbd> or <kbd>Esc</kbd> to close
+                </div>
+            </div>
+        </div>
+
+        <!-- Page Manager Panel -->
+        <div id="pageManagerPanel" class="help-panel">
+            <div class="help-content">
+                <h2>Page Manager</h2>
+                <div class="page-manager-controls">
+                    <button id="addBlankPageBtn" class="page-manager-btn">
+                        <i class="fas fa-plus"></i> Add Blank Page
+                    </button>
+                    <button id="duplicatePageBtn" class="page-manager-btn">
+                        <i class="fas fa-copy"></i> Duplicate Current
+                    </button>
+                </div>
+                <div id="pagesList" class="pages-list">
+                    <!-- Pages will be populated here -->
+                </div>
+                <div class="help-footer">
+                    Press <kbd>Esc</kbd> to close
                 </div>
             </div>
         </div>
