@@ -38,7 +38,7 @@
                                 <div class="no-diagrams">No saved diagrams</div>
                             </div>
                             <div class="logo-dropdown-divider"></div>
-                            <button class="logo-dropdown-item" id="settingsBtn">
+                            <button class="logo-dropdown-item" id="settingsBtn" title="Settings (Ctrl/⌘+,)">
                                 <i class="fas fa-cog"></i>
                                 <span>Settings</span>
                             </button>
@@ -702,16 +702,16 @@
             <div class="toolbar-group" data-group="file-ops">
                 <div class="toolbar-group-label">Export</div>
                 <div class="toolbar-group-content">
-            <button class="action-btn" id="exportImage" title="Export as Image/PowerPoint">
+            <button class="action-btn" id="exportImage" title="Export as Image/PowerPoint (Ctrl/⌘+E)">
                 <i class="fas fa-download"></i>
             </button>
-            <button class="action-btn" id="exportJSON" title="Save to File + Browser Storage">
+            <button class="action-btn" id="exportJSON" title="Save to File + Browser Storage (Ctrl/⌘+S)">
                 <i class="fas fa-save"></i>
             </button>
             <button class="action-btn" id="changelogBtn" title="What's New">
                 <i class="fas fa-star"></i>
             </button>
-            <button class="action-btn" id="importJSON" title="Load from File (also saves to Browser Storage)">
+            <button class="action-btn" id="importJSON" title="Load from File (Ctrl/⌘+O) - also saves to Browser Storage">
                 <i class="fas fa-folder-open"></i>
             </button>
             <button class="action-btn" id="clearBtn" title="Clear Canvas">
@@ -1414,6 +1414,13 @@
                         <div class="shortcut"><kbd>Shift+9</kbd><span>Arrow</span></div>
                         <div class="shortcut"><kbd>Shift+0</kbd><span>Text</span></div>
                         <p style="font-size: 10px; margin-top: 8px; opacity: 0.7; line-height: 1.3;">Creates at center with last used style (persists across sessions)</p>
+                    </div>
+                    <div class="help-section">
+                        <h3>File</h3>
+                        <div class="shortcut"><kbd>Ctrl/⌘+S</kbd><span>Save</span></div>
+                        <div class="shortcut"><kbd>Ctrl/⌘+O</kbd><span>Open</span></div>
+                        <div class="shortcut"><kbd>Ctrl/⌘+E</kbd><span>Export Image</span></div>
+                        <div class="shortcut"><kbd>Ctrl/⌘+,</kbd><span>Settings</span></div>
                     </div>
                     <div class="help-section">
                         <h3>Edit</h3>

@@ -2654,6 +2654,38 @@ document.addEventListener('keydown', (e) => {
         return;
     }
 
+    // Save (Cmd/Ctrl+S)
+    if ((e.ctrlKey || e.metaKey) && key === 's') {
+        const exportBtn = document.getElementById('exportJSON');
+        if (exportBtn) exportBtn.click();
+        e.preventDefault();
+        return;
+    }
+
+    // Open/Load (Cmd/Ctrl+O)
+    if ((e.ctrlKey || e.metaKey) && key === 'o') {
+        const importBtn = document.getElementById('importJSON');
+        if (importBtn) importBtn.click();
+        e.preventDefault();
+        return;
+    }
+
+    // Export Image (Cmd/Ctrl+E)
+    if ((e.ctrlKey || e.metaKey) && key === 'e') {
+        const exportImageBtn = document.getElementById('exportImage');
+        if (exportImageBtn) exportImageBtn.click();
+        e.preventDefault();
+        return;
+    }
+
+    // Settings (Cmd/Ctrl+,)
+    if ((e.ctrlKey || e.metaKey) && key === ',') {
+        const settingsBtn = document.getElementById('settingsBtn');
+        if (settingsBtn) settingsBtn.click();
+        e.preventDefault();
+        return;
+    }
+
     // Single-key tool shortcuts
     const toolMap = {
         'v': 'select', 'r': 'rectangle',
