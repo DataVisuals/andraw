@@ -7610,17 +7610,10 @@ function layoutHorizontal() {
     const maxWidth = canvas.width - margin * 2;
     const availableHeight = canvas.height - margin * 2;
 
-    // Sort elements by their current Y position, then X position (exclude connectors and text)
+    // Sort elements by their current X position for left-to-right layout (exclude connectors and text)
     const sortedElements = [...elements]
         .filter(el => el.type !== 'line' && el.type !== 'arrow' && el.type !== 'text')
-        .sort((a, b) => {
-            const ay = a.y || 0;
-            const by = b.y || 0;
-            if (Math.abs(ay - by) < 50) {
-                return (a.x || 0) - (b.x || 0);
-            }
-            return ay - by;
-        });
+        .sort((a, b) => (a.x || 0) - (b.x || 0));
 
     // Group elements into rows with minimal spacing for grouping
     let currentX = 0;
@@ -8084,11 +8077,32 @@ function redraw() {
             ctx.setLineDash([]);
 
             // Draw resize handles only for single selection
-            const handles = getResizeHandles(bounds);
-            ctx.fillStyle = '#2196f3';
-            handles.forEach(handle => {
-                ctx.fillRect(handle.x - 4, handle.y - 4, 8, 8);
-            });
+            if (selectedElement.type === 'line' || selectedElement.type === 'arrow') {
+                // For lines/arrows, show larger endpoint handles instead of corner handles
+                const x1 = selectedElement.x;
+                const y1 = selectedElement.y;
+                const x2 = selectedElement.x + selectedElement.width;
+                const y2 = selectedElement.y + selectedElement.height;
+
+                ctx.fillStyle = '#2196f3';
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+
+                // Start point handle
+                ctx.fillRect(x1 - 6, y1 - 6, 12, 12);
+                ctx.strokeRect(x1 - 6, y1 - 6, 12, 12);
+
+                // End point handle
+                ctx.fillRect(x2 - 6, y2 - 6, 12, 12);
+                ctx.strokeRect(x2 - 6, y2 - 6, 12, 12);
+            } else {
+                // Regular resize handles for other elements
+                const handles = getResizeHandles(bounds);
+                ctx.fillStyle = '#2196f3';
+                handles.forEach(handle => {
+                    ctx.fillRect(handle.x - 4, handle.y - 4, 8, 8);
+                });
+            }
 
             // Draw bend point handle for stepped arrows/lines
             if ((selectedElement.type === 'arrow' || selectedElement.type === 'line') &&
@@ -8344,15 +8358,86 @@ function getElementBounds(element) {
     }
 }
 
+// Helper function to check if a point is near a line segment
+function distanceToLineSegment(px, py, x1, y1, x2, y2) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const lengthSquared = dx * dx + dy * dy;
+
+    if (lengthSquared === 0) {
+        // Line is a point
+        return Math.sqrt((px - x1) * (px - x1) + (py - y1) * (py - y1));
+    }
+
+    // Parameter t represents position along the line (0 = start, 1 = end)
+    let t = ((px - x1) * dx + (py - y1) * dy) / lengthSquared;
+    t = Math.max(0, Math.min(1, t));
+
+    // Closest point on the line segment
+    const closestX = x1 + t * dx;
+    const closestY = y1 + t * dy;
+
+    // Distance from point to closest point on line
+    return Math.sqrt((px - closestX) * (px - closestX) + (py - closestY) * (py - closestY));
+}
+
 function getElementAtPoint(x, y) {
     for (let i = elements.length - 1; i >= 0; i--) {
         // Skip locked elements
         if (elements[i].locked) continue;
 
-        const bounds = getElementBounds(elements[i]);
+        const element = elements[i];
+
+        // Special handling for lines and arrows - check distance to line path
+        if (element.type === 'line' || element.type === 'arrow') {
+            const x1 = element.x;
+            const y1 = element.y;
+            const x2 = element.x + element.width;
+            const y2 = element.y + element.height;
+
+            // Increase click tolerance for easier selection (10 pixels)
+            const tolerance = 10;
+
+            if (element.lineRouting === 'stepped') {
+                // For stepped routing, check all three segments
+                const dx = x2 - x1;
+                const dy = y2 - y1;
+
+                // Determine bend point
+                let bendX, bendY;
+                if (element.bendPoint) {
+                    bendX = element.bendPoint.x;
+                    bendY = element.bendPoint.y;
+                } else if (Math.abs(dx) > Math.abs(dy)) {
+                    bendX = (x1 + x2) / 2;
+                    bendY = y1;
+                } else {
+                    bendX = x1;
+                    bendY = (y1 + y2) / 2;
+                }
+
+                // Check distance to each segment
+                const dist1 = distanceToLineSegment(x, y, x1, y1, bendX, bendY);
+                const dist2 = distanceToLineSegment(x, y, bendX, bendY, x2, y2);
+
+                if (Math.min(dist1, dist2) <= tolerance) {
+                    return element;
+                }
+            } else {
+                // Straight routing
+                const dist = distanceToLineSegment(x, y, x1, y1, x2, y2);
+                if (dist <= tolerance) {
+                    return element;
+                }
+            }
+            continue;
+        }
+
+        // Regular bounding box check for other elements
+        const bounds = getElementBounds(element);
         if (x >= bounds.x && x <= bounds.x + bounds.width &&
             y >= bounds.y && y <= bounds.y + bounds.height) {
-            return elements[i];
+            return element;
         }
     }
     return null;
@@ -8420,6 +8505,28 @@ function getSteppedBendPoint(element) {
 
 function getResizeHandle(x, y) {
     if (!selectedElement) return null;
+
+    // Special handling for lines and arrows - check endpoint handles
+    if (selectedElement.type === 'line' || selectedElement.type === 'arrow') {
+        const x1 = selectedElement.x;
+        const y1 = selectedElement.y;
+        const x2 = selectedElement.x + selectedElement.width;
+        const y2 = selectedElement.y + selectedElement.height;
+
+        // Check start point (larger tolerance for easier clicking)
+        if (Math.abs(x - x1) < 10 && Math.abs(y - y1) < 10) {
+            return { x: x1, y: y1, position: 'start', cursor: 'move' };
+        }
+
+        // Check end point
+        if (Math.abs(x - x2) < 10 && Math.abs(y - y2) < 10) {
+            return { x: x2, y: y2, position: 'end', cursor: 'move' };
+        }
+
+        return null;
+    }
+
+    // Regular resize handles for other elements
     const bounds = getElementBounds(selectedElement);
     const handles = getResizeHandles(bounds);
 
@@ -8714,6 +8821,36 @@ function resizeElement(element, x, y, handle) {
     if (element.type === 'pen' || element.type === 'text') return; // Can't resize these
 
     const bounds = getElementBounds(element);
+
+    // Handle endpoint dragging for lines and arrows
+    if ((element.type === 'line' || element.type === 'arrow') &&
+        (handle.position === 'start' || handle.position === 'end')) {
+
+        if (handle.position === 'start') {
+            // Moving the start point - adjust x, y, width, height
+            const deltaX = x - element.x;
+            const deltaY = y - element.y;
+            element.x = x;
+            element.y = y;
+            element.width -= deltaX;
+            element.height -= deltaY;
+
+            // Clear bend point when moving endpoints
+            if (element.bendPoint) {
+                delete element.bendPoint;
+            }
+        } else {
+            // Moving the end point - adjust width and height only
+            element.width = x - element.x;
+            element.height = y - element.y;
+
+            // Clear bend point when moving endpoints
+            if (element.bendPoint) {
+                delete element.bendPoint;
+            }
+        }
+        return;
+    }
 
     switch (handle.position) {
         case 'se':
