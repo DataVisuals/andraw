@@ -55,6 +55,8 @@ const strokeColorInput = document.getElementById('strokeColor');
 const fillColorInput = document.getElementById('fillColor');
 const fillEnabledInput = document.getElementById('fillEnabled');
 const shadowEnabledInput = document.getElementById('shadowEnabled');
+const opacitySlider = document.getElementById('opacitySlider');
+const opacityValue = document.getElementById('opacityValue');
 const fontBtn = document.getElementById('fontBtn');
 const fontBtnText = document.getElementById('fontBtnText');
 const fontDropdown = document.getElementById('fontDropdown');
@@ -69,10 +71,17 @@ const bgColorInput = document.getElementById('bgColor');
 let currentLineStyle = 'solid';
 let currentLineRouting = 'straight';
 let currentLineThickness = 2;
+let currentOpacity = 1.0; // Default opacity (1.0 = 100%)
+
+// Recent colors tracking
+let recentColors = [];
+const MAX_RECENT_COLORS = 8;
 
 // Grid and snapping
 let snapToGrid = false;
 const gridSize = 20;
+let showSizeDistance = false; // Show dimensions when resizing and distance when moving
+let darkMode = false; // Dark mode for UI
 
 // Smart guides for alignment
 let smartGuides = []; // Array of {type: 'vertical'|'horizontal', position: number, label: string}
@@ -863,9 +872,106 @@ function updateColorIcons() {
     }
 }
 
+// Recent colors functions
+function loadRecentColors() {
+    try {
+        const saved = localStorage.getItem('andraw_recentColors');
+        if (saved) {
+            recentColors = JSON.parse(saved);
+        }
+    } catch (e) {
+        console.error('Failed to load recent colors:', e);
+        recentColors = [];
+    }
+}
+
+function saveRecentColors() {
+    try {
+        localStorage.setItem('andraw_recentColors', JSON.stringify(recentColors));
+    } catch (e) {
+        console.error('Failed to save recent colors:', e);
+    }
+}
+
+function addRecentColor(color) {
+    // Normalize color to lowercase
+    color = color.toLowerCase();
+
+    // Remove if already exists
+    recentColors = recentColors.filter(c => c !== color);
+
+    // Add to beginning
+    recentColors.unshift(color);
+
+    // Limit to MAX_RECENT_COLORS
+    if (recentColors.length > MAX_RECENT_COLORS) {
+        recentColors = recentColors.slice(0, MAX_RECENT_COLORS);
+    }
+
+    saveRecentColors();
+    updateRecentColorsPalette();
+}
+
+function updateRecentColorsPalette() {
+    const container = document.getElementById('recentColorsContainer');
+    const palette = document.getElementById('recentColorsPalette');
+
+    if (!container || !palette) return;
+
+    if (recentColors.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+
+    container.style.display = 'block';
+    palette.innerHTML = '';
+
+    recentColors.forEach(color => {
+        const swatch = document.createElement('div');
+        swatch.style.width = '24px';
+        swatch.style.height = '24px';
+        swatch.style.backgroundColor = color;
+        swatch.style.border = '1px solid #d0d0d0';
+        swatch.style.borderRadius = '4px';
+        swatch.style.cursor = 'pointer';
+        swatch.style.transition = 'transform 0.2s, box-shadow 0.2s';
+        swatch.title = color;
+
+        swatch.addEventListener('mouseenter', () => {
+            swatch.style.transform = 'scale(1.1)';
+            swatch.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+        });
+
+        swatch.addEventListener('mouseleave', () => {
+            swatch.style.transform = 'scale(1)';
+            swatch.style.boxShadow = 'none';
+        });
+
+        swatch.addEventListener('click', () => {
+            // Apply to stroke color by default
+            strokeColorInput.value = color;
+            updateColorIcons();
+
+            // If elements are selected, update their stroke color
+            const elementsToUpdate = selectedElements.length > 0 ? selectedElements : (selectedElement ? [selectedElement] : []);
+            if (elementsToUpdate.length > 0) {
+                elementsToUpdate.forEach(el => {
+                    el.strokeColor = color;
+                });
+                saveHistory();
+                redraw();
+            }
+        });
+
+        palette.appendChild(swatch);
+    });
+}
+
 // Initialize color labels and icons (only for elements that exist)
 updateColorLabel('bgColor', 'bgLabel');
 updateColorIcons();
+loadRecentColors();
+updateRecentColorsPalette();
 
 // Background color change
 bgColorInput.addEventListener('input', (e) => {
@@ -1545,6 +1651,22 @@ shadowEnabledInput.addEventListener('change', (e) => {
     }
 });
 
+// Opacity slider - update selected elements
+opacitySlider.addEventListener('input', (e) => {
+    const opacity = parseInt(e.target.value) / 100;
+    currentOpacity = opacity;
+    opacityValue.textContent = e.target.value + '%';
+
+    const elementsToUpdate = selectedElements.length > 0 ? selectedElements : (selectedElement ? [selectedElement] : []);
+    if (elementsToUpdate.length > 0) {
+        elementsToUpdate.forEach(el => {
+            el.opacity = opacity;
+        });
+        saveHistory();
+        redraw();
+    }
+});
+
 // Text color change - update selected text elements
 textColorInput.addEventListener('input', (e) => {
     updateColorIcons();
@@ -1671,10 +1793,19 @@ if (styleBtn && styleDropdown) {
     });
 
     // Listen to color changes to update button icon and swatches
-    strokeColorInput.addEventListener('change', updateColorIcons);
-    fillColorInput.addEventListener('change', updateColorIcons);
+    strokeColorInput.addEventListener('change', () => {
+        updateColorIcons();
+        addRecentColor(strokeColorInput.value);
+    });
+    fillColorInput.addEventListener('change', () => {
+        updateColorIcons();
+        addRecentColor(fillColorInput.value);
+    });
     fillEnabledInput.addEventListener('change', updateColorIcons);
-    textColorInput.addEventListener('change', updateColorIcons);
+    textColorInput.addEventListener('change', () => {
+        updateColorIcons();
+        addRecentColor(textColorInput.value);
+    });
 
     // Populate toolbar preset grid
     const toolbarPresetGrid = document.getElementById('toolbarPresetGrid');
@@ -4429,7 +4560,8 @@ function handleMouseUp(e) {
                 shadow: shadowEnabledInput.checked,
                 lineStyle: currentLineStyle,
                 lineRouting: (currentTool === 'line' || currentTool === 'arrow') ? currentLineRouting : undefined,
-                lineThickness: currentLineThickness
+                lineThickness: currentLineThickness,
+                opacity: currentOpacity
             };
 
             // Add icon-specific properties
@@ -7163,6 +7295,12 @@ function drawGlue(x, y, w, h, strokeColor, fillColor) {
 function drawElement(element) {
     const lineStyle = element.lineStyle || 'solid';
 
+    // Apply opacity if set
+    const originalAlpha = ctx.globalAlpha;
+    if (element.opacity !== undefined) {
+        ctx.globalAlpha = element.opacity;
+    }
+
     // Apply shadow if enabled
     if (element.shadow) {
         ctx.shadowOffsetX = 3;
@@ -7644,6 +7782,9 @@ function drawElement(element) {
         ctx.shadowBlur = 0;
         ctx.shadowColor = 'transparent';
     }
+
+    // Reset opacity
+    ctx.globalAlpha = originalAlpha;
 }
 
 function drawPreview(x, y) {
@@ -8399,7 +8540,75 @@ function redraw() {
                 ctx.lineTo(10000, guide.position);
                 ctx.stroke();
             }
+
+            // Draw distance label if enabled and label exists
+            if (showSizeDistance && guide.label) {
+                ctx.save();
+                ctx.fillStyle = '#ff4081';
+                ctx.font = `${12 / zoomLevel}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                // Draw background for label
+                const metrics = ctx.measureText(guide.label);
+                const padding = 4 / zoomLevel;
+                const labelWidth = metrics.width + padding * 2;
+                const labelHeight = 16 / zoomLevel;
+
+                // Calculate viewport center in world coordinates
+                const viewportCenterX = (canvas.width / 2 - panOffsetX) / zoomLevel;
+                const viewportCenterY = (canvas.height / 2 - panOffsetY) / zoomLevel;
+
+                if (guide.type === 'vertical') {
+                    const labelX = guide.position;
+                    const labelY = viewportCenterY;
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                    ctx.fillRect(labelX - labelWidth / 2, labelY - labelHeight / 2, labelWidth, labelHeight);
+                    ctx.fillStyle = '#ff4081';
+                    ctx.fillText(guide.label, labelX, labelY);
+                } else {
+                    const labelX = viewportCenterX;
+                    const labelY = guide.position;
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                    ctx.fillRect(labelX - labelWidth / 2, labelY - labelHeight / 2, labelWidth, labelHeight);
+                    ctx.fillStyle = '#ff4081';
+                    ctx.fillText(guide.label, labelX, labelY);
+                }
+                ctx.restore();
+            }
         });
+    }
+
+    // Draw size indicator when resizing
+    if (showSizeDistance && dragMode === 'resize' && selectedElement) {
+        const bounds = getElementBounds(selectedElement);
+        const width = Math.round(Math.abs(bounds.width));
+        const height = Math.round(Math.abs(bounds.height));
+        const label = `${width} × ${height}`;
+
+        ctx.save();
+        ctx.fillStyle = '#2196f3';
+        ctx.font = `${14 / zoomLevel}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+
+        // Draw background for label
+        const metrics = ctx.measureText(label);
+        const padding = 6 / zoomLevel;
+        const labelWidth = metrics.width + padding * 2;
+        const labelHeight = 20 / zoomLevel;
+        const labelX = bounds.x + bounds.width / 2;
+        const labelY = bounds.y - 10 / zoomLevel;
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        ctx.strokeStyle = '#2196f3';
+        ctx.lineWidth = 1 / zoomLevel;
+        ctx.fillRect(labelX - labelWidth / 2, labelY - labelHeight, labelWidth, labelHeight);
+        ctx.strokeRect(labelX - labelWidth / 2, labelY - labelHeight, labelWidth, labelHeight);
+
+        ctx.fillStyle = '#2196f3';
+        ctx.fillText(label, labelX, labelY - padding);
+        ctx.restore();
     }
 
     // Restore context
@@ -8821,34 +9030,62 @@ function findSmartGuides(draggingElements) {
 
             // Check vertical alignments
             const verticalAlignments = [
-                { pos: refBounds.x, dragPos: dragBounds.x, label: 'left' },
-                { pos: refCenterX, dragPos: dragBounds.centerX, label: 'center' },
-                { pos: refRight, dragPos: dragBounds.right, label: 'right' }
+                { pos: refBounds.x, dragPos: dragBounds.x, type: 'left' },
+                { pos: refCenterX, dragPos: dragBounds.centerX, type: 'center' },
+                { pos: refRight, dragPos: dragBounds.right, type: 'right' }
             ];
 
             verticalAlignments.forEach(align => {
                 if (Math.abs(align.pos - align.dragPos) < SNAP_THRESHOLD) {
+                    // Calculate vertical gap between elements (when they're vertically aligned)
+                    let gap = null;
+
+                    // Check if dragged element is above reference
+                    if (dragBounds.bottom < refBounds.y) {
+                        gap = refBounds.y - dragBounds.bottom;
+                    }
+                    // Check if dragged element is below reference
+                    else if (dragBounds.y > refBottom) {
+                        gap = dragBounds.y - refBottom;
+                    }
+
+                    const label = gap && gap > 1 ? `${Math.round(gap)}px` : null;
+
                     guides.push({
                         type: 'vertical',
                         position: align.pos,
-                        label: align.label
+                        label: label
                     });
                 }
             });
 
             // Check horizontal alignments
             const horizontalAlignments = [
-                { pos: refBounds.y, dragPos: dragBounds.y, label: 'top' },
-                { pos: refCenterY, dragPos: dragBounds.centerY, label: 'middle' },
-                { pos: refBottom, dragPos: dragBounds.bottom, label: 'bottom' }
+                { pos: refBounds.y, dragPos: dragBounds.y, type: 'top' },
+                { pos: refCenterY, dragPos: dragBounds.centerY, type: 'middle' },
+                { pos: refBottom, dragPos: dragBounds.bottom, type: 'bottom' }
             ];
 
             horizontalAlignments.forEach(align => {
                 if (Math.abs(align.pos - align.dragPos) < SNAP_THRESHOLD) {
+                    // Calculate horizontal gap between elements (when they're horizontally aligned)
+                    let gap = null;
+
+                    // Check if dragged element is to the left of reference
+                    if (dragBounds.right < refBounds.x) {
+                        gap = refBounds.x - dragBounds.right;
+                    }
+                    // Check if dragged element is to the right of reference
+                    else if (dragBounds.x > refRight) {
+                        gap = dragBounds.x - refRight;
+                    }
+
+                    const label = gap && gap > 1 ? `${Math.round(gap)}px` : null;
+
                     guides.push({
                         type: 'horizontal',
                         position: align.pos,
-                        label: align.label
+                        label: label
                     });
                 }
             });
@@ -10725,9 +10962,12 @@ const defaultSettings = {
     textColor: '#556B2F',
     fillEnabled: true,
     shadowEnabled: false,
+    opacity: 1.0,
     backgroundColor: '#FFFEF9',
     backgroundPattern: 'line-grid',
     showRulers: false,
+    showSizeDistance: false,
+    darkMode: false,
     canvasMode: 'infinite',
     fontFamily: 'Comic Sans MS, cursive',
     fontSize: 16
@@ -10766,6 +11006,11 @@ function applySettings(settings) {
     if (settings.textColor) textColorInput.value = settings.textColor;
     if (settings.fillEnabled !== undefined) fillEnabledInput.checked = settings.fillEnabled;
     if (settings.shadowEnabled !== undefined) shadowEnabledInput.checked = settings.shadowEnabled;
+    if (settings.opacity !== undefined) {
+        currentOpacity = settings.opacity;
+        opacitySlider.value = settings.opacity * 100;
+        opacityValue.textContent = Math.round(settings.opacity * 100) + '%';
+    }
 
     // Update color icons to reflect the new colors
     updateColorIcons();
@@ -10776,6 +11021,15 @@ function applySettings(settings) {
     currentBackgroundPattern = settings.backgroundPattern;
     lastNonBlankPattern = settings.backgroundPattern !== 'blank' ? settings.backgroundPattern : 'line-grid';
     showRulers = settings.showRulers;
+    showSizeDistance = settings.showSizeDistance !== undefined ? settings.showSizeDistance : false;
+    darkMode = settings.darkMode !== undefined ? settings.darkMode : false;
+
+    // Apply dark mode
+    if (darkMode) {
+        document.body.classList.add('dark-mode');
+    } else {
+        document.body.classList.remove('dark-mode');
+    }
 
     // Apply canvas mode
     canvasMode = settings.canvasMode;
@@ -10802,6 +11056,8 @@ function populateSettingsDialog() {
     const settingsTextColor = document.getElementById('settingsTextColor');
     const settingsFillEnabled = document.getElementById('settingsFillEnabled');
     const settingsShadowEnabled = document.getElementById('settingsShadowEnabled');
+    const settingsOpacitySlider = document.getElementById('settingsOpacitySlider');
+    const settingsOpacityValue = document.getElementById('settingsOpacityValue');
 
     if (settingsStrokeColor) {
         settingsStrokeColor.value = strokeColorInput.value;
@@ -10829,6 +11085,16 @@ function populateSettingsDialog() {
         settingsShadowEnabled.checked = shadowEnabledInput.checked;
     }
 
+    if (settingsOpacitySlider && settingsOpacityValue) {
+        settingsOpacitySlider.value = currentOpacity * 100;
+        settingsOpacityValue.textContent = Math.round(currentOpacity * 100) + '%';
+
+        // Add live update for settings opacity slider
+        settingsOpacitySlider.addEventListener('input', (e) => {
+            settingsOpacityValue.textContent = e.target.value + '%';
+        });
+    }
+
     // Set font text and value
     const fontName = settings.fontFamily.split(',')[0].replace(/['"]/g, '');
     document.getElementById('settingsFontText').textContent = fontName;
@@ -10837,6 +11103,8 @@ function populateSettingsDialog() {
     document.getElementById('settingsBackgroundColor').value = settings.backgroundColor;
     document.getElementById('settingsBackgroundPattern').value = settings.backgroundPattern;
     document.getElementById('settingsShowRulers').checked = settings.showRulers;
+    document.getElementById('settingsShowSizeDistance').checked = settings.showSizeDistance !== undefined ? settings.showSizeDistance : false;
+    document.getElementById('settingsDarkMode').checked = settings.darkMode !== undefined ? settings.darkMode : false;
     document.getElementById('settingsCanvasMode').value = settings.canvasMode;
     document.getElementById('settingsFontSize').value = settings.fontSize;
 
@@ -11047,15 +11315,19 @@ document.addEventListener('click', (e) => {
 
 // Save and apply settings
 settingsSaveBtn.addEventListener('click', () => {
+    const settingsOpacitySlider = document.getElementById('settingsOpacitySlider');
     const settings = {
         strokeColor: document.getElementById('settingsStrokeColor').value,
         fillColor: document.getElementById('settingsFillColor').value,
         textColor: document.getElementById('settingsTextColor').value,
         fillEnabled: document.getElementById('settingsFillEnabled').checked,
         shadowEnabled: document.getElementById('settingsShadowEnabled').checked,
+        opacity: settingsOpacitySlider ? parseInt(settingsOpacitySlider.value) / 100 : 1.0,
         backgroundColor: document.getElementById('settingsBackgroundColor').value,
         backgroundPattern: document.getElementById('settingsBackgroundPattern').value,
         showRulers: document.getElementById('settingsShowRulers').checked,
+        showSizeDistance: document.getElementById('settingsShowSizeDistance').checked,
+        darkMode: document.getElementById('settingsDarkMode').checked,
         canvasMode: document.getElementById('settingsCanvasMode').value,
         fontFamily: settingsCurrentFont,
         fontSize: parseInt(document.getElementById('settingsFontSize').value)

@@ -187,6 +187,21 @@
                             <input type="checkbox" id="shadowEnabled"> Enable
                         </label>
                     </div>
+                    <div class="style-row">
+                        <label class="style-label">Opacity</label>
+                        <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+                            <input type="range" id="opacitySlider" min="0" max="100" value="100" style="flex: 1;">
+                            <span id="opacityValue" style="font-size: 12px; color: #666; min-width: 36px;">100%</span>
+                        </div>
+                    </div>
+                    <!-- Recent colors -->
+                    <div id="recentColorsContainer" style="display: none;">
+                        <div style="border-top: 1px solid #e0e0e0; margin: 8px 0;"></div>
+                        <div style="padding: 0 8px 8px 8px;">
+                            <label style="font-size: 11px; color: #666; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">Recent Colors</label>
+                            <div id="recentColorsPalette" style="display: flex; gap: 4px; flex-wrap: wrap;"></div>
+                        </div>
+                    </div>
                     <!-- Divider between manual controls and presets -->
                     <div style="border-top: 1px solid #e0e0e0; margin: 8px 0;"></div>
                     <!-- Preset thumbnails for quick selection -->
@@ -1405,6 +1420,13 @@
                                     <input type="checkbox" id="settingsShadowEnabled"> Enable
                                 </label>
                             </div>
+                            <div class="style-row">
+                                <label class="style-label">Opacity</label>
+                                <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+                                    <input type="range" id="settingsOpacitySlider" min="0" max="100" value="100" style="flex: 1;">
+                                    <span id="settingsOpacityValue" style="font-size: 12px; color: #666; min-width: 36px;">100%</span>
+                                </div>
+                            </div>
                             <!-- Divider between manual controls and presets -->
                             <div style="border-top: 1px solid #e0e0e0; margin: 8px 0;"></div>
                             <!-- Preset thumbnails for quick selection -->
@@ -1575,6 +1597,14 @@
                 <div class="settings-row">
                     <label>Show Rulers:</label>
                     <input type="checkbox" id="settingsShowRulers">
+                </div>
+                <div class="settings-row">
+                    <label>Show Size and Distance:</label>
+                    <input type="checkbox" id="settingsShowSizeDistance">
+                </div>
+                <div class="settings-row">
+                    <label>Dark Mode:</label>
+                    <input type="checkbox" id="settingsDarkMode">
                 </div>
                 <div class="settings-row">
                     <label>Canvas Mode:</label>
