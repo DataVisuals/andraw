@@ -222,8 +222,8 @@ function quickCreateShape(shapeType) {
 
     if (shapeType === 'text') {
         // Create text element at center, avoiding overlap
-        const tempWidth = 50; // Approximate text width for overlap detection
-        const tempHeight = style.fontSize || 16;
+        const tempWidth = 200; // Default text box width
+        const tempHeight = style.fontSize * 1.2 || 20;
         const pos = findNonOverlappingPosition(centerX, centerY, tempWidth, tempHeight);
 
         const element = {
@@ -231,6 +231,8 @@ function quickCreateShape(shapeType) {
             type: 'text',
             x: pos.x,
             y: pos.y,
+            width: tempWidth,
+            height: tempHeight,
             text: 'Text',
             color: style.textColor,
             fontFamily: style.fontFamily,
@@ -785,6 +787,16 @@ function updateColorIcons() {
     }
     if (textColorIcon && textColorInput) {
         textColorIcon.style.color = textColorInput.value;
+    }
+
+    // Update style button icon
+    const styleBtn = document.getElementById('styleBtn');
+    if (styleBtn) {
+        const btnSvg = styleBtn.querySelector('svg rect');
+        if (btnSvg) {
+            btnSvg.setAttribute('stroke', strokeColorInput.value);
+            btnSvg.setAttribute('fill', fillEnabledInput.checked ? fillColorInput.value : 'none');
+        }
     }
 }
 
@@ -1409,6 +1421,8 @@ document.addEventListener('click', (e) => {
     const logoDropdown = document.getElementById('logoDropdown');
     const lineOptionsBtn = document.getElementById('lineOptionsBtn');
     const lineOptionsDropdown = document.getElementById('lineOptionsDropdown');
+    const styleBtn = document.getElementById('styleBtn');
+    const styleDropdown = document.getElementById('styleDropdown');
     const alignBtn = document.getElementById('alignBtn');
     const alignDropdown = document.getElementById('alignDropdown');
     const zoomBtn = document.getElementById('zoomBtn');
@@ -1439,6 +1453,9 @@ document.addEventListener('click', (e) => {
     }
     if (lineOptionsBtn && lineOptionsDropdown && !lineOptionsBtn.contains(e.target) && !lineOptionsDropdown.contains(e.target)) {
         lineOptionsDropdown.classList.remove('active');
+    }
+    if (styleBtn && styleDropdown && !styleBtn.contains(e.target) && !styleDropdown.contains(e.target)) {
+        styleDropdown.classList.remove('active');
     }
     if (alignBtn && alignDropdown && !alignBtn.contains(e.target) && !alignDropdown.contains(e.target)) {
         alignDropdown.classList.remove('active');
@@ -1688,7 +1705,44 @@ lineOptionsBtn.addEventListener('click', (e) => {
     fontDropdown.classList.remove('active');
     const logoDropdown = document.getElementById('logoDropdown');
     if (logoDropdown) logoDropdown.classList.remove('active');
+    const styleDropdown = document.getElementById('styleDropdown');
+    if (styleDropdown) styleDropdown.classList.remove('active');
 });
+
+// Style dropdown
+const styleBtn = document.getElementById('styleBtn');
+const styleDropdown = document.getElementById('styleDropdown');
+
+if (styleBtn && styleDropdown) {
+    styleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        styleDropdown.classList.toggle('active');
+
+        // Close other dropdowns
+        if (rectangleDropdown) rectangleDropdown.classList.remove('active');
+        if (circleDropdown) circleDropdown.classList.remove('active');
+        if (shapeDropdown) shapeDropdown.classList.remove('active');
+        if (presetDropdown) presetDropdown.classList.remove('active');
+        fontDropdown.classList.remove('active');
+        lineOptionsDropdown.classList.remove('active');
+        const logoDropdown = document.getElementById('logoDropdown');
+        if (logoDropdown) logoDropdown.classList.remove('active');
+    });
+
+    // Update style button icon when colors change
+    function updateStyleButtonIcon() {
+        const btnSvg = styleBtn.querySelector('svg rect');
+        if (btnSvg) {
+            btnSvg.setAttribute('stroke', strokeColorInput.value);
+            btnSvg.setAttribute('fill', fillEnabledInput.checked ? fillColorInput.value : 'none');
+        }
+    }
+
+    // Listen to color changes
+    strokeColorInput.addEventListener('change', updateStyleButtonIcon);
+    fillColorInput.addEventListener('change', updateStyleButtonIcon);
+    fillEnabledInput.addEventListener('change', updateStyleButtonIcon);
+}
 
 // Update line options button icon
 function updateLineOptionsButtonIcon(style, routing, thickness = 2) {
@@ -5178,10 +5232,44 @@ function drawText(element) {
         }
     } else {
         // Regular text rendering (no parent)
-        const lines = element.text.split('\n');
-        lines.forEach((line, index) => {
-            ctx.fillText(line, element.x, element.y + (index * lineHeight));
-        });
+        // If text has explicit width/height, wrap within bounds
+        if (element.width !== undefined && element.height !== undefined) {
+            const maxWidth = element.width;
+            const wrappedLines = [];
+            const inputLines = element.text.split('\n');
+
+            inputLines.forEach(line => {
+                const words = line.split(' ');
+                let currentLine = '';
+
+                words.forEach((word) => {
+                    const testLine = currentLine ? currentLine + ' ' + word : word;
+                    const metrics = ctx.measureText(testLine);
+
+                    if (metrics.width > maxWidth && currentLine) {
+                        wrappedLines.push(currentLine);
+                        currentLine = word;
+                    } else {
+                        currentLine = testLine;
+                    }
+                });
+
+                if (currentLine) {
+                    wrappedLines.push(currentLine);
+                }
+            });
+
+            // Draw wrapped text
+            wrappedLines.forEach((line, index) => {
+                ctx.fillText(line, element.x, element.y + (index * lineHeight));
+            });
+        } else {
+            // No explicit bounds - render as-is
+            const lines = element.text.split('\n');
+            lines.forEach((line, index) => {
+                ctx.fillText(line, element.x, element.y + (index * lineHeight));
+            });
+        }
     }
 }
 
@@ -8334,6 +8422,17 @@ function getElementBounds(element) {
             }
 
             // Regular text (not parented to anything)
+            // If text has explicit width/height, use those (resizable text box)
+            if (element.width !== undefined && element.height !== undefined) {
+                return {
+                    x: element.x,
+                    y: element.y,
+                    width: element.width,
+                    height: element.height
+                };
+            }
+
+            // Otherwise calculate bounds based on content
             const lines = (element.text || '').split('\n');
             let maxWidth = 20; // Minimum width for empty text
 
@@ -8818,7 +8917,7 @@ function moveElement(element, dx, dy) {
 }
 
 function resizeElement(element, x, y, handle) {
-    if (element.type === 'pen' || element.type === 'text') return; // Can't resize these
+    if (element.type === 'pen') return; // Can't resize pen
 
     const bounds = getElementBounds(element);
 
@@ -8899,16 +8998,19 @@ function createTextInput(x, y) {
     const finishText = () => {
         const text = input.value.trim();
         if (text) {
+            const fontSize = parseInt(fontSizeSelect.value);
             const textElement = {
                 id: nextElementId++,
                 type: 'text',
                 x: x,
                 y: y,
+                width: 200, // Default text box width
+                height: fontSize * 1.2, // Initial height based on font size
                 text: text,
                 strokeColor: strokeColorInput.value,
                 textColor: textColorInput.value,
                 fontFamily: selectedFont,
-                fontSize: parseInt(fontSizeSelect.value),
+                fontSize: fontSize,
                 bold: isBold,
                 italic: isItalic
             };

@@ -325,25 +325,35 @@
                 <i class="fas fa-eye-dropper"></i>
             </button>
             <div class="divider"></div>
-            <div class="color-picker-icon" title="Border/Stroke Color">
-                <input type="color" id="strokeColor" value="#556B2F">
-                <div class="color-icon-border" id="strokeIcon"></div>
-            </div>
-            <div class="color-picker-icon" title="Fill Color">
-                <input type="color" id="fillColor" value="#D8E4BC">
-                <div class="color-icon-fill" id="fillIcon"></div>
+            <div class="style-dropdown-container">
+                <button class="tool-btn" id="styleBtn" title="Style Options">
+                    <svg width="20" height="20" viewBox="0 0 20 20">
+                        <rect x="2" y="2" width="16" height="16" stroke="#556B2F" stroke-width="2" fill="#D8E4BC"/>
+                    </svg>
+                    <i class="fas fa-caret-down" style="font-size: 10px; margin-left: 2px;"></i>
+                </button>
+                <div class="style-dropdown" id="styleDropdown">
+                    <div class="style-row">
+                        <label class="style-label">Stroke:</label>
+                        <input type="color" id="strokeColor" value="#556B2F">
+                    </div>
+                    <div class="style-row">
+                        <label class="style-label">Fill:</label>
+                        <input type="color" id="fillColor" value="#D8E4BC">
+                        <label class="style-checkbox">
+                            <input type="checkbox" id="fillEnabled"> Enable
+                        </label>
+                    </div>
+                    <div class="style-row">
+                        <label class="style-checkbox">
+                            <input type="checkbox" id="shadowEnabled"> Shadow
+                        </label>
+                    </div>
+                </div>
             </div>
             <div class="color-picker-wrapper" title="Background Color">
                 <input type="color" id="bgColor" value="#FFFEF9">
                 <div class="color-label" id="bgLabel">Background</div>
-            </div>
-            <div class="checkbox-stack">
-                <label>
-                    <input type="checkbox" id="fillEnabled"> Fill
-                </label>
-                <label>
-                    <input type="checkbox" id="shadowEnabled"> Shadow
-                </label>
             </div>
             <div class="divider"></div>
             <div class="font-dropdown-container">

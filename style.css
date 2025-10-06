@@ -561,6 +561,69 @@ body {
 }
 
 /* Line options dropdown (combined style + routing) */
+/* Style dropdown */
+.style-dropdown-container {
+    position: relative;
+    display: inline-block;
+}
+
+.style-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 8px;
+    background: white;
+    border: 1px solid #d0d0d0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    padding: 12px;
+    min-width: 200px;
+}
+
+.style-dropdown.active {
+    display: block;
+}
+
+.style-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.style-row:last-child {
+    margin-bottom: 0;
+}
+
+.style-label {
+    font-size: 13px;
+    color: #333;
+    min-width: 50px;
+}
+
+.style-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    color: #333;
+    cursor: pointer;
+}
+
+.style-checkbox input[type="checkbox"] {
+    cursor: pointer;
+}
+
+.style-row input[type="color"] {
+    width: 60px;
+    height: 28px;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
 .line-options-dropdown-container {
     position: relative;
     display: inline-block;
