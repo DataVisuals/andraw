@@ -334,12 +334,18 @@
                 </button>
                 <div class="style-dropdown" id="styleDropdown">
                     <div class="style-row">
-                        <label class="style-label">Stroke:</label>
-                        <input type="color" id="strokeColor" value="#556B2F">
+                        <label class="style-label">Stroke</label>
+                        <div class="color-swatch-wrapper">
+                            <div class="color-swatch" id="strokeSwatch"></div>
+                            <input type="color" id="strokeColor" value="#556B2F">
+                        </div>
                     </div>
                     <div class="style-row">
-                        <label class="style-label">Fill:</label>
-                        <input type="color" id="fillColor" value="#D8E4BC">
+                        <label class="style-label">Fill</label>
+                        <div class="color-swatch-wrapper">
+                            <div class="color-swatch" id="fillSwatch"></div>
+                            <input type="color" id="fillColor" value="#D8E4BC">
+                        </div>
                         <label class="style-checkbox">
                             <input type="checkbox" id="fillEnabled"> Enable
                         </label>

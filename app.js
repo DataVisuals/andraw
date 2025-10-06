@@ -798,6 +798,16 @@ function updateColorIcons() {
             btnSvg.setAttribute('fill', fillEnabledInput.checked ? fillColorInput.value : 'none');
         }
     }
+
+    // Update color swatches in style dropdown
+    const strokeSwatch = document.getElementById('strokeSwatch');
+    const fillSwatch = document.getElementById('fillSwatch');
+    if (strokeSwatch && strokeColorInput) {
+        strokeSwatch.style.backgroundColor = strokeColorInput.value;
+    }
+    if (fillSwatch && fillColorInput) {
+        fillSwatch.style.backgroundColor = fillColorInput.value;
+    }
 }
 
 // Initialize color labels and icons (only for elements that exist)
@@ -1729,19 +1739,10 @@ if (styleBtn && styleDropdown) {
         if (logoDropdown) logoDropdown.classList.remove('active');
     });
 
-    // Update style button icon when colors change
-    function updateStyleButtonIcon() {
-        const btnSvg = styleBtn.querySelector('svg rect');
-        if (btnSvg) {
-            btnSvg.setAttribute('stroke', strokeColorInput.value);
-            btnSvg.setAttribute('fill', fillEnabledInput.checked ? fillColorInput.value : 'none');
-        }
-    }
-
-    // Listen to color changes
-    strokeColorInput.addEventListener('change', updateStyleButtonIcon);
-    fillColorInput.addEventListener('change', updateStyleButtonIcon);
-    fillEnabledInput.addEventListener('change', updateStyleButtonIcon);
+    // Listen to color changes to update button icon and swatches
+    strokeColorInput.addEventListener('change', updateColorIcons);
+    fillColorInput.addEventListener('change', updateColorIcons);
+    fillEnabledInput.addEventListener('change', updateColorIcons);
 }
 
 // Update line options button icon

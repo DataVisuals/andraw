@@ -589,8 +589,8 @@ body {
 .style-row {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 10px;
+    gap: 10px;
+    margin-bottom: 12px;
 }
 
 .style-row:last-child {
@@ -600,28 +600,59 @@ body {
 .style-label {
     font-size: 13px;
     color: #333;
-    min-width: 50px;
+    min-width: 45px;
+    font-weight: 500;
+}
+
+.color-swatch-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0;
+}
+
+.color-swatch {
+    width: 40px;
+    height: 32px;
+    border: 2px solid #d0d0d0;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    pointer-events: none;
+    position: relative;
+    z-index: 1;
+}
+
+.color-swatch-wrapper:hover .color-swatch {
+    border-color: #999;
+}
+
+.color-swatch-wrapper input[type="color"] {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 40px;
+    height: 32px;
+    border: none;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 2;
 }
 
 .style-checkbox {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     font-size: 13px;
     color: #333;
     cursor: pointer;
+    user-select: none;
 }
 
 .style-checkbox input[type="checkbox"] {
     cursor: pointer;
-}
-
-.style-row input[type="color"] {
-    width: 60px;
-    height: 28px;
-    border: 1px solid #d0d0d0;
-    border-radius: 4px;
-    cursor: pointer;
+    width: 16px;
+    height: 16px;
 }
 
 .line-options-dropdown-container {
