@@ -17,7 +17,7 @@
                 <img src="logo-transparent.png" alt="Andraw Logo" class="splash-logo" width="120" height="120">
             </div>
             <h1 class="splash-title">Andraw</h1>
-            <p class="splash-version">v1.0.0-f08df2c</p>
+            <p class="splash-version">v1.0.1-3e9b9bc</p>
         </div>
     </div>
 
@@ -142,182 +142,6 @@
             <div class="toolbar-group" data-group="style">
                 <div class="toolbar-group-label">Style</div>
                 <div class="toolbar-group-content">
-            <!-- Style Preset Selector -->
-            <div class="shape-dropdown-container">
-                <button class="tool-btn" id="presetBtn" title="Style Preset">
-                    <i class="fas fa-palette"></i>
-                    <i class="fas fa-caret-down" style="font-size: 10px; margin-left: 2px;"></i>
-                </button>
-                <div class="shape-dropdown preset-grid-dropdown" id="presetDropdown">
-                    <!-- Sage variants -->
-                    <button class="preset-grid-item" data-preset="sage" title="Sage">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="sage-shadow" title="Sage + Shadow">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="sage-dashed" title="Sage + Dashed">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="sage-shadow-dashed" title="Sage + Shadow + Dashed">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-
-                    <!-- Slate variants -->
-                    <button class="preset-grid-item" data-preset="slate" title="Slate">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="slate-shadow" title="Slate + Shadow">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="slate-dashed" title="Slate + Dashed">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="slate-shadow-dashed" title="Slate + Shadow + Dashed">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-
-                    <!-- Terracotta variants -->
-                    <button class="preset-grid-item" data-preset="terracotta" title="Terracotta">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="terracotta-shadow" title="Terracotta + Shadow">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="terracotta-dashed" title="Terracotta + Dashed">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="terracotta-shadow-dashed" title="Terracotta + Shadow + Dashed">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-
-                    <!-- Ocean variants -->
-                    <button class="preset-grid-item" data-preset="ocean" title="Ocean">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="ocean-shadow" title="Ocean + Shadow">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="ocean-dashed" title="Ocean + Dashed">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="ocean-shadow-dashed" title="Ocean + Shadow + Dashed">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-
-                    <!-- Plum variants -->
-                    <button class="preset-grid-item" data-preset="plum" title="Plum">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="plum-shadow" title="Plum + Shadow">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="plum-dashed" title="Plum + Dashed">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="plum-shadow-dashed" title="Plum + Shadow + Dashed">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-
-                    <!-- Charcoal variants -->
-                    <button class="preset-grid-item" data-preset="charcoal" title="Charcoal">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="charcoal-shadow" title="Charcoal + Shadow">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="charcoal-dashed" title="Charcoal + Dashed">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="charcoal-shadow-dashed" title="Charcoal + Shadow + Dashed">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-
-                    <!-- Forest variants -->
-                    <button class="preset-grid-item" data-preset="forest" title="Forest">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="forest-shadow" title="Forest + Shadow">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="forest-dashed" title="Forest + Dashed">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="forest-shadow-dashed" title="Forest + Shadow + Dashed">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-
-                    <!-- Burgundy variants -->
-                    <button class="preset-grid-item" data-preset="burgundy" title="Burgundy">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="burgundy-shadow" title="Burgundy + Shadow">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="burgundy-dashed" title="Burgundy + Dashed">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="burgundy-shadow-dashed" title="Burgundy + Shadow + Dashed">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-
-                    <!-- Navy variants -->
-                    <button class="preset-grid-item" data-preset="navy" title="Navy">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="navy-shadow" title="Navy + Shadow">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="navy-dashed" title="Navy + Dashed">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="navy-shadow-dashed" title="Navy + Shadow + Dashed">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-
-                    <!-- Copper variants -->
-                    <button class="preset-grid-item" data-preset="copper" title="Copper">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="copper-shadow" title="Copper + Shadow">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="copper-dashed" title="Copper + Dashed">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="copper-shadow-dashed" title="Copper + Shadow + Dashed">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-
-                    <!-- Moss variants -->
-                    <button class="preset-grid-item" data-preset="moss" title="Moss">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="moss-shadow" title="Moss + Shadow">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="moss-dashed" title="Moss + Dashed">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="moss-shadow-dashed" title="Moss + Shadow + Dashed">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-
-                    <!-- Cerulean variants -->
-                    <button class="preset-grid-item" data-preset="cerulean" title="Cerulean">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="cerulean-shadow" title="Cerulean + Shadow">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="cerulean-dashed" title="Cerulean + Dashed">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                    <button class="preset-grid-item" data-preset="cerulean-shadow-dashed" title="Cerulean + Shadow + Dashed">
-                        <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
-                    </button>
-                </div>
-            </div>
             <button class="action-btn" id="formatPainterBtn" title="Format Painter (Shift+P) - Double-click to apply to multiple">
                 <i class="fas fa-paint-brush"></i>
             </button>
@@ -351,9 +175,22 @@
                         </label>
                     </div>
                     <div class="style-row">
+                        <label class="style-label">Text</label>
+                        <div class="color-swatch-wrapper">
+                            <div class="color-swatch" id="textSwatch"></div>
+                            <input type="color" id="textColor" value="#556B2F">
+                        </div>
+                    </div>
+                    <div class="style-row">
+                        <label class="style-label">Shadow</label>
                         <label class="style-checkbox">
-                            <input type="checkbox" id="shadowEnabled"> Shadow
+                            <input type="checkbox" id="shadowEnabled"> Enable
                         </label>
+                    </div>
+                    <!-- Divider between manual controls and presets -->
+                    <div style="border-top: 1px solid #e0e0e0; margin: 8px 0;"></div>
+                    <!-- Preset thumbnails for quick selection -->
+                    <div class="toolbar-preset-grid" id="toolbarPresetGrid">
                     </div>
                 </div>
             </div>
@@ -426,10 +263,6 @@
                         <option value="48">48px</option>
                         <option value="64">64px</option>
                     </select>
-                    <div class="color-picker-icon" title="Text Color">
-                        <input type="color" id="textColor" value="#556B2F">
-                        <div class="color-icon-text" id="textColorIcon"></div>
-                    </div>
                     <button class="text-style-btn" id="boldBtn" title="Bold">
                         <i class="fas fa-bold"></i>
                     </button>
@@ -580,7 +413,7 @@
             </div>
             <div class="divider"></div>
             <div class="pattern-dropdown-container">
-                <button class="action-btn" id="patternBtn" title="Background Pattern">
+                <button class="action-btn" id="patternBtn" title="Background Pattern (G)">
                     <i class="fas fa-th"></i>
                     <i class="fas fa-caret-down" style="font-size: 10px; margin-left: 2px;"></i>
                 </button>
@@ -1516,13 +1349,50 @@
             <div class="settings-section">
                 <h3>Default Styles</h3>
                 <div class="settings-row">
-                    <label>Style Preset:</label>
-                    <div class="settings-preset-selector">
-                        <button class="settings-preset-btn" id="settingsPresetBtn">
-                            <span id="settingsPresetText">Sage</span>
+                    <label>Style Options:</label>
+                    <div class="settings-style-selector">
+                        <button class="settings-style-btn" id="settingsStyleBtn">
+                            <svg width="20" height="20" viewBox="0 0 20 20">
+                                <rect x="2" y="2" width="16" height="16" stroke="#556B2F" stroke-width="2" fill="#D8E4BC"/>
+                            </svg>
                             <i class="fas fa-caret-down" style="font-size: 10px; margin-left: 8px;"></i>
                         </button>
-                        <div class="settings-preset-dropdown" id="settingsPresetDropdown">
+                        <div class="settings-style-dropdown" id="settingsStyleDropdown">
+                            <!-- Individual style controls -->
+                            <div class="style-row">
+                                <label class="style-label">Stroke</label>
+                                <div class="color-swatch-wrapper">
+                                    <div class="color-swatch" id="settingsStrokeSwatch"></div>
+                                    <input type="color" id="settingsStrokeColor" value="#556B2F">
+                                </div>
+                            </div>
+                            <div class="style-row">
+                                <label class="style-label">Fill</label>
+                                <div class="color-swatch-wrapper">
+                                    <div class="color-swatch" id="settingsFillSwatch"></div>
+                                    <input type="color" id="settingsFillColor" value="#D8E4BC">
+                                </div>
+                                <label class="style-checkbox">
+                                    <input type="checkbox" id="settingsFillEnabled" checked> Enable
+                                </label>
+                            </div>
+                            <div class="style-row">
+                                <label class="style-label">Text</label>
+                                <div class="color-swatch-wrapper">
+                                    <div class="color-swatch" id="settingsTextSwatch"></div>
+                                    <input type="color" id="settingsTextColor" value="#556B2F">
+                                </div>
+                            </div>
+                            <div class="style-row">
+                                <label class="style-label">Shadow</label>
+                                <label class="style-checkbox">
+                                    <input type="checkbox" id="settingsShadowEnabled"> Enable
+                                </label>
+                            </div>
+                            <!-- Divider between manual controls and presets -->
+                            <div style="border-top: 1px solid #e0e0e0; margin: 8px 0;"></div>
+                            <!-- Preset thumbnails for quick selection -->
+                            <div class="settings-preset-grid" id="settingsPresetGrid">
                             <button class="preset-grid-item" data-preset="sage" title="Sage">
                                 <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
                             </button>
@@ -1667,6 +1537,7 @@
                             <button class="preset-grid-item" data-preset="cerulean-shadow-dashed" title="Cerulean + Shadow + Dashed">
                                 <svg class="preset-preview" width="32" height="32" viewBox="0 0 24 24"></svg>
                             </button>
+                            </div>
                         </div>
                     </div>
                 </div>

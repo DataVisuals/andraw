@@ -655,6 +655,14 @@ body {
     height: 16px;
 }
 
+.toolbar-preset-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
 .line-options-dropdown-container {
     position: relative;
     display: inline-block;
@@ -2057,7 +2065,7 @@ svg.preset-preview {
 }
 
 .modal-close-btn {
-    width: 100%;
+    flex: 1;
     padding: 12px;
     background: #f5f5f5;
     border: 1px solid #d0d0d0;
@@ -2072,6 +2080,7 @@ svg.preset-preview {
 .modal-close-btn:hover {
     background: #e8e8e8;
     border-color: #999;
+    transform: translateY(-1px);
 }
 
 /* Settings Modal */
@@ -2180,12 +2189,12 @@ svg.preset-preview {
 }
 
 /* Settings Preset Selector */
-.settings-preset-selector {
+.settings-style-selector {
     position: relative;
     flex: 1;
 }
 
-.settings-preset-btn {
+.settings-style-btn {
     width: 100%;
     padding: 8px 12px;
     border: 1px solid #d0d0d0;
@@ -2199,12 +2208,12 @@ svg.preset-preview {
     transition: all 0.15s;
 }
 
-.settings-preset-btn:hover {
+.settings-style-btn:hover {
     border-color: #2196f3;
     background: #f8f9fa;
 }
 
-.settings-preset-dropdown {
+.settings-style-dropdown {
     display: none;
     position: absolute;
     top: 100%;
@@ -2217,14 +2226,19 @@ svg.preset-preview {
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     z-index: 1000;
     padding: 8px;
-    max-height: 300px;
+    max-height: 400px;
     overflow-y: auto;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
 }
 
-.settings-preset-dropdown.active {
+.settings-style-dropdown.active {
+    display: block;
+}
+
+.settings-preset-grid {
     display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 8px;
 }
 
 /* Settings Font Selector */

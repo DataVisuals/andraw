@@ -1,6 +1,6 @@
 // Canvas setup
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
+let canvas = document.getElementById('canvas');
+let ctx = canvas.getContext('2d');
 
 // Resize canvas to fill window
 function resizeCanvas() {
@@ -216,15 +216,76 @@ function quickCreateShape(shapeType) {
     const style = lastUsedStyles[shapeType];
     if (!style) return;
 
-    // Get canvas center-left position in world coordinates (1/4 from left, vertically centered)
-    let centerX = (canvas.width / 4 - panOffsetX) / zoomLevel;
-    let centerY = (canvas.height / 2 - panOffsetY) / zoomLevel;
+    // Determine position based on whether we have a last created shape
+    let desiredX, desiredY;
+    const spacing = 20;
+
+    if (lastCreatedShape) {
+        // Use alignment logic similar to 'M' key duplication
+        // Determine direction only on first duplication, then keep consistent
+        if (!duplicationDirection) {
+            const elementCenterX = lastCreatedShape.x + Math.abs(lastCreatedShape.width || 0) / 2;
+            const isCentered = Math.abs(elementCenterX - canvas.width / 2) < canvas.width * 0.15; // Within 15% of center
+            const isNearTop = lastCreatedShape.y < canvas.height * 0.3; // In top 30%
+            duplicationDirection = (isCentered && isNearTop) ? 'vertical' : 'horizontal';
+        }
+
+        const shouldPlaceVertically = duplicationDirection === 'vertical';
+
+        if (shapeType === 'text') {
+            const tempHeight = style.fontSize * 1.2 || 20;
+            if (shouldPlaceVertically) {
+                desiredX = lastCreatedShape.x;
+                desiredY = lastCreatedShape.y + (lastCreatedShape.height || tempHeight) + spacing;
+            } else {
+                desiredX = lastCreatedShape.x + (lastCreatedShape.width || 200) + spacing;
+                desiredY = lastCreatedShape.y;
+            }
+        } else if (shapeType === 'line' || shapeType === 'arrow') {
+            const lineHeight = Math.abs(lastCreatedShape.height || 0);
+            const lineWidth = Math.abs(lastCreatedShape.width || 150);
+            if (shouldPlaceVertically) {
+                desiredX = lastCreatedShape.x;
+                desiredY = lastCreatedShape.y + lineHeight + spacing;
+            } else {
+                desiredX = lastCreatedShape.x + lineWidth + spacing;
+                desiredY = lastCreatedShape.y;
+            }
+        } else {
+            // Shapes with width/height
+            if (shouldPlaceVertically) {
+                desiredX = lastCreatedShape.x;
+                desiredY = lastCreatedShape.y + Math.abs(lastCreatedShape.height || 80) + spacing;
+            } else {
+                desiredX = lastCreatedShape.x + Math.abs(lastCreatedShape.width || 120) + spacing;
+                desiredY = lastCreatedShape.y;
+            }
+        }
+    } else {
+        // No last created shape - use canvas center-left position (1/4 from left, vertically centered)
+        let centerX = (canvas.width / 4 - panOffsetX) / zoomLevel;
+        let centerY = (canvas.height / 2 - panOffsetY) / zoomLevel;
+
+        if (shapeType === 'text') {
+            desiredX = centerX;
+            desiredY = centerY;
+        } else if (shapeType === 'line' || shapeType === 'arrow') {
+            const width = 150;
+            desiredX = centerX - width / 2;
+            desiredY = centerY;
+        } else {
+            const width = 120;
+            const height = 80;
+            desiredX = centerX - width / 2;
+            desiredY = centerY - height / 2;
+        }
+    }
 
     if (shapeType === 'text') {
-        // Create text element at center, avoiding overlap
+        // Create text element
         const tempWidth = 200; // Default text box width
         const tempHeight = style.fontSize * 1.2 || 20;
-        const pos = findNonOverlappingPosition(centerX, centerY, tempWidth, tempHeight);
+        const pos = findNonOverlappingPosition(desiredX, desiredY, tempWidth, tempHeight);
 
         const element = {
             id: nextElementId++,
@@ -241,19 +302,17 @@ function quickCreateShape(shapeType) {
             italic: style.italic
         };
         elements.push(element);
+        lastCreatedShape = element;
         saveHistory();
         redraw();
 
         // Don't select the text element - allows adding multiple elements without interruption
-        // User can select and edit later
         selectedElement = null;
         selectedElements = [];
     } else if (shapeType === 'line' || shapeType === 'arrow') {
-        // Create line/arrow from left to right across center, avoiding overlap
+        // Create line/arrow
         const width = 150;
         const height = 2; // Small height for overlap detection
-        const desiredX = centerX - width / 2;
-        const desiredY = centerY;
         const pos = findNonOverlappingPosition(desiredX, desiredY, width, height);
 
         const element = {
@@ -275,11 +334,9 @@ function quickCreateShape(shapeType) {
         saveHistory();
         redraw();
     } else {
-        // Create shape at center, avoiding overlap
+        // Create shape
         const width = 120;
         const height = 80;
-        const desiredX = centerX - width / 2;
-        const desiredY = centerY - height / 2;
         const pos = findNonOverlappingPosition(desiredX, desiredY, width, height);
 
         const element = {
@@ -329,8 +386,6 @@ const circleDropdown = document.getElementById('circleDropdown');
 // New unified shape and preset selectors
 const shapeBtn = document.getElementById('shapeBtn');
 const shapeDropdown = document.getElementById('shapeDropdown');
-const presetBtn = document.getElementById('presetBtn');
-const presetDropdown = document.getElementById('presetDropdown');
 let currentShapeType = 'rectangle'; // Track selected shape type
 let currentPreset = 'slate'; // Track selected preset
 
@@ -796,11 +851,15 @@ function updateColorIcons() {
     // Update color swatches in style dropdown
     const strokeSwatch = document.getElementById('strokeSwatch');
     const fillSwatch = document.getElementById('fillSwatch');
+    const textSwatch = document.getElementById('textSwatch');
     if (strokeSwatch && strokeColorInput) {
         strokeSwatch.style.backgroundColor = strokeColorInput.value;
     }
     if (fillSwatch && fillColorInput) {
         fillSwatch.style.backgroundColor = fillColorInput.value;
+    }
+    if (textSwatch && textColorInput) {
+        textSwatch.style.backgroundColor = textColorInput.value;
     }
 }
 
@@ -870,7 +929,6 @@ fontBtn.addEventListener('click', (e) => {
     if (rectangleDropdown) rectangleDropdown.classList.remove('active');
     if (circleDropdown) circleDropdown.classList.remove('active');
     if (shapeDropdown) shapeDropdown.classList.remove('active');
-    if (presetDropdown) presetDropdown.classList.remove('active');
 });
 
 // New shape selector dropdown
@@ -878,7 +936,6 @@ if (shapeBtn && shapeDropdown) {
     shapeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         shapeDropdown.classList.toggle('active');
-        if (presetDropdown) presetDropdown.classList.remove('active');
         if (rectangleDropdown) rectangleDropdown.classList.remove('active');
         if (circleDropdown) circleDropdown.classList.remove('active');
         fontDropdown.classList.remove('active');
@@ -955,11 +1012,6 @@ if (shapeBtn && shapeDropdown) {
                         fillColorInput.value = stylePresets[currentPreset].fill;
                         fillEnabledInput.checked = true;
                         updateColorIcons();
-                    }
-
-                    // Update preset previews to show the new shape
-                    if (presetDropdown) {
-                        updatePresetPreviews();
                     }
 
                     selectedElement = null;
@@ -1125,128 +1177,6 @@ function getShapeSVGPath(shapeType) {
     return shapes[shapeType] || shapes.rectangle;
 }
 
-// Function to update preset previews based on current shape
-function updatePresetPreviews() {
-    const shapeType = currentShapeType || 'rectangle';
-    const shapePath = getShapeSVGPath(shapeType);
-
-    presetDropdown.querySelectorAll('.preset-grid-item').forEach(item => {
-        const preset = item.dataset.preset;
-        const svg = item.querySelector('.preset-preview');
-
-        if (preset && svg) {
-            // Parse preset name
-            const parts = preset.split('-');
-            const basePreset = parts[0];
-            const hasShadow = parts.includes('shadow');
-            const hasDashed = parts.includes('dashed');
-
-            const colors = stylePresets[basePreset];
-            if (colors) {
-                const strokeDasharray = hasDashed ? '2,2' : '';
-                const filter = hasShadow ? 'drop-shadow(1px 1px 2px rgba(0,0,0,0.3))' : '';
-
-                svg.innerHTML = shapePath;
-                svg.style.filter = filter;
-
-                const shape = svg.querySelector('rect, circle, path');
-                if (shape) {
-                    shape.setAttribute('fill', colors.fill);
-                    shape.setAttribute('stroke', colors.stroke);
-                    shape.setAttribute('stroke-width', '2');
-                    if (strokeDasharray) {
-                        shape.setAttribute('stroke-dasharray', strokeDasharray);
-                    }
-                }
-            }
-        }
-    });
-}
-
-// New style preset dropdown
-if (presetBtn && presetDropdown) {
-    presetBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        presetDropdown.classList.toggle('active');
-
-        // Update previews when opening
-        if (presetDropdown.classList.contains('active')) {
-            updatePresetPreviews();
-        }
-
-        if (shapeDropdown) shapeDropdown.classList.remove('active');
-        if (rectangleDropdown) rectangleDropdown.classList.remove('active');
-        if (circleDropdown) circleDropdown.classList.remove('active');
-        fontDropdown.classList.remove('active');
-    });
-
-    // Handle preset selection
-    presetDropdown.querySelectorAll('.preset-grid-item').forEach(item => {
-        item.addEventListener('click', (e) => {
-            const preset = e.currentTarget.dataset.preset;
-            if (preset) {
-                // Parse preset name to extract base preset and modifiers
-                const parts = preset.split('-');
-                const basePreset = parts[0]; // e.g., 'sage', 'slate', etc.
-                const hasShadow = parts.includes('shadow');
-                const hasDashed = parts.includes('dashed');
-
-                currentPreset = basePreset;
-
-                // Apply preset colors
-                if (stylePresets[basePreset]) {
-                    strokeColorInput.value = stylePresets[basePreset].stroke;
-                    fillColorInput.value = stylePresets[basePreset].fill;
-                    fillEnabledInput.checked = true;
-
-                    // Apply shadow if specified
-                    if (shadowEnabledInput) {
-                        shadowEnabledInput.checked = hasShadow;
-                    }
-
-                    // Apply line style if specified
-                    if (hasDashed) {
-                        currentLineStyle = 'dashed';
-                    } else {
-                        currentLineStyle = 'solid';
-                    }
-
-                    // Update line combo button to match current settings
-                    document.querySelectorAll('.line-combo-btn').forEach(btn => {
-                        const matches = btn.dataset.style === currentLineStyle &&
-                                        btn.dataset.routing === currentLineRouting &&
-                                        parseInt(btn.dataset.thickness) === currentLineThickness;
-                        btn.classList.toggle('active', matches);
-                    });
-
-                    // Update line options button to reflect the new style
-                    updateLineOptionsButtonIcon(currentLineStyle, currentLineRouting, currentLineThickness);
-
-                    updateColorIcons();
-                }
-
-                // Apply to selected elements if any
-                const elementsToUpdate = selectedElements.length > 0 ? selectedElements : (selectedElement ? [selectedElement] : []);
-                if (elementsToUpdate.length > 0) {
-                    elementsToUpdate.forEach(el => {
-                        if (el.type !== 'text' && el.type !== 'line' && el.type !== 'arrow' && el.type !== 'pen') {
-                            el.strokeColor = stylePresets[basePreset].stroke;
-                            el.fillColor = stylePresets[basePreset].fill;
-                            el.fillEnabled = true;
-                            el.shadow = hasShadow;
-                            if (hasDashed) {
-                                el.lineStyle = 'dashed';
-                            }
-                        }
-                    });
-                    redraw();
-                }
-
-                presetDropdown.classList.remove('active');
-            }
-        });
-    });
-}
 
 // Font Awesome icon selector
 const iconBtn = document.getElementById('iconBtn');
@@ -1347,7 +1277,6 @@ if (iconBtn && iconDropdown) {
         }
 
         if (shapeDropdown) shapeDropdown.classList.remove('active');
-        if (presetDropdown) presetDropdown.classList.remove('active');
         if (rectangleDropdown) rectangleDropdown.classList.remove('active');
         if (circleDropdown) circleDropdown.classList.remove('active');
         fontDropdown.classList.remove('active');
@@ -1446,9 +1375,6 @@ document.addEventListener('click', (e) => {
     if (shapeBtn && shapeDropdown && !shapeBtn.contains(e.target) && !shapeDropdown.contains(e.target)) {
         shapeDropdown.classList.remove('active');
     }
-    if (presetBtn && presetDropdown && !presetBtn.contains(e.target) && !presetDropdown.contains(e.target)) {
-        presetDropdown.classList.remove('active');
-    }
     if (iconBtn && iconDropdown && !iconBtn.contains(e.target) && !iconDropdown.contains(e.target)) {
         iconDropdown.classList.remove('active');
     }
@@ -1525,8 +1451,7 @@ document.querySelectorAll('.shape-item').forEach(item => {
             if (rectangleDropdown) rectangleDropdown.classList.remove('active');
             if (circleDropdown) circleDropdown.classList.remove('active');
             if (shapeDropdown) shapeDropdown.classList.remove('active');
-            if (presetDropdown) presetDropdown.classList.remove('active');
-
+    
             redraw();
         }
     });
@@ -1705,7 +1630,6 @@ lineOptionsBtn.addEventListener('click', (e) => {
     if (rectangleDropdown) rectangleDropdown.classList.remove('active');
     if (circleDropdown) circleDropdown.classList.remove('active');
     if (shapeDropdown) shapeDropdown.classList.remove('active');
-    if (presetDropdown) presetDropdown.classList.remove('active');
     fontDropdown.classList.remove('active');
     const logoDropdown = document.getElementById('logoDropdown');
     if (logoDropdown) logoDropdown.classList.remove('active');
@@ -1726,7 +1650,6 @@ if (styleBtn && styleDropdown) {
         if (rectangleDropdown) rectangleDropdown.classList.remove('active');
         if (circleDropdown) circleDropdown.classList.remove('active');
         if (shapeDropdown) shapeDropdown.classList.remove('active');
-        if (presetDropdown) presetDropdown.classList.remove('active');
         fontDropdown.classList.remove('active');
         lineOptionsDropdown.classList.remove('active');
         const logoDropdown = document.getElementById('logoDropdown');
@@ -1737,6 +1660,113 @@ if (styleBtn && styleDropdown) {
     strokeColorInput.addEventListener('change', updateColorIcons);
     fillColorInput.addEventListener('change', updateColorIcons);
     fillEnabledInput.addEventListener('change', updateColorIcons);
+    textColorInput.addEventListener('change', updateColorIcons);
+
+    // Populate toolbar preset grid
+    const toolbarPresetGrid = document.getElementById('toolbarPresetGrid');
+    if (toolbarPresetGrid) {
+        // Generate preset buttons dynamically
+        const presetNames = Object.keys(stylePresets);
+        const variants = ['', '-shadow', '-dashed', '-shadow-dashed'];
+
+        presetNames.forEach(presetName => {
+            variants.forEach(variant => {
+                const presetId = presetName + variant;
+                const button = document.createElement('button');
+                button.className = 'preset-grid-item';
+                button.dataset.preset = presetId;
+
+                // Build title
+                const parts = presetId.split('-');
+                const title = parts.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' + ');
+                button.title = title;
+
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.classList.add('preset-preview');
+                svg.setAttribute('width', '32');
+                svg.setAttribute('height', '32');
+                svg.setAttribute('viewBox', '0 0 24 24');
+
+                button.appendChild(svg);
+                toolbarPresetGrid.appendChild(button);
+            });
+        });
+
+        // Update preset previews when opening
+        styleBtn.addEventListener('click', () => {
+            if (styleDropdown.classList.contains('active')) {
+                updateToolbarPresetPreviews();
+            }
+        });
+
+        // Handle preset clicks
+        toolbarPresetGrid.querySelectorAll('.preset-grid-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const preset = item.dataset.preset;
+                const presetParts = preset.split('-');
+                const basePreset = presetParts[0];
+                const hasShadow = presetParts.includes('shadow');
+
+                const presetColors = stylePresets[basePreset];
+                if (presetColors) {
+                    strokeColorInput.value = presetColors.stroke;
+                    fillColorInput.value = presetColors.fill;
+                    textColorInput.value = presetColors.stroke;
+                    fillEnabledInput.checked = true;
+                    shadowEnabledInput.checked = hasShadow;
+
+                    // Update swatches
+                    updateColorIcons();
+
+                    // Update button icon
+                    const btnSvg = styleBtn.querySelector('rect');
+                    if (btnSvg) {
+                        btnSvg.setAttribute('stroke', presetColors.stroke);
+                        btnSvg.setAttribute('fill', presetColors.fill);
+                    }
+                }
+            });
+        });
+    }
+}
+
+// Update toolbar preset previews
+function updateToolbarPresetPreviews() {
+    const toolbarPresetGrid = document.getElementById('toolbarPresetGrid');
+    if (!toolbarPresetGrid) return;
+
+    const shapePath = getShapeSVGPath('rectangle');
+
+    toolbarPresetGrid.querySelectorAll('.preset-grid-item').forEach(item => {
+        const preset = item.dataset.preset;
+        const svg = item.querySelector('.preset-preview');
+
+        if (preset && svg) {
+            const parts = preset.split('-');
+            const basePreset = parts[0];
+            const hasShadow = parts.includes('shadow');
+            const hasDashed = parts.includes('dashed');
+
+            const colors = stylePresets[basePreset];
+            if (colors) {
+                const strokeDasharray = hasDashed ? '2,2' : '';
+                const filter = hasShadow ? 'drop-shadow(1px 1px 2px rgba(0,0,0,0.3))' : '';
+
+                svg.innerHTML = shapePath;
+                svg.style.filter = filter;
+
+                const shape = svg.querySelector('rect, circle, path');
+                if (shape) {
+                    shape.setAttribute('fill', colors.fill);
+                    shape.setAttribute('stroke', colors.stroke);
+                    shape.setAttribute('stroke-width', '2');
+                    if (strokeDasharray) {
+                        shape.setAttribute('stroke-dasharray', strokeDasharray);
+                    }
+                }
+            }
+        }
+    });
 }
 
 // Update line options button icon
@@ -1820,7 +1850,6 @@ if (alignBtn && alignDropdown) {
         if (rectangleDropdown) rectangleDropdown.classList.remove('active');
         if (circleDropdown) circleDropdown.classList.remove('active');
         if (shapeDropdown) shapeDropdown.classList.remove('active');
-        if (presetDropdown) presetDropdown.classList.remove('active');
         fontDropdown.classList.remove('active');
         lineOptionsDropdown.classList.remove('active');
         const logoDropdown = document.getElementById('logoDropdown');
@@ -2146,7 +2175,6 @@ if (zoomBtn && zoomDropdown) {
         if (rectangleDropdown) rectangleDropdown.classList.remove('active');
         if (circleDropdown) circleDropdown.classList.remove('active');
         if (shapeDropdown) shapeDropdown.classList.remove('active');
-        if (presetDropdown) presetDropdown.classList.remove('active');
         fontDropdown.classList.remove('active');
         lineOptionsDropdown.classList.remove('active');
         const logoDropdown = document.getElementById('logoDropdown');
@@ -2265,7 +2293,6 @@ if (patternBtn && patternDropdown) {
         if (rectangleDropdown) rectangleDropdown.classList.remove('active');
         if (circleDropdown) circleDropdown.classList.remove('active');
         if (shapeDropdown) shapeDropdown.classList.remove('active');
-        if (presetDropdown) presetDropdown.classList.remove('active');
         fontDropdown.classList.remove('active');
         lineOptionsDropdown.classList.remove('active');
         const logoDropdown = document.getElementById('logoDropdown');
@@ -2307,7 +2334,6 @@ if (selectionBtn && selectionDropdown) {
         if (rectangleDropdown) rectangleDropdown.classList.remove('active');
         if (circleDropdown) circleDropdown.classList.remove('active');
         if (shapeDropdown) shapeDropdown.classList.remove('active');
-        if (presetDropdown) presetDropdown.classList.remove('active');
         fontDropdown.classList.remove('active');
         lineOptionsDropdown.classList.remove('active');
         const logoDropdown = document.getElementById('logoDropdown');
@@ -3597,14 +3623,14 @@ function handleDoubleClick(e) {
     const x = (e.clientX - rect.left - panOffsetX) / zoomLevel;
     const y = (e.clientY - rect.top - panOffsetY) / zoomLevel;
 
-    // Check if double-clicked on a text element first
+    // Check if double-clicked on a standalone text element first (not child text)
     for (let i = elements.length - 1; i >= 0; i--) {
         const element = elements[i];
-        if (element.type === 'text') {
+        if (element.type === 'text' && !element.parentId) {
             const bounds = getElementBounds(element);
             if (x >= bounds.x && x <= bounds.x + bounds.width &&
                 y >= bounds.y && y <= bounds.y + bounds.height) {
-                // Found text element - make it editable
+                // Found standalone text element - make it editable
                 editTextElement(element);
                 return;
             }
@@ -9553,6 +9579,32 @@ function copyFormat(element) {
         if (element.fontSize !== undefined) copiedFormat.fontSize = element.fontSize;
         if (element.bold !== undefined) copiedFormat.bold = element.bold;
         if (element.italic !== undefined) copiedFormat.italic = element.italic;
+    } else {
+        // If this is a shape with child text, copy the child text properties
+        // First try to find by parentId (for new diagrams)
+        let childText = elements.find(el => el.type === 'text' && el.parentId === element.id);
+
+        // Fallback: Find text that's positioned within the shape bounds (for old diagrams)
+        if (!childText) {
+            const bounds = getElementBounds(element);
+            childText = elements.find(el => {
+                if (el.type !== 'text' || el === element) return false;
+                const textBounds = getElementBounds(el);
+                // Check if text center is within shape bounds
+                const textCenterX = textBounds.x + textBounds.width / 2;
+                const textCenterY = textBounds.y + textBounds.height / 2;
+                return textCenterX >= bounds.x && textCenterX <= bounds.x + bounds.width &&
+                       textCenterY >= bounds.y && textCenterY <= bounds.y + bounds.height;
+            });
+        }
+
+        if (childText) {
+            if (childText.textColor !== undefined) copiedFormat.textColor = childText.textColor;
+            if (childText.fontFamily !== undefined) copiedFormat.fontFamily = childText.fontFamily;
+            if (childText.fontSize !== undefined) copiedFormat.fontSize = childText.fontSize;
+            if (childText.bold !== undefined) copiedFormat.bold = childText.bold;
+            if (childText.italic !== undefined) copiedFormat.italic = childText.italic;
+        }
     }
 
     // Copy icon color
@@ -9581,6 +9633,32 @@ function applyFormat(element) {
         if (copiedFormat.fontSize !== undefined) element.fontSize = copiedFormat.fontSize;
         if (copiedFormat.bold !== undefined) element.bold = copiedFormat.bold;
         if (copiedFormat.italic !== undefined) element.italic = copiedFormat.italic;
+    } else {
+        // If this is a shape with child text, apply text properties to the child
+        // First try to find by parentId (for new diagrams)
+        let childText = elements.find(el => el.type === 'text' && el.parentId === element.id);
+
+        // Fallback: Find text that's positioned within the shape bounds (for old diagrams)
+        if (!childText) {
+            const bounds = getElementBounds(element);
+            childText = elements.find(el => {
+                if (el.type !== 'text' || el === element) return false;
+                const textBounds = getElementBounds(el);
+                // Check if text center is within shape bounds
+                const textCenterX = textBounds.x + textBounds.width / 2;
+                const textCenterY = textBounds.y + textBounds.height / 2;
+                return textCenterX >= bounds.x && textCenterX <= bounds.x + bounds.width &&
+                       textCenterY >= bounds.y && textCenterY <= bounds.y + bounds.height;
+            });
+        }
+
+        if (childText) {
+            if (copiedFormat.textColor !== undefined) childText.textColor = copiedFormat.textColor;
+            if (copiedFormat.fontFamily !== undefined) childText.fontFamily = copiedFormat.fontFamily;
+            if (copiedFormat.fontSize !== undefined) childText.fontSize = copiedFormat.fontSize;
+            if (copiedFormat.bold !== undefined) childText.bold = copiedFormat.bold;
+            if (copiedFormat.italic !== undefined) childText.italic = copiedFormat.italic;
+        }
     }
 
     // Apply icon color
@@ -9733,53 +9811,152 @@ document.querySelectorAll('.export-format-btn').forEach(btn => {
 });
 
 function exportAsPowerPoint() {
-    // Create a new PowerPoint presentation
-    const pres = new PptxGenJS();
+    try {
+        console.log('exportAsPowerPoint called');
+        console.log('canvasMode:', canvasMode);
+        console.log('pages.length:', pages.length);
+        console.log('elements.length:', elements.length);
 
-    // Add a slide
-    const slide = pres.addSlide();
+        // Create a new PowerPoint presentation
+        const pres = new PptxGenJS();
 
-    // Get canvas as image data URL
-    const imageData = canvas.toDataURL('image/png');
+        // Helper function to get content bounds from elements
+        function getContentBounds(elementsList) {
+        if (elementsList.length === 0) {
+            return { minX: 0, minY: 0, maxX: 800, maxY: 600 };
+        }
 
-    // Calculate dimensions to fit slide (standard 10" x 7.5" slide)
-    // Convert canvas dimensions to inches (assuming 96 DPI)
-    const canvasWidthInches = canvas.width / 96;
-    const canvasHeightInches = canvas.height / 96;
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
 
-    // Scale to fit within slide (max 9.5" x 7" to leave margins)
-    const maxWidth = 9.5;
-    const maxHeight = 7;
-    let width = canvasWidthInches;
-    let height = canvasHeightInches;
+        elementsList.forEach(element => {
+            const bounds = getElementBounds(element);
+            minX = Math.min(minX, bounds.x);
+            minY = Math.min(minY, bounds.y);
+            maxX = Math.max(maxX, bounds.x + bounds.width);
+            maxY = Math.max(maxY, bounds.y + bounds.height);
+        });
 
-    if (width > maxWidth) {
-        const scale = maxWidth / width;
-        width = maxWidth;
-        height = height * scale;
+        return { minX, minY, maxX, maxY };
     }
 
-    if (height > maxHeight) {
-        const scale = maxHeight / height;
-        height = maxHeight;
-        width = width * scale;
+    // Helper function to create slide from elements
+    function createSlideFromElements(elementsList, slideNumber) {
+        // Calculate content bounds
+        const bounds = getContentBounds(elementsList);
+        const contentWidth = bounds.maxX - bounds.minX;
+        const contentHeight = bounds.maxY - bounds.minY;
+        const padding = 20; // pixels of padding around content
+
+        // Create temporary canvas for cropped content
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = contentWidth + padding * 2;
+        tempCanvas.height = contentHeight + padding * 2;
+        const tempCtx = tempCanvas.getContext('2d');
+
+        // Fill with white background
+        tempCtx.fillStyle = '#ffffff';
+        tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+
+        // Save current state
+        const oldPanX = panOffsetX;
+        const oldPanY = panOffsetY;
+        const oldZoom = zoomLevel;
+        const oldElements = elements;
+        const oldCanvas = canvas;
+        const oldCtx = ctx;
+
+        // Set up temp canvas context
+        canvas = tempCanvas;
+        ctx = tempCtx;
+        elements = elementsList;
+        zoomLevel = 1;
+        panOffsetX = 0;
+        panOffsetY = 0;
+
+        // Set up canvas transformation like redraw() does
+        ctx.save();
+        ctx.translate(-bounds.minX + padding, -bounds.minY + padding);
+        ctx.scale(1, 1);
+
+        // Draw all elements
+        console.log('Drawing', elementsList.length, 'elements to temp canvas');
+        elementsList.forEach(element => {
+            drawElement(element);
+        });
+
+        // Restore context
+        ctx.restore();
+
+        // Restore original state
+        canvas = oldCanvas;
+        ctx = oldCtx;
+        panOffsetX = oldPanX;
+        panOffsetY = oldPanY;
+        zoomLevel = oldZoom;
+        elements = oldElements;
+
+        // Get image data from temp canvas
+        const imageData = tempCanvas.toDataURL('image/png');
+
+        // Add slide
+        const slide = pres.addSlide();
+
+        // Calculate dimensions to fit slide (standard 10" x 7.5" slide)
+        // Convert canvas dimensions to inches (assuming 96 DPI)
+        const canvasWidthInches = tempCanvas.width / 96;
+        const canvasHeightInches = tempCanvas.height / 96;
+
+        // Scale to fit within slide (max 9.8" x 7.3" to leave minimal margins)
+        const maxWidth = 9.8;
+        const maxHeight = 7.3;
+        let width = canvasWidthInches;
+        let height = canvasHeightInches;
+
+        if (width > maxWidth || height > maxHeight) {
+            const scaleW = maxWidth / width;
+            const scaleH = maxHeight / height;
+            const scale = Math.min(scaleW, scaleH);
+            width = width * scale;
+            height = height * scale;
+        }
+
+        // Center the image on the slide
+        const x = (10 - width) / 2;
+        const y = (7.5 - height) / 2;
+
+        // Add image to slide
+        slide.addImage({
+            data: imageData,
+            x: x,
+            y: y,
+            w: width,
+            h: height
+        });
     }
 
-    // Center the image on the slide
-    const x = (10 - width) / 2;
-    const y = (7.5 - height) / 2;
-
-    // Add image to slide
-    slide.addImage({
-        data: imageData,
-        x: x,
-        y: y,
-        w: width,
-        h: height
-    });
+    // Check if we're in storybook mode with multiple pages
+    if (canvasMode === 'storybook' && pages.length > 1) {
+        // Export one slide per page
+        console.log('Exporting', pages.length, 'pages to PowerPoint');
+        pages.forEach((page, index) => {
+            console.log('Creating slide', index + 1, 'with', (page.elements || []).length, 'elements');
+            createSlideFromElements(page.elements || [], index + 1);
+        });
+    } else {
+        // Export current view as single slide
+        console.log('Exporting single slide with', elements.length, 'elements');
+        createSlideFromElements(elements, 1);
+    }
 
     // Save the presentation
+    console.log('Calling pres.writeFile');
     pres.writeFile({ fileName: 'drawing.pptx' });
+    console.log('PowerPoint export completed');
+
+    } catch (error) {
+        console.error('Error exporting to PowerPoint:', error);
+        alert('Failed to export to PowerPoint: ' + error.message);
+    }
 }
 
 // Saved Diagrams Management (localStorage)
@@ -9928,7 +10105,6 @@ document.getElementById('logoBtn').addEventListener('click', (e) => {
     if (rectangleDropdown) rectangleDropdown.classList.remove('active');
     if (circleDropdown) circleDropdown.classList.remove('active');
     if (shapeDropdown) shapeDropdown.classList.remove('active');
-    if (presetDropdown) presetDropdown.classList.remove('active');
     fontDropdown.classList.remove('active');
 });
 
@@ -10481,7 +10657,11 @@ function deletePage(index) {
 
 // Default settings
 const defaultSettings = {
-    stylePreset: 'sage',
+    strokeColor: '#556B2F',
+    fillColor: '#D8E4BC',
+    textColor: '#556B2F',
+    fillEnabled: true,
+    shadowEnabled: false,
     backgroundColor: '#FFFEF9',
     backgroundPattern: 'line-grid',
     showRulers: false,
@@ -10496,13 +10676,6 @@ function loadSettings() {
     if (saved) {
         try {
             const settings = JSON.parse(saved);
-
-            // Backward compatibility: convert old individual style settings to preset
-            if (!settings.stylePreset && (settings.strokeColor || settings.fillColor)) {
-                // Try to find a matching preset based on colors
-                settings.stylePreset = 'sage'; // Default fallback
-            }
-
             return { ...defaultSettings, ...settings };
         } catch (e) {
             console.error('Failed to load settings:', e);
@@ -10510,22 +10683,7 @@ function loadSettings() {
         }
     }
 
-    // Backward compatibility: check for individual settings
-    const backwardCompatSettings = {};
-
-    // Check for old backgroundColor setting
-    const oldBgColor = localStorage.getItem('andraw_backgroundColor');
-    if (oldBgColor) {
-        backwardCompatSettings.backgroundColor = oldBgColor;
-    }
-
-    // Check for old canvasMode setting
-    const oldCanvasMode = localStorage.getItem('andraw_canvasMode');
-    if (oldCanvasMode) {
-        backwardCompatSettings.canvasMode = oldCanvasMode;
-    }
-
-    return { ...defaultSettings, ...backwardCompatSettings };
+    return { ...defaultSettings };
 }
 
 // Save settings to localStorage
@@ -10539,68 +10697,15 @@ function saveSettings(settings) {
 
 // Apply settings to application
 function applySettings(settings) {
-    // Apply style preset
-    if (settings.stylePreset === 'custom') {
-        // Apply custom colors
-        if (settings.customStrokeColor) strokeColorInput.value = settings.customStrokeColor;
-        if (settings.customFillColor) fillColorInput.value = settings.customFillColor;
-        if (settings.customTextColor) textColorInput.value = settings.customTextColor;
-        if (settings.customShadow !== undefined) shadowEnabledInput.checked = settings.customShadow;
-        if (settings.customLineStyle) currentLineStyle = settings.customLineStyle;
-        if (settings.customLineThickness) currentLineThickness = settings.customLineThickness;
-        if (settings.customLineRouting) currentLineRouting = settings.customLineRouting;
+    // Apply style settings
+    if (settings.strokeColor) strokeColorInput.value = settings.strokeColor;
+    if (settings.fillColor) fillColorInput.value = settings.fillColor;
+    if (settings.textColor) textColorInput.value = settings.textColor;
+    if (settings.fillEnabled !== undefined) fillEnabledInput.checked = settings.fillEnabled;
+    if (settings.shadowEnabled !== undefined) shadowEnabledInput.checked = settings.shadowEnabled;
 
-        // Update line combo button to match current settings
-        document.querySelectorAll('.line-combo-btn').forEach(btn => {
-            const matches = btn.dataset.style === currentLineStyle &&
-                            btn.dataset.routing === currentLineRouting &&
-                            parseInt(btn.dataset.thickness) === currentLineThickness;
-            btn.classList.toggle('active', matches);
-        });
-
-        // Update line options button icon
-        updateLineOptionsButtonIcon(currentLineStyle, currentLineRouting, currentLineThickness);
-
-        currentPreset = 'custom';
-
-        // Update color icons to reflect the new colors
-        updateColorIcons();
-    } else if (settings.stylePreset) {
-        const presetParts = settings.stylePreset.split('-');
-        const basePreset = presetParts[0];
-        const hasShadow = presetParts.includes('shadow');
-        const hasDashed = presetParts.includes('dashed');
-
-        console.log('Applying preset:', settings.stylePreset, 'hasDashed:', hasDashed);
-
-        const preset = stylePresets[basePreset];
-        if (!preset) return; // Invalid preset
-
-        strokeColorInput.value = preset.stroke;
-        fillColorInput.value = preset.fill;
-        textColorInput.value = preset.stroke; // Match text color to stroke
-        fillEnabledInput.checked = true;
-        shadowEnabledInput.checked = hasShadow;
-        currentLineStyle = hasDashed ? 'dashed' : 'solid';
-
-        console.log('Set currentLineStyle to:', currentLineStyle);
-
-        // Update line combo button to match current settings
-        document.querySelectorAll('.line-combo-btn').forEach(btn => {
-            const matches = btn.dataset.style === currentLineStyle &&
-                            btn.dataset.routing === currentLineRouting &&
-                            parseInt(btn.dataset.thickness) === currentLineThickness;
-            btn.classList.toggle('active', matches);
-        });
-
-        // Update line options button icon
-        updateLineOptionsButtonIcon(currentLineStyle, currentLineRouting, currentLineThickness);
-
-        currentPreset = settings.stylePreset;
-
-        // Update color icons to reflect the new colors
-        updateColorIcons();
-    }
+    // Update color icons to reflect the new colors
+    updateColorIcons();
 
     // Apply view defaults
     backgroundColor = settings.backgroundColor;
@@ -10628,38 +10733,37 @@ function applySettings(settings) {
 function populateSettingsDialog() {
     const settings = loadSettings();
 
-    // Detect current preset based on toolbar colors
-    const currentStroke = strokeColorInput.value.toUpperCase();
-    const currentFill = fillColorInput.value.toUpperCase();
-    const hasShadow = shadowEnabledInput.checked;
-    const isDashed = currentLineStyle === 'dashed';
+    // Populate style controls with current values
+    const settingsStrokeColor = document.getElementById('settingsStrokeColor');
+    const settingsFillColor = document.getElementById('settingsFillColor');
+    const settingsTextColor = document.getElementById('settingsTextColor');
+    const settingsFillEnabled = document.getElementById('settingsFillEnabled');
+    const settingsShadowEnabled = document.getElementById('settingsShadowEnabled');
 
-    // Find matching preset
-    let matchedPreset = null;
-    for (const [presetKey, presetColors] of Object.entries(stylePresets)) {
-        if (presetColors.stroke.toUpperCase() === currentStroke &&
-            presetColors.fill.toUpperCase() === currentFill) {
-            // Build preset name with modifiers
-            matchedPreset = presetKey;
-            if (hasShadow && isDashed) {
-                matchedPreset += '-shadow-dashed';
-            } else if (hasShadow) {
-                matchedPreset += '-shadow';
-            } else if (isDashed) {
-                matchedPreset += '-dashed';
-            }
-            break;
-        }
+    if (settingsStrokeColor) {
+        settingsStrokeColor.value = strokeColorInput.value;
+        const swatch = document.getElementById('settingsStrokeSwatch');
+        if (swatch) swatch.style.backgroundColor = strokeColorInput.value;
     }
 
-    // Set preset text and value
-    if (matchedPreset) {
-        settingsCurrentPreset = matchedPreset;
-        const presetName = matchedPreset.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' + ');
-        document.getElementById('settingsPresetText').textContent = presetName;
-    } else {
-        settingsCurrentPreset = 'custom';
-        document.getElementById('settingsPresetText').textContent = 'Custom';
+    if (settingsFillColor) {
+        settingsFillColor.value = fillColorInput.value;
+        const swatch = document.getElementById('settingsFillSwatch');
+        if (swatch) swatch.style.backgroundColor = fillColorInput.value;
+    }
+
+    if (settingsTextColor) {
+        settingsTextColor.value = textColorInput.value;
+        const swatch = document.getElementById('settingsTextSwatch');
+        if (swatch) swatch.style.backgroundColor = textColorInput.value;
+    }
+
+    if (settingsFillEnabled) {
+        settingsFillEnabled.checked = fillEnabledInput.checked;
+    }
+
+    if (settingsShadowEnabled) {
+        settingsShadowEnabled.checked = shadowEnabledInput.checked;
     }
 
     // Set font text and value
@@ -10673,6 +10777,37 @@ function populateSettingsDialog() {
     document.getElementById('settingsCanvasMode').value = settings.canvasMode;
     document.getElementById('settingsFontSize').value = settings.fontSize;
 
+    // Add live color swatch updates
+    if (settingsStrokeColor) {
+        settingsStrokeColor.addEventListener('input', (e) => {
+            const swatch = document.getElementById('settingsStrokeSwatch');
+            if (swatch) swatch.style.backgroundColor = e.target.value;
+        });
+    }
+
+    if (settingsFillColor) {
+        settingsFillColor.addEventListener('input', (e) => {
+            const swatch = document.getElementById('settingsFillSwatch');
+            if (swatch) swatch.style.backgroundColor = e.target.value;
+        });
+    }
+
+    if (settingsTextColor) {
+        settingsTextColor.addEventListener('input', (e) => {
+            const swatch = document.getElementById('settingsTextSwatch');
+            if (swatch) swatch.style.backgroundColor = e.target.value;
+        });
+    }
+
+    // Update the button icon to reflect current colors
+    if (settingsStyleBtn) {
+        const btnSvg = settingsStyleBtn.querySelector('rect');
+        if (btnSvg) {
+            btnSvg.setAttribute('stroke', strokeColorInput.value);
+            btnSvg.setAttribute('fill', fillColorInput.value);
+        }
+    }
+
     // Update preset previews in settings dropdown
     updateSettingsPresetPreviews();
 }
@@ -10681,7 +10816,9 @@ function populateSettingsDialog() {
 function updateSettingsPresetPreviews() {
     const shapePath = getShapeSVGPath('rectangle'); // Always use rectangle for settings preview
 
-    settingsPresetDropdown.querySelectorAll('.preset-grid-item').forEach(item => {
+    if (!settingsStyleDropdown) return;
+
+    settingsStyleDropdown.querySelectorAll('.preset-grid-item').forEach(item => {
         const preset = item.dataset.preset;
         const svg = item.querySelector('.preset-preview');
 
@@ -10721,28 +10858,72 @@ const settingsSaveBtn = document.getElementById('settingsSave');
 const settingsResetBtn = document.getElementById('settingsReset');
 const settingsCloseBtn = document.getElementById('settingsClose');
 
-// Settings preset and font state
-let settingsCurrentPreset = 'sage';
+// Settings font state
 let settingsCurrentFont = 'Comic Sans MS, cursive';
 
-// Settings preset dropdown
-const settingsPresetBtn = document.getElementById('settingsPresetBtn');
-const settingsPresetDropdown = document.getElementById('settingsPresetDropdown');
+// Settings style dropdown
+const settingsStyleBtn = document.getElementById('settingsStyleBtn');
+const settingsStyleDropdown = document.getElementById('settingsStyleDropdown');
 
-settingsPresetBtn.addEventListener('click', () => {
-    settingsPresetDropdown.classList.toggle('active');
-    settingsFontDropdown.classList.remove('active');
-});
-
-settingsPresetDropdown.querySelectorAll('.preset-grid-item').forEach(item => {
-    item.addEventListener('click', () => {
-        const preset = item.dataset.preset;
-        settingsCurrentPreset = preset;
-        const presetName = preset.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' + ');
-        document.getElementById('settingsPresetText').textContent = presetName;
-        settingsPresetDropdown.classList.remove('active');
+if (settingsStyleBtn) {
+    settingsStyleBtn.addEventListener('click', () => {
+        settingsStyleDropdown.classList.toggle('active');
+        const settingsFontDropdown = document.getElementById('settingsFontDropdown');
+        if (settingsFontDropdown) settingsFontDropdown.classList.remove('active');
     });
-});
+}
+
+// Settings preset thumbnail clicks
+if (settingsStyleDropdown) {
+    settingsStyleDropdown.querySelectorAll('.preset-grid-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const preset = item.dataset.preset;
+
+            // Parse preset and update individual controls
+            const presetParts = preset.split('-');
+            const basePreset = presetParts[0];
+            const hasShadow = presetParts.includes('shadow');
+
+            const presetColors = stylePresets[basePreset];
+            if (presetColors) {
+                // Update color inputs and swatches
+                const settingsStrokeColor = document.getElementById('settingsStrokeColor');
+                const settingsFillColor = document.getElementById('settingsFillColor');
+                const settingsTextColor = document.getElementById('settingsTextColor');
+                const settingsShadowEnabled = document.getElementById('settingsShadowEnabled');
+
+                if (settingsStrokeColor) {
+                    settingsStrokeColor.value = presetColors.stroke;
+                    const swatch = document.getElementById('settingsStrokeSwatch');
+                    if (swatch) swatch.style.backgroundColor = presetColors.stroke;
+                }
+
+                if (settingsFillColor) {
+                    settingsFillColor.value = presetColors.fill;
+                    const swatch = document.getElementById('settingsFillSwatch');
+                    if (swatch) swatch.style.backgroundColor = presetColors.fill;
+                }
+
+                if (settingsTextColor) {
+                    settingsTextColor.value = presetColors.stroke;
+                    const swatch = document.getElementById('settingsTextSwatch');
+                    if (swatch) swatch.style.backgroundColor = presetColors.stroke;
+                }
+
+                if (settingsShadowEnabled) {
+                    settingsShadowEnabled.checked = hasShadow;
+                }
+
+                // Update the icon preview on the button
+                const btnSvg = settingsStyleBtn.querySelector('rect');
+                if (btnSvg) {
+                    btnSvg.setAttribute('stroke', presetColors.stroke);
+                    btnSvg.setAttribute('fill', presetColors.fill);
+                }
+            }
+        });
+    });
+}
 
 // Settings font dropdown
 const settingsFontBtn = document.getElementById('settingsFontBtn');
@@ -10790,10 +10971,12 @@ settingsModal.addEventListener('click', (e) => {
 // Close dropdowns when clicking outside (only when modal is active)
 document.addEventListener('click', (e) => {
     if (settingsModal.classList.contains('active')) {
-        if (!settingsPresetBtn.contains(e.target) && !settingsPresetDropdown.contains(e.target)) {
-            settingsPresetDropdown.classList.remove('active');
+        if (settingsStyleBtn && settingsStyleDropdown &&
+            !settingsStyleBtn.contains(e.target) && !settingsStyleDropdown.contains(e.target)) {
+            settingsStyleDropdown.classList.remove('active');
         }
-        if (!settingsFontBtn.contains(e.target) && !settingsFontDropdown.contains(e.target)) {
+        if (settingsFontBtn && settingsFontDropdown &&
+            !settingsFontBtn.contains(e.target) && !settingsFontDropdown.contains(e.target)) {
             settingsFontDropdown.classList.remove('active');
         }
     }
@@ -10802,7 +10985,11 @@ document.addEventListener('click', (e) => {
 // Save and apply settings
 settingsSaveBtn.addEventListener('click', () => {
     const settings = {
-        stylePreset: settingsCurrentPreset,
+        strokeColor: document.getElementById('settingsStrokeColor').value,
+        fillColor: document.getElementById('settingsFillColor').value,
+        textColor: document.getElementById('settingsTextColor').value,
+        fillEnabled: document.getElementById('settingsFillEnabled').checked,
+        shadowEnabled: document.getElementById('settingsShadowEnabled').checked,
         backgroundColor: document.getElementById('settingsBackgroundColor').value,
         backgroundPattern: document.getElementById('settingsBackgroundPattern').value,
         showRulers: document.getElementById('settingsShowRulers').checked,
@@ -10810,17 +10997,6 @@ settingsSaveBtn.addEventListener('click', () => {
         fontFamily: settingsCurrentFont,
         fontSize: parseInt(document.getElementById('settingsFontSize').value)
     };
-
-    // If custom preset, save the actual colors
-    if (settingsCurrentPreset === 'custom') {
-        settings.customStrokeColor = strokeColorInput.value;
-        settings.customFillColor = fillColorInput.value;
-        settings.customTextColor = textColorInput.value;
-        settings.customShadow = shadowEnabledInput.checked;
-        settings.customLineStyle = currentLineStyle;
-        settings.customLineThickness = currentLineThickness;
-        settings.customLineRouting = currentLineRouting;
-    }
 
     saveSettings(settings);
     applySettings(settings);
@@ -10844,11 +11020,6 @@ settingsResetBtn.addEventListener('click', () => {
 
 // Initialize canvas
 resizeCanvas();
-
-// Initialize preset previews
-if (presetDropdown) {
-    updatePresetPreviews();
-}
 
 // Splash screen handling - show for 0.75 seconds
 (function() {
