@@ -244,8 +244,9 @@ function quickCreateShape(shapeType) {
         saveHistory();
         redraw();
 
-        // Select the text element so user can double-click to edit
-        selectedElement = element;
+        // Don't select the text element - allows adding multiple elements without interruption
+        // User can select and edit later
+        selectedElement = null;
         selectedElements = [];
     } else if (shapeType === 'line' || shapeType === 'arrow') {
         // Create line/arrow from left to right across center, avoiding overlap
@@ -299,15 +300,8 @@ function quickCreateShape(shapeType) {
         lastCreatedShape = element;
         saveHistory();
 
-        // Auto-create text input for container shapes
-        const containerShapes = ['rectangle', 'circle', 'diamond', 'parallelogram', 'roundRect'];
-        if (containerShapes.includes(shapeType)) {
-            const actualCenterX = pos.x + width / 2;
-            const actualCenterY = pos.y + height / 2;
-            setTimeout(() => {
-                createTextInputForShape(actualCenterX, actualCenterY, element);
-            }, 10);
-        }
+        // Don't auto-create text input for quick create - allows adding multiple shapes
+        // User can double-click shape later to add text
 
         redraw();
     }
