@@ -211,13 +211,13 @@ function findNonOverlappingPosition(desiredX, desiredY, width, height) {
     };
 }
 
-// Quick create shape at canvas center with last used style
+// Quick create shape at canvas center-left with last used style
 function quickCreateShape(shapeType) {
     const style = lastUsedStyles[shapeType];
     if (!style) return;
 
-    // Get canvas center in world coordinates
-    let centerX = (canvas.width / 2 - panOffsetX) / zoomLevel;
+    // Get canvas center-left position in world coordinates (1/4 from left, vertically centered)
+    let centerX = (canvas.width / 4 - panOffsetX) / zoomLevel;
     let centerY = (canvas.height / 2 - panOffsetY) / zoomLevel;
 
     if (shapeType === 'text') {
