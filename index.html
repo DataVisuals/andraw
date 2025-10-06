@@ -17,7 +17,7 @@
                 <img src="logo-transparent.png" alt="Andraw Logo" class="splash-logo" width="120" height="120">
             </div>
             <h1 class="splash-title">Andraw</h1>
-            <p class="splash-version">v1.0.1-3e9b9bc</p>
+            <p class="splash-version">v1.0.2-7615161</p>
         </div>
     </div>
 
@@ -277,6 +277,22 @@
                             <i class="fas fa-caret-down" style="font-size: 10px; margin-left: 2px;"></i>
                         </button>
                         <div class="line-options-dropdown" id="lineOptionsDropdown">
+                            <div class="line-options-header">Connector Type</div>
+                            <div class="line-options-row">
+                                <button class="line-type-btn" data-line-type="line" title="Line (no arrowhead)">
+                                    <svg width="48" height="20" viewBox="0 0 48 20">
+                                        <line x1="4" y1="10" x2="44" y2="10" stroke="#666" stroke-width="2"/>
+                                    </svg>
+                                    <span>Line</span>
+                                </button>
+                                <button class="line-type-btn" data-line-type="arrow" title="Arrow (with arrowhead)">
+                                    <svg width="48" height="20" viewBox="0 0 48 20">
+                                        <line x1="4" y1="10" x2="38" y2="10" stroke="#666" stroke-width="2"/>
+                                        <polygon points="44,10 38,7 38,13" fill="#666"/>
+                                    </svg>
+                                    <span>Arrow</span>
+                                </button>
+                            </div>
                             <div class="line-options-header">Straight Lines</div>
                             <div class="line-options-row">
                                 <button class="line-combo-btn" data-style="solid" data-routing="straight" data-thickness="1" title="Straight · Solid · 1px">

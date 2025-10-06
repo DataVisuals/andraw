@@ -1531,6 +1531,20 @@ fillEnabledInput.addEventListener('change', (e) => {
     }
 });
 
+// Shadow enabled toggle - update selected element
+shadowEnabledInput.addEventListener('change', (e) => {
+    const elementsToUpdate = selectedElements.length > 0 ? selectedElements : (selectedElement ? [selectedElement] : []);
+    if (elementsToUpdate.length > 0) {
+        elementsToUpdate.forEach(el => {
+            if (el.type !== 'text' && el.type !== 'line' && el.type !== 'arrow' && el.type !== 'pen') {
+                el.shadow = e.target.checked;
+            }
+        });
+        saveHistory();
+        redraw();
+    }
+});
+
 // Text color change - update selected text elements
 textColorInput.addEventListener('input', (e) => {
     updateColorIcons();
@@ -1724,6 +1738,20 @@ if (styleBtn && styleDropdown) {
                         btnSvg.setAttribute('stroke', presetColors.stroke);
                         btnSvg.setAttribute('fill', presetColors.fill);
                     }
+
+                    // Apply to selected elements
+                    const elementsToUpdate = selectedElements.length > 0 ? selectedElements : (selectedElement ? [selectedElement] : []);
+                    if (elementsToUpdate.length > 0) {
+                        elementsToUpdate.forEach(el => {
+                            if (el.type !== 'text' && el.type !== 'line' && el.type !== 'arrow' && el.type !== 'pen') {
+                                el.strokeColor = presetColors.stroke;
+                                el.fillColor = presetColors.fill;
+                                el.shadow = hasShadow;
+                            }
+                        });
+                        saveHistory();
+                        redraw();
+                    }
                 }
             });
         });
@@ -1834,6 +1862,41 @@ document.querySelectorAll('.line-combo-btn').forEach(btn => {
 
         // Close dropdown
         lineOptionsDropdown.classList.remove('active');
+    });
+});
+
+// Line type conversion (line <-> arrow)
+document.querySelectorAll('.line-type-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const lineType = btn.dataset.lineType;
+
+        // Update button states
+        document.querySelectorAll('.line-type-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        // Update current tool for future drawing
+        if (currentTool === 'line' || currentTool === 'arrow') {
+            currentTool = lineType;
+        }
+
+        // Convert selected lines/arrows
+        const elementsToUpdate = selectedElements.length > 0 ? selectedElements : (selectedElement ? [selectedElement] : []);
+        if (elementsToUpdate.length > 0) {
+            let convertedCount = 0;
+            elementsToUpdate.forEach(el => {
+                if (el.type === 'line' || el.type === 'arrow') {
+                    el.type = lineType;
+                    convertedCount++;
+                }
+            });
+
+            if (convertedCount > 0) {
+                saveHistory();
+                redraw();
+            }
+        }
+
+        // Don't close dropdown - let user continue selecting options
     });
 });
 
@@ -10931,7 +10994,7 @@ const settingsFontDropdown = document.getElementById('settingsFontDropdown');
 
 settingsFontBtn.addEventListener('click', () => {
     settingsFontDropdown.classList.toggle('active');
-    settingsPresetDropdown.classList.remove('active');
+    settingsStyleDropdown.classList.remove('active');
 });
 
 settingsFontDropdown.querySelectorAll('.font-item').forEach(item => {
