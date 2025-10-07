@@ -1365,11 +1365,19 @@ document.querySelectorAll('.shape-item').forEach(item => {
                 selectedElements.forEach(el => {
                     el.strokeColor = stylePresets[preset].stroke;
                     el.fillColor = stylePresets[preset].fill;
+                    // Also update icon color
+                    if (el.type === 'icon') {
+                        el.color = stylePresets[preset].stroke;
+                    }
                 });
                 saveHistory();
             } else if (selectedElement) {
                 selectedElement.strokeColor = stylePresets[preset].stroke;
                 selectedElement.fillColor = stylePresets[preset].fill;
+                // Also update icon color
+                if (selectedElement.type === 'icon') {
+                    selectedElement.color = stylePresets[preset].stroke;
+                }
                 saveHistory();
             } else {
                 // No selection - set the tool for drawing new shapes
