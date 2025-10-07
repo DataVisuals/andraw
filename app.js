@@ -26,6 +26,7 @@ let dragMode = null; // 'move' or 'resize'
 let resizeHandle = null;
 let lastCreatedShape = null; // Track last created shape for 'M' key duplication
 let duplicationDirection = null; // Track direction for consistent duplication chain ('vertical' or 'horizontal')
+let userHasMovedShapes = false; // Track if user has manually moved shapes (disables auto-layout)
 let thingCounter = 1; // Auto-incrementing counter for "Thing N"
 let isConnectMode = false; // For connecting selected elements
 let nextElementId = 1; // Unique ID for elements
@@ -419,119 +420,7 @@ const stylePresets = {
 };
 
 // Diagram templates
-const diagramTemplates = {
-    orgChart: {
-        name: 'Organization Chart',
-        description: 'Hierarchical org chart structure',
-        elements: [
-            // CEO (centered)
-            { type: 'rectangle', x: -70, y: 0, width: 140, height: 60, text: 'CEO' },
-            // VPs (evenly spaced, centered under CEO)
-            { type: 'rectangle', x: -330, y: 100, width: 140, height: 60, text: 'VP Engineering' },
-            { type: 'rectangle', x: -70, y: 100, width: 140, height: 60, text: 'VP Marketing' },
-            { type: 'rectangle', x: 190, y: 100, width: 140, height: 60, text: 'VP Sales' },
-            // Team members under VP Engineering (centered under their VP)
-            { type: 'rectangle', x: -410, y: 200, width: 120, height: 50, text: 'Dev Team Lead' },
-            { type: 'rectangle', x: -270, y: 200, width: 120, height: 50, text: 'QA Lead' },
-            // Team members under VP Marketing (centered under their VP)
-            { type: 'rectangle', x: -130, y: 200, width: 120, height: 50, text: 'Content Lead' },
-            { type: 'rectangle', x: 10, y: 200, width: 120, height: 50, text: 'Social Media' },
-            // Team members under VP Sales (centered under their VP)
-            { type: 'rectangle', x: 150, y: 200, width: 120, height: 50, text: 'Sales Rep 1' },
-            { type: 'rectangle', x: 290, y: 200, width: 120, height: 50, text: 'Sales Rep 2' }
-        ],
-        connections: [
-            // CEO to VPs
-            { from: 0, to: 1 },
-            { from: 0, to: 2 },
-            { from: 0, to: 3 },
-            // VP Engineering to team
-            { from: 1, to: 4 },
-            { from: 1, to: 5 },
-            // VP Marketing to team
-            { from: 2, to: 6 },
-            { from: 2, to: 7 },
-            // VP Sales to team
-            { from: 3, to: 8 },
-            { from: 3, to: 9 }
-        ]
-    },
-    networkDiagram: {
-        name: 'Network Diagram',
-        description: 'Basic network topology',
-        elements: [
-            // Internet
-            { type: 'cloud', x: 0, y: 0, width: 120, height: 80, text: 'Internet' },
-            // Firewall
-            { type: 'rectangle', x: 0, y: 120, width: 100, height: 70, text: 'Firewall' },
-            // Router
-            { type: 'parallelogram', x: 0, y: 230, width: 100, height: 60, text: 'Router' },
-            // Switches
-            { type: 'rectangle', x: -150, y: 340, width: 100, height: 60, text: 'Switch 1' },
-            { type: 'rectangle', x: 150, y: 340, width: 100, height: 60, text: 'Switch 2' },
-            // Servers
-            { type: 'cylinder', x: -220, y: 450, width: 70, height: 90, text: 'DB Server' },
-            { type: 'cylinder', x: -80, y: 450, width: 70, height: 90, text: 'Web Server' },
-            // Workstations
-            { type: 'rectangle', x: 80, y: 460, width: 80, height: 60, text: 'PC 1' },
-            { type: 'rectangle', x: 220, y: 460, width: 80, height: 60, text: 'PC 2' }
-        ],
-        connections: [
-            { from: 0, to: 1, label: 'HTTPS' },
-            { from: 1, to: 2, label: 'Filtered' },
-            { from: 2, to: 3, label: 'VLAN 10' },
-            { from: 2, to: 4, label: 'VLAN 20' },
-            { from: 3, to: 5, label: 'SQL' },
-            { from: 3, to: 6, label: 'HTTP' },
-            { from: 4, to: 7, label: 'RDP' },
-            { from: 4, to: 8, label: 'RDP' }
-        ]
-    },
-    mindMap: {
-        name: 'Mind Map',
-        description: 'Radial mind map layout',
-        elements: [
-            // Central idea
-            { type: 'circle', x: 0, y: 0, width: 140, height: 140, text: 'Main Idea' },
-            // Primary branches (4 directions)
-            { type: 'roundRect', x: -300, y: -20, width: 120, height: 60, text: 'Topic 1' },
-            { type: 'roundRect', x: 180, y: -20, width: 120, height: 60, text: 'Topic 2' },
-            { type: 'roundRect', x: -300, y: 200, width: 120, height: 60, text: 'Topic 3' },
-            { type: 'roundRect', x: 180, y: 200, width: 120, height: 60, text: 'Topic 4' },
-            // Secondary branches for Topic 1
-            { type: 'roundRect', x: -450, y: -90, width: 100, height: 50, text: 'Sub 1A' },
-            { type: 'roundRect', x: -450, y: 40, width: 100, height: 50, text: 'Sub 1B' },
-            // Secondary branches for Topic 2
-            { type: 'roundRect', x: 330, y: -90, width: 100, height: 50, text: 'Sub 2A' },
-            { type: 'roundRect', x: 330, y: 40, width: 100, height: 50, text: 'Sub 2B' },
-            // Secondary branches for Topic 3
-            { type: 'roundRect', x: -450, y: 170, width: 100, height: 50, text: 'Sub 3A' },
-            { type: 'roundRect', x: -450, y: 250, width: 100, height: 50, text: 'Sub 3B' },
-            // Secondary branches for Topic 4
-            { type: 'roundRect', x: 330, y: 170, width: 100, height: 50, text: 'Sub 4A' },
-            { type: 'roundRect', x: 330, y: 250, width: 100, height: 50, text: 'Sub 4B' }
-        ],
-        connections: [
-            // Central to primary
-            { from: 0, to: 1 },
-            { from: 0, to: 2 },
-            { from: 0, to: 3 },
-            { from: 0, to: 4 },
-            // Topic 1 to subs
-            { from: 1, to: 5 },
-            { from: 1, to: 6 },
-            // Topic 2 to subs
-            { from: 2, to: 7 },
-            { from: 2, to: 8 },
-            // Topic 3 to subs
-            { from: 3, to: 9 },
-            { from: 3, to: 10 },
-            // Topic 4 to subs
-            { from: 4, to: 11 },
-            { from: 4, to: 12 }
-        ]
-    }
-};
+const diagramTemplates = {};
 
 // Background color state
 let backgroundColor = '#FFFEF9';
@@ -640,43 +529,6 @@ function ensureElementIds() {
 
 // Template definitions
 const templates = {
-    // Flowchart
-    process: { type: 'rectangle', width: 120, height: 60 },
-    decision: { type: 'diamond', width: 100, height: 100 },
-    data: { type: 'parallelogram', width: 120, height: 60 },
-    terminator: { type: 'roundRect', width: 120, height: 50 },
-    document: { type: 'document', width: 120, height: 100 },
-    'predefined-process': { type: 'predefinedProcess', width: 120, height: 60 },
-    'manual-input': { type: 'manualInput', width: 120, height: 60 },
-    delay: { type: 'delay', width: 100, height: 80 },
-    merge: { type: 'triangle', width: 100, height: 100 },
-    display: { type: 'display', width: 120, height: 80 },
-    'manual-operation': { type: 'manualOperation', width: 120, height: 60 },
-    // UML
-    class: { type: 'umlClass', width: 140, height: 120 },
-    actor: { type: 'stickFigure', width: 60, height: 80 },
-    package: { type: 'umlPackage', width: 140, height: 100 },
-    // Cloud/AWS
-    server: { type: 'server', width: 100, height: 120 },
-    database: { type: 'database', width: 100, height: 80 },
-    cloud: { type: 'cloud', width: 140, height: 80 },
-    lambda: { type: 'lambda', width: 100, height: 80 },
-    storage: { type: 'storage', width: 100, height: 80 },
-    queue: { type: 'queue', width: 120, height: 60 },
-    // Shapes
-    hexagon: { type: 'hexagon', width: 100, height: 100 },
-    pentagon: { type: 'pentagon', width: 100, height: 100 },
-    octagon: { type: 'octagon', width: 100, height: 100 },
-    triangle: { type: 'triangle', width: 100, height: 100 },
-    trapezoid: { type: 'trapezoid', width: 120, height: 80 },
-    star: { type: 'star', width: 100, height: 100 },
-    cross: { type: 'cross', width: 80, height: 80 },
-    'arrow-right': { type: 'arrowRight', width: 120, height: 60 },
-    'arrow-left': { type: 'arrowLeft', width: 120, height: 60 },
-    'speech-bubble': { type: 'speechBubble', width: 120, height: 90 },
-    heart: { type: 'heart', width: 100, height: 100 },
-    note: { type: 'note', width: 120, height: 100 },
-    cylinder: { type: 'cylinder', width: 100, height: 80 },
     // Kubernetes
     'k8s-pod': { type: 'k8sPod', width: 80, height: 80 },
     'k8s-service': { type: 'k8sService', width: 100, height: 80 },
@@ -764,21 +616,7 @@ const templates = {
     folder: { type: 'folder', width: 100, height: 80 },
     file: { type: 'file', width: 70, height: 90 },
     envelope: { type: 'envelope', width: 100, height: 70 },
-    calendar: { type: 'calendar', width: 90, height: 90 },
-    // Devices
-    desktop: { type: 'desktop', width: 100, height: 80 },
-    laptop: { type: 'laptop', width: 100, height: 70 },
-    mobile: { type: 'mobile', width: 50, height: 90 },
-    tablet: { type: 'tablet', width: 70, height: 90 },
-    // Symbols
-    gear: { type: 'gear', width: 80, height: 80 },
-    lock: { type: 'lock', width: 70, height: 90 },
-    shield: { type: 'shield', width: 80, height: 90 },
-    key: { type: 'key', width: 90, height: 50 },
-    bell: { type: 'bell', width: 70, height: 80 },
-    check: { type: 'check', width: 80, height: 80 },
-    warning: { type: 'warning', width: 80, height: 80 },
-    clock: { type: 'clock', width: 80, height: 80 }
+    calendar: { type: 'calendar', width: 90, height: 90 }
 };
 
 // Tool selection
@@ -1617,6 +1455,10 @@ strokeColorInput.addEventListener('input', (e) => {
     if (elementsToUpdate.length > 0) {
         elementsToUpdate.forEach(el => {
             el.strokeColor = e.target.value;
+            // Also update icon color
+            if (el.type === 'icon') {
+                el.color = e.target.value;
+            }
         });
         saveHistory();
         redraw();
@@ -2659,8 +2501,10 @@ document.querySelectorAll('.template-btn').forEach(btn => {
             lastCreatedShape = element; // Track for 'M' key duplication
             duplicationDirection = null; // Reset direction for new shape
 
-            // Layout all shapes with the same colors
-            layoutShapesWithColors(currentStroke, currentFill);
+            // Only auto-layout if user hasn't manually moved shapes yet
+            if (!userHasMovedShapes) {
+                layoutShapesWithColors(currentStroke, currentFill);
+            }
 
             saveHistory();
             redraw();
@@ -4203,6 +4047,10 @@ function handleMouseDown(e) {
                 if (selectedElement.strokeColor) {
                     strokeColorInput.value = selectedElement.strokeColor;
                 }
+                // For icons, use the color property for stroke color picker
+                if (selectedElement.type === 'icon' && selectedElement.color) {
+                    strokeColorInput.value = selectedElement.color;
+                }
                 if (selectedElement.fillColor) {
                     fillColorInput.value = selectedElement.fillColor;
                     fillEnabledInput.checked = true;
@@ -4606,6 +4454,10 @@ function handleMouseUp(e) {
 
     // Save history after move/resize/bend operations
     if (dragMode === 'move' || dragMode === 'resize' || dragMode === 'bend') {
+        // Track that user has manually moved shapes (disables auto-layout)
+        if (dragMode === 'move') {
+            userHasMovedShapes = true;
+        }
         saveHistory();
     }
 
@@ -10041,6 +9893,7 @@ document.getElementById('clearBtn').addEventListener('click', () => {
         backgroundColor = '#FFFEF9';
         bgColorInput.value = '#FFFEF9';
         thingCounter = 1; // Reset the "Thing N" counter
+        userHasMovedShapes = false; // Reset movement tracking for auto-layout
         pages = [{ elements: [], backgroundColor: '#FFFEF9' }]; // Reset to single empty page
         currentPageIndex = 0;
         updatePageCounter();
@@ -10342,6 +10195,7 @@ function loadDiagram(name) {
 
         selectedElement = null;
         selectedElements = [];
+        userHasMovedShapes = false; // Reset movement tracking for auto-layout
         updatePageCounter();
         redraw();
 
@@ -10498,6 +10352,7 @@ document.getElementById('fileInput').addEventListener('change', (e) => {
 
                 selectedElement = null;
                 selectedElements = [];
+                userHasMovedShapes = false; // Reset movement tracking for auto-layout
                 updatePageCounter();
                 redraw();
             } catch (err) {
