@@ -78,8 +78,7 @@ let currentOpacity = 1.0; // Default opacity (1.0 = 100%)
 let recentColors = [];
 const MAX_RECENT_COLORS = 8;
 
-// Grid and snapping
-let snapToGrid = false;
+// Grid
 const gridSize = 20;
 let showSizeDistance = false; // Show dimensions when resizing and distance when moving
 let darkMode = false; // Dark mode for UI
@@ -2634,20 +2633,15 @@ document.addEventListener('keydown', (e) => {
         return;
     }
 
-    // 'g' key toggles pattern, Shift+G toggles snap
-    if (key === 'g' && !e.ctrlKey && !e.metaKey) {
-        if (e.shiftKey) {
-            // Shift+G toggles snap
-            document.getElementById('snapToggleBtn').click();
+    // 'g' key toggles pattern
+    if (key === 'g' && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+        // G toggles between blank and last selected pattern
+        if (currentBackgroundPattern === 'blank') {
+            currentBackgroundPattern = lastNonBlankPattern;
         } else {
-            // G toggles between blank and last selected pattern
-            if (currentBackgroundPattern === 'blank') {
-                currentBackgroundPattern = lastNonBlankPattern;
-            } else {
-                currentBackgroundPattern = 'blank';
-            }
-            redraw();
+            currentBackgroundPattern = 'blank';
         }
+        redraw();
         e.preventDefault();
         return;
     }
@@ -3053,12 +3047,6 @@ function pasteSelection() {
     let offsetX = lastMouseX - centroidX;
     let offsetY = lastMouseY - centroidY;
 
-    // Apply grid snapping to the paste location if enabled
-    if (snapToGrid) {
-        offsetX = snapToGridValue(centroidX + offsetX) - centroidX;
-        offsetY = snapToGridValue(centroidY + offsetY) - centroidY;
-    }
-
     const idMap = new Map(); // Maps old IDs to new IDs for parent references
     const pastedElements = [];
 
@@ -3114,7 +3102,7 @@ function duplicateSelection() {
     // Combine selected elements and their child text
     const allElementsToDuplicate = [...elementsToDuplicate, ...childTextElements];
 
-    const duplicateOffset = snapToGrid ? gridSize : 20;
+    const duplicateOffset = 20;
     const idMap = new Map();
     const duplicatedElements = [];
 
@@ -4155,18 +4143,14 @@ function handleMouseMove(e) {
             selectionRect.height = currentY - selectionRect.y;
             redraw();
         } else if (dragMode === 'move') {
-            // Apply grid snapping to current position if snap is enabled
-            let snappedCurrentX = snapToGrid ? snapToGridValue(currentX) : currentX;
-            let snappedCurrentY = snapToGrid ? snapToGridValue(currentY) : currentY;
-
-            let dx = snappedCurrentX - startX;
-            let dy = snappedCurrentY - startY;
+            let dx = currentX - startX;
+            let dy = currentY - startY;
 
             // Get dragging elements
             const draggingElements = selectedElements.length > 0 ? selectedElements : (selectedElement ? [selectedElement] : []);
 
-            // Apply smart guide snapping if not using grid snap
-            if (!snapToGrid && draggingElements.length > 0) {
+            // Apply smart guide snapping
+            if (draggingElements.length > 0) {
                 const snapped = applySmartGuideSnapping(draggingElements, dx, dy);
                 dx = snapped.dx;
                 dy = snapped.dy;
@@ -4395,20 +4379,15 @@ function handleMouseUp(e) {
     }
 
     if (currentTool !== 'select' && currentTool !== 'pen' && currentTool !== 'text') {
-        // Apply grid snapping to element position and size
-        const snappedStartX = snapToGridValue(startX);
-        const snappedStartY = snapToGridValue(startY);
-        const snappedEndX = snapToGridValue(endX);
-        const snappedEndY = snapToGridValue(endY);
-        const width = snappedEndX - snappedStartX;
-        const height = snappedEndY - snappedStartY;
+        const width = endX - startX;
+        const height = endY - startY;
 
         if (Math.abs(width) > 5 || Math.abs(height) > 5) {
             const element = {
                 id: nextElementId++,
                 type: currentTool,
-                x: snappedStartX,
-                y: snappedStartY,
+                x: startX,
+                y: startY,
                 width: width,
                 height: height,
                 strokeColor: strokeColorInput.value,
@@ -8102,12 +8081,6 @@ function drawGrid() {
     drawLineGrid();
 }
 
-// Snap to grid helper
-function snapToGridValue(value) {
-    if (!snapToGrid) return value;
-    return Math.round(value / gridSize) * gridSize;
-}
-
 function drawRulers() {
     // Save current transformation state
     ctx.save();
@@ -9877,22 +9850,6 @@ document.getElementById('layoutVerticalBtn').addEventListener('click', () => {
     layoutVertical();
 });
 
-// Snap to grid toggle
-document.getElementById('snapToggleBtn').addEventListener('click', () => {
-    snapToGrid = !snapToGrid;
-    const btn = document.getElementById('snapToggleBtn');
-    if (snapToGrid) {
-        btn.classList.add('active');
-        // Auto-enable pattern when snap is enabled
-        if (currentBackgroundPattern === 'blank') {
-            currentBackgroundPattern = lastNonBlankPattern;
-        }
-    } else {
-        btn.classList.remove('active');
-    }
-    redraw();
-});
-
 // Export/Import
 document.getElementById('clearBtn').addEventListener('click', () => {
     if (confirm('Clear canvas?')) {
@@ -10451,7 +10408,7 @@ function populateChangelog() {
             'Zoom indicator display (bottom-right corner)',
             'Multi-line text editing with wrapping (Shift+Enter for line breaks)',
             'Paste now pastes at cursor location instead of fixed offset',
-            'Grid toggle (G) and snap to grid (Shift+G)',
+            'Grid toggle (G)',
             'Copy/paste/duplicate (Cmd+C/V/D) with parent-child preservation',
             'Alignment tools (left/center/right/top/middle/bottom)',
             'Distribution tools (horizontal/vertical)',
