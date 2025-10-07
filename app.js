@@ -4212,8 +4212,8 @@ function handleMouseMove(e) {
                 moveElement(selectedElement, dx, dy);
             }
 
-            startX = snappedCurrentX + (dx - (snappedCurrentX - startX));
-            startY = snappedCurrentY + (dy - (snappedCurrentY - startY));
+            startX = currentX;
+            startY = currentY;
             redraw();
         } else if (dragMode === 'resize' && selectedElement) {
             resizeElement(selectedElement, currentX, currentY, resizeHandle);
