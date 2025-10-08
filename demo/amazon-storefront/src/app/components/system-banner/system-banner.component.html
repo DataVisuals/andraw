@@ -1,0 +1,16 @@
+<div *ngIf="(status$ | async) as status" class="system-banner-container">
+  <div *ngIf="!status.online" class="system-banner alert-danger" role="alert">
+    <div class="banner-content">
+      <div class="banner-icon">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+      </div>
+      <div class="banner-message">
+        <strong>System Unavailable</strong>
+        <span>{{ status.message || 'Unable to connect to the server. Please try again later.' }}</span>
+      </div>
+      <button class="btn btn-sm btn-light retry-btn" (click)="retry()">
+        <i class="bi bi-arrow-clockwise"></i> Retry
+      </button>
+    </div>
+  </div>
+</div>

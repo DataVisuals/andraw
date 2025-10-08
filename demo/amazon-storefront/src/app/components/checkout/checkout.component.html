@@ -1,0 +1,300 @@
+<div class="container-fluid">
+  <!-- Header -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+    <div class="container-fluid">
+      <a class="navbar-brand" routerLink="/">
+        <img src="/logo.svg" alt="StoreFront" height="60">
+      </a>
+      <div class="d-flex align-items-center">
+        <span class="text-light">
+          <i class="bi bi-lock-fill"></i> Secure Checkout
+        </span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Order Confirmation -->
+  <div *ngIf="orderPlaced" class="row justify-content-center">
+    <div class="col-lg-6">
+      <div class="card text-center">
+        <div class="card-body py-5">
+          <i class="bi bi-check-circle-fill text-success" style="font-size: 5rem;"></i>
+          <h2 class="mt-4 mb-3">Order Placed Successfully!</h2>
+          <p class="text-muted mb-4">Thank you for your purchase. Your order has been confirmed.</p>
+          <div class="alert alert-info">
+            <strong>Order ID:</strong> #{{ orderId }}
+          </div>
+          <p class="mb-4">You will receive an email confirmation shortly with your order details and tracking information.</p>
+          <button class="btn btn-primary btn-lg" (click)="continueShopping()">
+            <i class="bi bi-arrow-left"></i> Continue Shopping
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Checkout Steps -->
+  <div *ngIf="!orderPlaced" class="row">
+    <!-- Progress Stepper -->
+    <div class="col-12 mb-4">
+      <div class="card">
+        <div class="card-body">
+          <div class="row text-center">
+            <div class="col-4">
+              <div [class.text-primary]="currentStep === 1" [class.text-success]="currentStep > 1">
+                <i class="bi bi-truck fs-1" [class.bi-check-circle-fill]="currentStep > 1"></i>
+                <p class="mb-0 mt-2"><strong>Shipping</strong></p>
+              </div>
+            </div>
+            <div class="col-4">
+              <div [class.text-primary]="currentStep === 2" [class.text-success]="currentStep > 2" [class.text-muted]="currentStep < 2">
+                <i class="bi bi-credit-card fs-1" [class.bi-check-circle-fill]="currentStep > 2"></i>
+                <p class="mb-0 mt-2"><strong>Payment</strong></p>
+              </div>
+            </div>
+            <div class="col-4">
+              <div [class.text-primary]="currentStep === 3" [class.text-muted]="currentStep < 3">
+                <i class="bi bi-clipboard-check fs-1"></i>
+                <p class="mb-0 mt-2"><strong>Review</strong></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="col-lg-8">
+      <!-- Step 1: Shipping Address -->
+      <div *ngIf="currentStep === 1" class="card mb-4">
+        <div class="card-header">
+          <h4 class="mb-0">Shipping Address</h4>
+        </div>
+        <div class="card-body">
+          <form>
+            <div class="mb-3">
+              <label class="form-label">Full Name *</label>
+              <input type="text" class="form-control" [(ngModel)]="shippingAddress.fullName" name="fullName" required>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Address Line 1 *</label>
+              <input type="text" class="form-control" [(ngModel)]="shippingAddress.addressLine1" name="addressLine1" placeholder="Street address, P.O. box" required>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Address Line 2</label>
+              <input type="text" class="form-control" [(ngModel)]="shippingAddress.addressLine2" name="addressLine2" placeholder="Apartment, suite, unit, building, floor, etc.">
+            </div>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">City *</label>
+                <input type="text" class="form-control" [(ngModel)]="shippingAddress.city" name="city" required>
+              </div>
+
+              <div class="col-md-3 mb-3">
+                <label class="form-label">State *</label>
+                <select class="form-select" [(ngModel)]="shippingAddress.state" name="state" required>
+                  <option value="">Select</option>
+                  <option *ngFor="let state of states" [value]="state">{{ state }}</option>
+                </select>
+              </div>
+
+              <div class="col-md-3 mb-3">
+                <label class="form-label">ZIP Code *</label>
+                <input type="text" class="form-control" [(ngModel)]="shippingAddress.zipCode" name="zipCode" placeholder="12345" required>
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-between">
+              <a routerLink="/cart" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Cart
+              </a>
+              <button type="button" class="btn btn-primary" (click)="nextStep()">
+                Continue to Payment <i class="bi bi-arrow-right"></i>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Step 2: Payment Information -->
+      <div *ngIf="currentStep === 2" class="card mb-4">
+        <div class="card-header">
+          <h4 class="mb-0">Payment Information</h4>
+        </div>
+        <div class="card-body">
+          <div class="alert alert-info">
+            <i class="bi bi-shield-check"></i> Your payment information is encrypted and secure.
+          </div>
+
+          <form>
+            <div class="mb-3">
+              <label class="form-label">Card Number *</label>
+              <input
+                type="text"
+                class="form-control"
+                [(ngModel)]="creditCard.cardNumber"
+                (blur)="formatCardNumber()"
+                name="cardNumber"
+                placeholder="1234 5678 9012 3456"
+                maxlength="19"
+                required>
+              <small class="text-muted">We accept Visa, Mastercard, American Express, and Discover</small>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Cardholder Name *</label>
+              <input type="text" class="form-control" [(ngModel)]="creditCard.cardHolderName" name="cardHolderName" placeholder="Name as it appears on card" required>
+            </div>
+
+            <div class="row">
+              <div class="col-md-4 mb-3">
+                <label class="form-label">Expiration Month *</label>
+                <select class="form-select" [(ngModel)]="creditCard.expirationMonth" name="expirationMonth" required>
+                  <option value="">Month</option>
+                  <option *ngFor="let month of months" [value]="month">{{ month }}</option>
+                </select>
+              </div>
+
+              <div class="col-md-4 mb-3">
+                <label class="form-label">Expiration Year *</label>
+                <select class="form-select" [(ngModel)]="creditCard.expirationYear" name="expirationYear" required>
+                  <option value="">Year</option>
+                  <option *ngFor="let year of years" [value]="year">{{ year }}</option>
+                </select>
+              </div>
+
+              <div class="col-md-4 mb-3">
+                <label class="form-label">CVV *</label>
+                <input type="text" class="form-control" [(ngModel)]="creditCard.cvv" name="cvv" placeholder="123" maxlength="4" required>
+                <small class="text-muted">3-4 digits on back</small>
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-between">
+              <button type="button" class="btn btn-outline-secondary" (click)="previousStep()">
+                <i class="bi bi-arrow-left"></i> Back
+              </button>
+              <button type="button" class="btn btn-primary" (click)="nextStep()">
+                Review Order <i class="bi bi-arrow-right"></i>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Step 3: Review Order -->
+      <div *ngIf="currentStep === 3">
+        <!-- Shipping Address Review -->
+        <div class="card mb-3">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Shipping Address</h5>
+            <button class="btn btn-sm btn-outline-primary" (click)="currentStep = 1">Edit</button>
+          </div>
+          <div class="card-body">
+            <p class="mb-1"><strong>{{ shippingAddress.fullName }}</strong></p>
+            <p class="mb-1">{{ shippingAddress.addressLine1 }}</p>
+            <p class="mb-1" *ngIf="shippingAddress.addressLine2">{{ shippingAddress.addressLine2 }}</p>
+            <p class="mb-0">{{ shippingAddress.city }}, {{ shippingAddress.state }} {{ shippingAddress.zipCode }}</p>
+          </div>
+        </div>
+
+        <!-- Payment Method Review -->
+        <div class="card mb-3">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Payment Method</h5>
+            <button class="btn btn-sm btn-outline-primary" (click)="currentStep = 2">Edit</button>
+          </div>
+          <div class="card-body">
+            <p class="mb-1"><i class="bi bi-credit-card"></i> **** **** **** {{ creditCard.cardNumber.slice(-4) }}</p>
+            <p class="mb-0">Expires: {{ creditCard.expirationMonth }}/{{ creditCard.expirationYear }}</p>
+          </div>
+        </div>
+
+        <!-- Order Items Review -->
+        <div class="card mb-3">
+          <div class="card-header">
+            <h5 class="mb-0">Order Items</h5>
+          </div>
+          <div class="card-body">
+            <div class="row mb-3" *ngFor="let item of cartItems">
+              <div class="col-2">
+                <img [src]="item.product.image_url" [alt]="item.product.name" class="img-fluid rounded">
+              </div>
+              <div class="col-6">
+                <h6>{{ item.product.name }}</h6>
+                <p class="text-muted small mb-0">Quantity: {{ item.quantity }}</p>
+              </div>
+              <div class="col-4 text-end">
+                <strong>${{ (item.product.price * item.quantity).toFixed(2) }}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Place Order Button -->
+        <div class="d-flex justify-content-between mb-4">
+          <button type="button" class="btn btn-outline-secondary" (click)="previousStep()">
+            <i class="bi bi-arrow-left"></i> Back
+          </button>
+          <button
+            type="button"
+            class="btn btn-success btn-lg"
+            (click)="placeOrder()"
+            [disabled]="processingOrder">
+            <span *ngIf="!processingOrder">
+              <i class="bi bi-check-circle"></i> Place Order
+            </span>
+            <span *ngIf="processingOrder">
+              <span class="spinner-border spinner-border-sm me-2"></span>
+              Processing...
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Order Summary Sidebar -->
+    <div class="col-lg-4">
+      <div class="card sticky-top" style="top: 20px;">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0">Order Summary</h5>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <small class="text-muted">Items ({{ cartService.getItemCount() }}):</small>
+            <div *ngFor="let item of cartItems" class="d-flex justify-content-between mb-1">
+              <small>{{ item.product.name }} ({{ item.quantity }}x)</small>
+              <small>${{ (item.product.price * item.quantity).toFixed(2) }}</small>
+            </div>
+          </div>
+
+          <hr>
+
+          <div class="d-flex justify-content-between mb-2">
+            <span>Subtotal:</span>
+            <strong>${{ getSubtotal().toFixed(2) }}</strong>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span>Tax (8%):</span>
+            <strong>${{ getTax().toFixed(2) }}</strong>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span>Shipping:</span>
+            <strong class="text-success">FREE</strong>
+          </div>
+          <hr>
+          <div class="d-flex justify-content-between">
+            <h5>Total:</h5>
+            <h5 class="text-primary">${{ getTotal().toFixed(2) }}</h5>
+          </div>
+        </div>
+        <div class="card-footer text-center text-muted small">
+          <i class="bi bi-shield-check"></i> 100% Secure Checkout
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
