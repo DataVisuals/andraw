@@ -1,118 +1,270 @@
-# Andraw
+<div align="center">
+  <img src="logo-transparent.png" alt="Andraw Logo" width="120" height="120">
 
-A local drawing app with hand-drawn aesthetic and comprehensive AWS architecture templates.
+  # ✨ Andraw
 
-## Features
+  **A beautiful, local drawing app with hand-drawn aesthetic**
 
-- **Drawing Tools**: Rectangle, Circle, Line, Arrow, Pen, Text
-- **Hand-drawn Style**: Rough, sketchy aesthetic like Excalidraw
-- **Auto Text**: Drawing shapes automatically prompts for centered text with auto-incrementing labels ("Thing 1", "Thing 2", etc.)
-- **Selection & Manipulation**: Select, move, and resize elements
-- **Connect Mode**: Press 'C' to enter connect mode - drag a rectangle to select multiple elements and automatically connect them with arrows (left-to-right or top-to-bottom based on layout)
-- **Customization**: Stroke color, fill color, fill toggle, background color, font selector (14 fonts), line styles (solid, dashed, dotted), and line routing (straight, stepped). Selected elements can be recolored in real-time.
-- **Templates**: Collapsible categories with visual previews
-  - **Flowchart**: Process, Decision, Data, Terminator, Document
-  - **UML**: Class, Actor, Package
-  - **Cloud**: Server, Database, Cloud, Lambda, Storage, Queue
-  - **AWS**: 44 AWS services organized in 9 subcategories (Compute, Storage, Database, Networking, Security, Dev Tools, Integration, Analytics & ML, Management)
-  - **Shapes**: Hexagon, Triangle, Star, Note, Cylinder
-  - **Network**: Router, Firewall, Switch
-- **Export/Import**: Save as PNG, JPG, or SVG images, or save/load as JSON
-- **Keyboard Shortcuts**:
-  - `V` - Selection tool
-  - `R` - Rectangle (opens dropdown)
-  - `C` - Connect mode (drag to select elements and auto-connect with arrows)
-  - `L` - Line
-  - `A` - Arrow
-  - `P` - Pen
-  - `T` - Text
-  - `H` - Hand/Pan tool
-  - `Delete/Backspace` - Delete selected element(s)
+  Create stunning diagrams with comprehensive AWS architecture templates
 
-## Usage
+  ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white)
+  ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat&logo=javascript&logoColor=black)
+  ![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=flat&logo=css3&logoColor=white)
+  ![Canvas](https://img.shields.io/badge/Canvas_API-FF6F00?style=flat&logo=html5&logoColor=white)
 
-1. Open `index.html` in a web browser (or run a local server: `python3 -m http.server 8000`)
-2. Select a tool from the toolbar or use keyboard shortcuts
-3. Draw on the canvas or click a template from the left panel
-4. Use the selection tool (V) to move or resize elements
-5. Export your work as PNG, JPG, or SVG, or save as JSON for later editing
+</div>
 
-## Controls
+---
 
-- **Draw**: Click and drag to create shapes
-- **Templates**: Click any template button to add it to the center of the canvas. Click category headers to collapse/expand sections
-- **Text**: Click to place text, type, and press Enter. Shapes auto-prompt with "Thing 1", "Thing 2", etc.
-- **Move**: Select an element and drag it
-- **Resize**: Select an element and drag the corner handles
-- **Delete**: Select an element and press Delete/Backspace
-- **Connect**: Press `C`, then drag a rectangle around multiple elements to auto-connect them with arrows
+## 📸 Preview
 
-## Development History
+<div align="center">
+  <p><i>🎨 Create beautiful hand-drawn diagrams with AWS architecture templates</i></p>
+  <p><i>💡 Tip: Try opening index.html to see Andraw in action!</i></p>
+</div>
 
-This project was developed iteratively with Claude Code. Here's the progression of prompts that shaped Andraw:
+---
 
-### Initial Foundation
-- Started as an Excalidraw-inspired drawing app with basic shapes and hand-drawn aesthetic
-- Built template system with collapsible categories
-- Added arrow snapping to shape edges
-- Implemented live color editing for selected elements
-- Added multiple export formats (PNG, JPG, SVG)
+## 📋 Table of Contents
 
-### AWS Architecture Templates
-1. **"Can we position the text for the AWS icons underneath rather than in the middle and also fix the ambiguity in the panel sections 2 use AWS"**
-   - Modified text positioning for AWS templates to appear below icons
-   - Renamed "Cloud/AWS" section to "Cloud" to avoid confusion
+- [✨ Features](#-features)
+- [🚀 Quick Start](#-quick-start)
+- [🎮 How to Use](#-how-to-use)
+- [📖 What's New](#-whats-new)
+- [🏗️ Development Journey](#️-development-journey)
+- [🛠️ Technical Stack](#️-technical-stack)
+- [📜 License](#-license)
 
-2. **Using official AWS Architecture Icons**
-   - Switched from CDN to official AWS Architecture Icons from aws.amazon.com
-   - Downloaded icon package and hosted locally
-   - Created aws-icons/ directory with SVG files
+---
 
-3. **"Add all of these under subpanels by type"**
-   - Expanded from 15 to 44 AWS services
-   - Organized across 9 categories: Compute, Storage, Database, Networking, Security, Dev Tools, Integration, Analytics & ML, Management
-   - Added drawing functions for each new service
+## ✨ Features
 
-4. **"No all the AWS icons should appear as sub sub sections not siblings of other non AWS sections"**
-   - Restructured HTML to create nested hierarchy
-   - Created parent "AWS" category with 9 subcategories underneath
-   - Added CSS for subcategory styling with proper indentation
-   - Implemented JavaScript event handlers for subcategory toggling
+### 🎨 Drawing Tools
+- **7 Shape Types**: Rectangle, Circle, Diamond, Parallelogram, Rounded Rectangle, Triangle, plus custom shapes
+- **Drawing Tools**: Line, Arrow, Pen (freehand), Text
+- **Hand-drawn Style**: Rough, sketchy aesthetic inspired by Excalidraw
+- **Auto Text Labels**: Automatically prompts for text with smart incrementing ("Thing 1", "Thing 2"...)
 
-### Branding & Publishing
-5. **"Change the name of the project to Andraw and commit to github"**
-   - Rebranded from "Excalidraw Clone" to "Andraw"
-   - Updated title, README, and documentation
-   - Created GitHub repository: DataVisuals/andraw
-   - Pushed all commits to remote
+### 🎯 Selection & Manipulation
+- **Smart Selection**: Click to select, drag to move, corner handles to resize
+- **Multi-Select**: Drag to select multiple elements at once
+- **Connect Mode** (`C`): Drag a rectangle to auto-connect elements with arrows
+- **Arrow Key Positioning**: Fine-tune with 1px or 10px (with Shift) precision
+- **Copy/Paste/Duplicate**: Full support with parent-child relationship preservation
 
-### Advanced Features
-6. **"Can we add support for stepped connector lines"**
-   - Added line routing selector (Straight/Stepped)
-   - Implemented orthogonal routing with 3-segment paths
-   - Created drawSteppedLine() and drawSteppedArrow() functions
-   - Updated both canvas rendering and SVG export
-   - Arrowheads correctly orient based on final segment direction
+### 🎨 Customization
+- **Colors**: Stroke color, fill color, background color - all customizable in real-time
+- **14 Font Choices**: From classic to modern typefaces
+- **Line Styles**: Solid, dashed, or dotted lines
+- **Line Routing**: Straight or stepped (orthogonal) connectors
+- **Style Presets**: Quick-apply preset styles to your elements
 
-### UI Consistency & Polish
-7. **"Make the dropdown choices consistent across font, line style, stepped and the choice of image export in the popup"**
-   - Replaced export format prompt dialog with dropdown
-   - Changed "Image" button to "Export"
-   - Standardized all toolbar controls to use dropdowns
+### 📐 Advanced Features
+- **Grid & Snap**: Toggle grid (`G`) and snap to grid (`Shift+G`)
+- **Alignment Tools**: Left, Center, Right, Top, Middle, Bottom with smart text handling
+- **Distribution**: Horizontal and vertical distribution maintaining relative positions
+- **Zoom Controls**: Fit, Reset, 50%, 100%, 150%, 200%
+- **Lock/Unlock**: Prevent accidental edits to specific elements
 
-8. **"We still have different styles across the dropdowns and let's put all the buttons on the right"**
-   - Applied consistent styling to all dropdowns (padding, borders, hover states)
-   - Added toolbar-spacer to push action buttons to the right
-   - Reorganized layout: tools/controls on left, action buttons on right
-   - Moved Clear button to far right
+### 📦 Rich Template Library
 
-## Technical Stack
+#### 📊 Flowchart
+Process, Decision, Data, Terminator, Document
 
-- **Frontend**: Vanilla JavaScript, HTML5 Canvas, CSS3
-- **Icons**: Official AWS Architecture Icons (SVG), Font Awesome
-- **Architecture**: No dependencies, runs entirely in browser
-- **Export**: Canvas API for PNG/JPG, custom SVG generation
+#### 🏗️ UML
+Class, Actor, Package
 
-## License
+#### ☁️ Cloud
+Server, Database, Cloud, Lambda, Storage, Queue
 
-This project was created with assistance from Claude Code (Anthropic).
+#### ⚡ AWS (44 Services Across 9 Categories)
+- **Compute**: EC2, Lambda, ECS, Fargate, Batch
+- **Storage**: S3, EFS, Glacier, Storage Gateway
+- **Database**: RDS, DynamoDB, ElastiCache, Redshift, Neptune
+- **Networking**: VPC, CloudFront, Route53, API Gateway, Direct Connect
+- **Security**: IAM, Cognito, Secrets Manager, Shield, WAF
+- **Developer Tools**: CodeBuild, CodeDeploy, CodePipeline
+- **Integration**: SNS, SQS, EventBridge, Step Functions
+- **Analytics & ML**: Athena, EMR, Kinesis, SageMaker
+- **Management**: CloudWatch, CloudFormation, Systems Manager
+
+#### 🔷 Shapes
+Hexagon, Triangle, Star, Note, Cylinder
+
+#### 🌐 Network
+Router, Firewall, Switch
+
+### 💾 Export & Import
+- **Image Export**: PNG, JPG, SVG (with embedded fonts)
+- **JSON Export**: Save and load your work for later editing
+- **Browser Storage**: Quick save/load from local browser storage
+
+### ⌨️ Keyboard Shortcuts
+| Key | Action |
+|-----|--------|
+| `V` | Selection tool |
+| `R` | Rectangle (opens shape selector) |
+| `C` | Connect mode |
+| `L` | Line |
+| `A` | Arrow |
+| `P` | Pen |
+| `T` | Text |
+| `H` | Hand/Pan tool |
+| `G` | Toggle grid |
+| `Shift+G` | Snap to grid |
+| `Cmd/Ctrl+C` | Copy |
+| `Cmd/Ctrl+V` | Paste |
+| `Cmd/Ctrl+D` | Duplicate |
+| `Delete/Backspace` | Delete selected |
+| `Arrow keys` | Move 1px (10px with Shift) |
+| `?` | Show help |
+
+## 🚀 Quick Start
+
+### Running Locally
+
+```bash
+# Clone the repository
+git clone https://github.com/DataVisuals/andraw.git
+cd andraw
+
+# Option 1: Open directly in browser
+open index.html
+
+# Option 2: Run with Python server (recommended)
+python3 -m http.server 8000
+# Then visit http://localhost:8000
+```
+
+### Getting Started
+
+1. **🎨 Choose a tool** from the toolbar or press a keyboard shortcut
+2. **✏️ Draw on canvas** by clicking and dragging
+3. **📦 Add templates** from the collapsible left panel
+4. **🎯 Select and customize** elements with the selection tool (`V`)
+5. **💾 Export** your work as PNG, JPG, SVG, or save as JSON
+
+## 🎮 How to Use
+
+| Action | How To |
+|--------|--------|
+| **Draw Shapes** | Select a shape tool, click and drag on canvas |
+| **Add Templates** | Click any template in the left panel - appears at canvas center |
+| **Add Text** | Press `T`, click on canvas, type, and press Enter |
+| **Move Elements** | Select with `V` tool, then drag |
+| **Resize** | Select element and drag corner handles |
+| **Connect Elements** | Press `C`, drag rectangle around elements to auto-connect |
+| **Delete** | Select element(s) and press Delete/Backspace |
+| **Customize Colors** | Select element, use color pickers in toolbar |
+| **Apply Styles** | Select element, choose from style preset dropdown |
+
+## 📖 What's New
+
+### 2025-10-06
+✨ Font Awesome icon library - searchable selector with 60+ popular icons
+✨ Icons are resizable, moveable, and color customizable
+✨ Unified shape selector with all shapes and keyboard shortcuts (Shift+1-7)
+✨ Style preset selector reorganized into 4-column grid layout
+
+### 2025-10-05
+✨ Grid toggle (`G`) and snap to grid (`Shift+G`)
+✨ Copy/paste/duplicate (`Cmd+C/V/D`) with parent-child preservation
+✨ Alignment tools (left/center/right/top/middle/bottom) with smart text handling
+✨ Distribution tools (horizontal/vertical) maintaining text relative positions
+✨ Zoom controls (Fit/Reset/50%/100%/150%/200%)
+✨ Selection tools (Select All, Lock/Unlock, Select by Type)
+✨ Arrow key positioning (1px or 10px with Shift)
+✨ Layout buttons now preserve selection
+✨ Fixed copy/paste keyboard shortcuts
+✨ What's New changelog panel (⭐ button)
+
+### 2025-10-04
+✨ New selection icons and improved styling
+✨ Logo and visual enhancements
+
+### 2025-10-03
+✨ Comprehensive style preset system
+✨ 14 font choices with live preview
+
+### 2025-10-02
+✨ Official AWS Architecture Icons integration (44 services, 9 categories)
+✨ Collapsible template categories with visual previews
+✨ Hand-drawn aesthetic inspired by Excalidraw
+✨ Pan and zoom for infinite canvas
+
+---
+
+## 🏗️ Development Journey
+
+Built iteratively with **Claude Code**, this project evolved through collaborative AI-assisted development:
+
+### 🎯 Phase 1: Foundation
+- Hand-drawn aesthetic with canvas-based rendering
+- Template system with collapsible categories
+- Smart arrow snapping to shape edges
+- Live color editing for selected elements
+- Multi-format export (PNG, JPG, SVG)
+
+### ☁️ Phase 2: AWS Integration
+- Official AWS Architecture Icons (44 services)
+- 9-category hierarchical organization
+- Icon text positioning optimization
+- Local SVG asset hosting
+
+### ⚡ Phase 3: Advanced Features
+- Stepped/orthogonal connector routing
+- 3-segment path algorithm for clean diagrams
+- SVG export with proper arrowhead orientation
+- Consistent toolbar UI/UX
+
+### 🎨 Phase 4: Polish & Productivity
+- Grid and snap functionality
+- Alignment and distribution tools
+- Copy/paste with relationship preservation
+- Keyboard shortcuts for power users
+- Style presets for rapid prototyping
+
+## 🛠️ Technical Stack
+
+<table>
+<tr>
+<td width="50%">
+
+**Core Technologies**
+- 🟨 Vanilla JavaScript (ES6+)
+- 🎨 HTML5 Canvas API
+- 💅 CSS3 with custom properties
+- 📦 No build tools required
+
+</td>
+<td width="50%">
+
+**Libraries & Assets**
+- ⚡ Font Awesome 6.4.0
+- ☁️ Official AWS Architecture Icons
+- 🖼️ Custom SVG generation
+- 💾 LocalStorage API
+
+</td>
+</tr>
+</table>
+
+**Key Features:**
+- ✅ Zero dependencies - runs entirely in browser
+- ✅ No backend required - fully client-side
+- ✅ Offline capable after first load
+- ✅ Cross-platform compatible
+
+## 📜 License
+
+Created with 🤖 **Claude Code** by Anthropic
+
+---
+
+<div align="center">
+
+  **[⭐ Star on GitHub](https://github.com/DataVisuals/andraw)** | **[🐛 Report Bug](https://github.com/DataVisuals/andraw/issues)** | **[💡 Request Feature](https://github.com/DataVisuals/andraw/issues)**
+
+  Made with ❤️ by [Andrew Spruce](https://github.com/DataVisuals)
+
+</div>
