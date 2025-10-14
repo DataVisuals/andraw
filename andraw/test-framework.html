@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Andraw Test Framework</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            padding: 20px;
+        }
+
+        .header {
+            background: #161b22;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #30363d;
+        }
+
+        h1 {
+            color: #58a6ff;
+            margin-bottom: 10px;
+        }
+
+        .summary {
+            display: flex;
+            gap: 30px;
+            margin-top: 15px;
+            font-size: 1.1em;
+        }
+
+        .summary-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .summary-item .label {
+            color: #8b949e;
+        }
+
+        .summary-item .value {
+            font-weight: bold;
+            font-size: 1.3em;
+        }
+
+        .pass-value { color: #3fb950; }
+        .fail-value { color: #f85149; }
+        .skip-value { color: #d29922; }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        button {
+            background: #238636;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #2ea043;
+        }
+
+        button.secondary {
+            background: #21262d;
+            border: 1px solid #30363d;
+        }
+
+        button.secondary:hover {
+            background: #30363d;
+        }
+
+        .test-suites {
+            display: grid;
+            gap: 20px;
+        }
+
+        .test-suite {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .suite-header {
+            background: #21262d;
+            padding: 15px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+            transition: background 0.2s;
+        }
+
+        .suite-header:hover {
+            background: #30363d;
+        }
+
+        .suite-title {
+            font-size: 1.1em;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .suite-stats {
+            display: flex;
+            gap: 15px;
+            font-size: 0.9em;
+        }
+
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .suite-body {
+            padding: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .suite-body.expanded {
+            max-height: 10000px;
+            transition: max-height 0.5s ease-in;
+        }
+
+        .test-case {
+            padding: 15px 20px;
+            border-top: 1px solid #30363d;
+            transition: background 0.2s;
+        }
+
+        .test-case:hover {
+            background: #0d1117;
+        }
+
+        .test-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .test-icon {
+            font-size: 1.2em;
+            min-width: 20px;
+        }
+
+        .test-pass .test-icon { color: #3fb950; }
+        .test-fail .test-icon { color: #f85149; }
+        .test-skip .test-icon { color: #d29922; }
+
+        .test-name {
+            flex: 1;
+            font-weight: 500;
+        }
+
+        .test-duration {
+            color: #8b949e;
+            font-size: 0.85em;
+        }
+
+        .test-details {
+            margin-left: 32px;
+            padding: 12px;
+            background: #0d1117;
+            border-radius: 6px;
+            border-left: 3px solid #30363d;
+            margin-top: 10px;
+        }
+
+        .test-fail .test-details {
+            border-left-color: #f85149;
+        }
+
+        .test-detail-row {
+            display: flex;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+
+        .test-detail-label {
+            color: #8b949e;
+            min-width: 100px;
+        }
+
+        .test-detail-value {
+            color: #c9d1d9;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        .error-message {
+            color: #f85149;
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(248, 81, 73, 0.1);
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+        }
+
+        .collapsible-icon {
+            transition: transform 0.3s;
+        }
+
+        .collapsible-icon.expanded {
+            transform: rotate(90deg);
+        }
+
+        .filter-bar {
+            background: #161b22;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #30363d;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .filter-label {
+            color: #8b949e;
+            font-weight: 500;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 5px;
+        }
+
+        .filter-btn {
+            padding: 6px 12px;
+            font-size: 0.9em;
+            background: #21262d;
+        }
+
+        .filter-btn.active {
+            background: #238636;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: #21262d;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 15px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3fb950, #58a6ff);
+            transition: width 0.3s ease;
+        }
+
+        code {
+            background: #161b22;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #8b949e;
+        }
+
+        .spinner {
+            border: 3px solid #30363d;
+            border-top: 3px solid #58a6ff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧪 Andraw Test Framework</h1>
+        <div class="summary">
+            <div class="summary-item">
+                <span class="label">Total:</span>
+                <span class="value" id="total-tests">0</span>
+            </div>
+            <div class="summary-item">
+                <span class="label">Passed:</span>
+                <span class="value pass-value" id="passed-tests">0</span>
+            </div>
+            <div class="summary-item">
+                <span class="label">Failed:</span>
+                <span class="value fail-value" id="failed-tests">0</span>
+            </div>
+            <div class="summary-item">
+                <span class="label">Duration:</span>
+                <span class="value" id="duration">0ms</span>
+            </div>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+        </div>
+        <div class="controls">
+            <button onclick="runAllTests()">▶ Run All Tests</button>
+            <button class="secondary" onclick="expandAll()">Expand All</button>
+            <button class="secondary" onclick="collapseAll()">Collapse All</button>
+            <button class="secondary" onclick="exportResults()">📥 Export Results</button>
+        </div>
+    </div>
+
+    <div class="filter-bar">
+        <span class="filter-label">Filter:</span>
+        <div class="filter-buttons">
+            <button class="filter-btn active" onclick="filterTests('all')">All</button>
+            <button class="filter-btn" onclick="filterTests('passed')">✓ Passed</button>
+            <button class="filter-btn" onclick="filterTests('failed')">✗ Failed</button>
+        </div>
+    </div>
+
+    <div id="test-results" class="test-suites">
+        <div class="loading">
+            <div class="spinner"></div>
+            <div>Loading test framework...</div>
+        </div>
+    </div>
+
+    <!-- Load app.js in an iframe to access its functions -->
+    <iframe id="app-frame" src="index.html" style="display: none;"></iframe>
+
+    <script type="module">
+        // Test Framework Core
+        class TestFramework {
+            constructor() {
+                this.suites = [];
+                this.results = {
+                    total: 0,
+                    passed: 0,
+                    failed: 0,
+                    duration: 0
+                };
+                this.filter = 'all';
+            }
+
+            suite(name, setupFn) {
+                const suite = {
+                    name,
+                    tests: [],
+                    beforeEach: null,
+                    afterEach: null
+                };
+
+                const context = {
+                    test: (testName, testFn) => {
+                        suite.tests.push({ name: testName, fn: testFn });
+                    },
+                    beforeEach: (fn) => {
+                        suite.beforeEach = fn;
+                    },
+                    afterEach: (fn) => {
+                        suite.afterEach = fn;
+                    }
+                };
+
+                setupFn(context);
+                this.suites.push(suite);
+                return this;
+            }
+
+            async run() {
+                const startTime = performance.now();
+                const results = [];
+
+                for (const suite of this.suites) {
+                    const suiteResults = {
+                        name: suite.name,
+                        tests: [],
+                        passed: 0,
+                        failed: 0
+                    };
+
+                    for (const test of suite.tests) {
+                        const testStart = performance.now();
+                        let result = {
+                            name: test.name,
+                            passed: false,
+                            error: null,
+                            duration: 0,
+                            details: {}
+                        };
+
+                        try {
+                            if (suite.beforeEach) await suite.beforeEach();
+
+                            const assertions = [];
+                            const assert = {
+                                equal: (actual, expected, message) => {
+                                    const passed = actual === expected;
+                                    assertions.push({ type: 'equal', actual, expected, passed, message });
+                                    if (!passed) throw new Error(message || `Expected ${expected}, got ${actual}`);
+                                },
+                                deepEqual: (actual, expected, message) => {
+                                    const passed = JSON.stringify(actual) === JSON.stringify(expected);
+                                    assertions.push({ type: 'deepEqual', actual, expected, passed, message });
+                                    if (!passed) throw new Error(message || `Objects not equal`);
+                                },
+                                true: (value, message) => {
+                                    const passed = value === true;
+                                    assertions.push({ type: 'true', value, passed, message });
+                                    if (!passed) throw new Error(message || `Expected true, got ${value}`);
+                                },
+                                false: (value, message) => {
+                                    const passed = value === false;
+                                    assertions.push({ type: 'false', value, passed, message });
+                                    if (!passed) throw new Error(message || `Expected false, got ${value}`);
+                                },
+                                throws: (fn, message) => {
+                                    let threw = false;
+                                    try { fn(); } catch(e) { threw = true; }
+                                    const passed = threw;
+                                    assertions.push({ type: 'throws', passed, message });
+                                    if (!passed) throw new Error(message || 'Expected function to throw');
+                                },
+                                within: (actual, expected, tolerance, message) => {
+                                    const passed = Math.abs(actual - expected) <= tolerance;
+                                    assertions.push({ type: 'within', actual, expected, tolerance, passed, message });
+                                    if (!passed) throw new Error(message || `${actual} not within ${tolerance} of ${expected}`);
+                                }
+                            };
+
+                            await test.fn(assert);
+                            result.passed = true;
+                            result.details = { assertions };
+                            suiteResults.passed++;
+
+                            if (suite.afterEach) await suite.afterEach();
+                        } catch (error) {
+                            result.error = error.message;
+                            result.details = { assertions, error: error.stack };
+                            suiteResults.failed++;
+                        }
+
+                        result.duration = performance.now() - testStart;
+                        suiteResults.tests.push(result);
+                    }
+
+                    results.push(suiteResults);
+                }
+
+                this.results.duration = performance.now() - startTime;
+                this.results.total = results.reduce((sum, s) => sum + s.tests.length, 0);
+                this.results.passed = results.reduce((sum, s) => sum + s.passed, 0);
+                this.results.failed = results.reduce((sum, s) => sum + s.failed, 0);
+
+                return results;
+            }
+
+            render(results) {
+                const container = document.getElementById('test-results');
+                container.innerHTML = '';
+
+                results.forEach((suite, suiteIndex) => {
+                    const suiteDiv = document.createElement('div');
+                    suiteDiv.className = 'test-suite';
+                    suiteDiv.dataset.suiteIndex = suiteIndex;
+
+                    const header = document.createElement('div');
+                    header.className = 'suite-header';
+                    header.onclick = () => this.toggleSuite(suiteIndex);
+
+                    header.innerHTML = `
+                        <div class="suite-title">
+                            <span class="collapsible-icon" id="icon-${suiteIndex}">▶</span>
+                            ${suite.name}
+                        </div>
+                        <div class="suite-stats">
+                            <div class="stat"><span style="color: #3fb950">✓</span> ${suite.passed}</div>
+                            <div class="stat"><span style="color: #f85149">✗</span> ${suite.failed}</div>
+                        </div>
+                    `;
+
+                    const body = document.createElement('div');
+                    body.className = 'suite-body';
+                    body.id = `suite-${suiteIndex}`;
+
+                    suite.tests.forEach(test => {
+                        const testDiv = document.createElement('div');
+                        testDiv.className = `test-case test-${test.passed ? 'pass' : 'fail'}`;
+                        testDiv.dataset.status = test.passed ? 'passed' : 'failed';
+
+                        let detailsHtml = '';
+                        if (!test.passed && test.error) {
+                            detailsHtml = `
+                                <div class="test-details">
+                                    <div class="error-message">${test.error}</div>
+                                </div>
+                            `;
+                        }
+
+                        testDiv.innerHTML = `
+                            <div class="test-header">
+                                <span class="test-icon">${test.passed ? '✓' : '✗'}</span>
+                                <span class="test-name">${test.name}</span>
+                                <span class="test-duration">${test.duration.toFixed(2)}ms</span>
+                            </div>
+                            ${detailsHtml}
+                        `;
+
+                        body.appendChild(testDiv);
+                    });
+
+                    suiteDiv.appendChild(header);
+                    suiteDiv.appendChild(body);
+                    container.appendChild(suiteDiv);
+                });
+
+                this.updateSummary();
+            }
+
+            toggleSuite(index) {
+                const body = document.getElementById(`suite-${index}`);
+                const icon = document.getElementById(`icon-${index}`);
+
+                body.classList.toggle('expanded');
+                icon.classList.toggle('expanded');
+            }
+
+            updateSummary() {
+                document.getElementById('total-tests').textContent = this.results.total;
+                document.getElementById('passed-tests').textContent = this.results.passed;
+                document.getElementById('failed-tests').textContent = this.results.failed;
+                document.getElementById('duration').textContent = Math.round(this.results.duration) + 'ms';
+
+                const progress = this.results.total > 0 ? (this.results.passed / this.results.total) * 100 : 0;
+                document.getElementById('progress-fill').style.width = progress + '%';
+            }
+        }
+
+        // Global test framework instance
+        window.testFramework = new TestFramework();
+
+        // Global helper functions
+        window.runAllTests = async function() {
+            const results = await testFramework.run();
+            testFramework.render(results);
+        };
+
+        window.expandAll = function() {
+            document.querySelectorAll('.suite-body').forEach(body => {
+                body.classList.add('expanded');
+            });
+            document.querySelectorAll('.collapsible-icon').forEach(icon => {
+                icon.classList.add('expanded');
+            });
+        };
+
+        window.collapseAll = function() {
+            document.querySelectorAll('.suite-body').forEach(body => {
+                body.classList.remove('expanded');
+            });
+            document.querySelectorAll('.collapsible-icon').forEach(icon => {
+                icon.classList.remove('expanded');
+            });
+        };
+
+        window.filterTests = function(filter) {
+            testFramework.filter = filter;
+
+            // Update active button
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Filter test cases
+            document.querySelectorAll('.test-case').forEach(test => {
+                const status = test.dataset.status;
+                if (filter === 'all' || filter === status) {
+                    test.style.display = '';
+                } else {
+                    test.style.display = 'none';
+                }
+            });
+        };
+
+        window.exportResults = function() {
+            const results = {
+                summary: testFramework.results,
+                suites: testFramework.suites.map(s => s.name),
+                timestamp: new Date().toISOString()
+            };
+
+            const blob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `test-results-${Date.now()}.json`;
+            a.click();
+        };
+
+        // Wait for iframe to load, then define tests
+        window.addEventListener('load', () => {
+            setTimeout(defineTests, 1000);
+        });
+
+        function defineTests() {
+            // Import test definitions
+            const script = document.createElement('script');
+            script.src = 'test-definitions.js';
+            script.type = 'module';
+            document.body.appendChild(script);
+        }
+    </script>
+</body>
+</html>
