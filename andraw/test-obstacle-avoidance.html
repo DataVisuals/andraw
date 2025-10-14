@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Obstacle Avoidance Tests</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        h1 {
+            color: #4ec9b0;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+        }
+        .pass {
+            background: #1e3a1e;
+            border-left: 4px solid #4ec9b0;
+        }
+        .fail {
+            background: #3a1e1e;
+            border-left: 4px solid #f48771;
+        }
+        .test-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .test-details {
+            font-size: 0.9em;
+            color: #888;
+            margin-left: 20px;
+        }
+        .summary {
+            margin-top: 20px;
+            padding: 15px;
+            background: #2d2d30;
+            border-radius: 4px;
+            font-size: 1.2em;
+        }
+        .pass-count {
+            color: #4ec9b0;
+        }
+        .fail-count {
+            color: #f48771;
+        }
+    </style>
+</head>
+<body>
+    <h1>Obstacle Avoidance Tests</h1>
+    <div id="results"></div>
+    <div id="summary" class="summary"></div>
+
+    <script>
+        const results = [];
+
+        function assert(condition, testName, details = '') {
+            const result = {
+                name: testName,
+                passed: condition,
+                details: details
+            };
+            results.push(result);
+
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${condition ? 'pass' : 'fail'}`;
+
+            const nameDiv = document.createElement('div');
+            nameDiv.className = 'test-name';
+            nameDiv.textContent = `${condition ? '✓' : '✗'} ${testName}`;
+            resultDiv.appendChild(nameDiv);
+
+            if (details) {
+                const detailsDiv = document.createElement('div');
+                detailsDiv.className = 'test-details';
+                detailsDiv.textContent = details;
+                resultDiv.appendChild(detailsDiv);
+            }
+
+            document.getElementById('results').appendChild(resultDiv);
+        }
+
+        // Mock elements array and helper functions
+        let elements = [];
+        let nextElementId = 1;
+
+        function getObstacles(excludeIds) {
+            return elements.filter(el =>
+                !excludeIds.includes(el.id) &&
+                (el.type === 'rect' || el.type === 'circle' || el.type === 'diamond')
+            );
+        }
+
+        function getSideCenters(bounds, type) {
+            const cx = bounds.x + bounds.width / 2;
+            const cy = bounds.y + bounds.height / 2;
+            return {
+                top: {x: cx, y: bounds.y},
+                bottom: {x: cx, y: bounds.y + bounds.height},
+                left: {x: bounds.x, y: cy},
+                right: {x: bounds.x + bounds.width, y: cy}
+            };
+        }
+
+        // Copy the hasObstacleInPath logic from app.js
+        function hasObstacleInPath(x1, y1, x2, y2, anchorDirection = null, obstacles) {
+            if (anchorDirection) {
+                const horizontalSpan = {
+                    left: Math.min(x1, x2),
+                    right: Math.max(x1, x2)
+                };
+                const verticalSpan = {
+                    top: Math.min(y1, y2),
+                    bottom: Math.max(y1, y2)
+                };
+
+                for (const obs of obstacles) {
+                    const obsRect = {
+                        left: obs.x,
+                        right: obs.x + obs.width,
+                        top: obs.y,
+                        bottom: obs.y + obs.height
+                    };
+
+                    const horizontalOverlap = obsRect.right >= horizontalSpan.left && obsRect.left <= horizontalSpan.right;
+                    const verticalOverlap = obsRect.bottom >= verticalSpan.top && obsRect.top <= verticalSpan.bottom;
+
+                    if (anchorDirection === 'top') {
+                        if (horizontalOverlap) {
+                            const startLevel = Math.max(verticalSpan.top, verticalSpan.bottom);
+                            if (obsRect.bottom < startLevel + 30) {
+                                return true;
+                            }
+                        }
+                    } else if (anchorDirection === 'bottom') {
+                        if (horizontalOverlap) {
+                            const bottomEdge = Math.max(verticalSpan.top, verticalSpan.bottom);
+                            if (obsRect.top > bottomEdge + 30) {
+                                return true;
+                            }
+                        }
+                    } else if (anchorDirection === 'left') {
+                        if (verticalOverlap) {
+                            const startLevel = Math.min(horizontalSpan.left, horizontalSpan.right);
+                            if (obsRect.right >= startLevel - 10) {
+                                return true;
+                            }
+                        }
+                    } else if (anchorDirection === 'right') {
+                        if (verticalOverlap) {
+                            const startLevel = Math.max(horizontalSpan.left, horizontalSpan.right);
+                            if (obsRect.right >= startLevel - 10) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+
+            // For direct paths
+            const pathRect = {
+                left: Math.min(x1, x2),
+                right: Math.max(x1, x2),
+                top: Math.min(y1, y2),
+                bottom: Math.max(y1, y2)
+            };
+
+            for (const obs of obstacles) {
+                const obsRect = {
+                    left: obs.x,
+                    right: obs.x + obs.width,
+                    top: obs.y,
+                    bottom: obs.y + obs.height
+                };
+
+                if (obsRect.right >= pathRect.left && obsRect.left <= pathRect.right &&
+                    obsRect.bottom >= pathRect.top && obsRect.top <= pathRect.bottom) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Test 1: A-B-C-D Layout (horizontally aligned with D above B)
+        function testHorizontalWithObstacleAbove() {
+            elements = [
+                {id: 1, type: 'rect', x: 100, y: 574, width: 120, height: 80},  // A
+                {id: 2, type: 'rect', x: 384, y: 574, width: 120, height: 80},  // B
+                {id: 3, type: 'rect', x: 668, y: 574, width: 120, height: 80},  // C
+                {id: 4, type: 'rect', x: 384, y: 454, width: 120, height: 80}   // D (above B)
+            ];
+
+            const boundsA = {x: 100, y: 574, width: 120, height: 80};
+            const boundsC = {x: 668, y: 574, width: 120, height: 80};
+            const sidesA = getSideCenters(boundsA, 'rect');
+            const sidesC = getSideCenters(boundsC, 'rect');
+            const obstacles = getObstacles([1, 3]);
+
+            // Check top path (should be blocked by D)
+            const topBlocked = hasObstacleInPath(
+                sidesA.top.x, sidesA.top.y,
+                sidesC.top.x, sidesC.top.y,
+                'top',
+                obstacles
+            );
+
+            // Check bottom path (should NOT be blocked)
+            const bottomBlocked = hasObstacleInPath(
+                sidesA.bottom.x, sidesA.bottom.y,
+                sidesC.bottom.x, sidesC.bottom.y,
+                'bottom',
+                obstacles
+            );
+
+            assert(topBlocked === true, 'Test 1a: Top path blocked by D above',
+                `Top path should be blocked by D. Result: ${topBlocked}`);
+            assert(bottomBlocked === false, 'Test 1b: Bottom path clear',
+                `Bottom path should be clear (B at same level). Result: ${bottomBlocked}`);
+        }
+
+        // Test 2: Vertical alignment with obstacle to the side
+        function testVerticalWithObstacleSide() {
+            elements = [
+                {id: 1, type: 'rect', x: 200, y: 100, width: 120, height: 80},  // A
+                {id: 2, type: 'rect', x: 200, y: 400, width: 120, height: 80},  // B (below A)
+                {id: 3, type: 'rect', x: 100, y: 250, width: 120, height: 80}   // C (to left, between A and B)
+            ];
+
+            const boundsA = {x: 200, y: 100, width: 120, height: 80};
+            const boundsB = {x: 200, y: 400, width: 120, height: 80};
+            const sidesA = getSideCenters(boundsA, 'rect');
+            const sidesB = getSideCenters(boundsB, 'rect');
+            const obstacles = getObstacles([1, 2]);
+
+            // Left path should be blocked by C
+            const leftBlocked = hasObstacleInPath(
+                sidesA.left.x, sidesA.left.y,
+                sidesB.left.x, sidesB.left.y,
+                'left',
+                obstacles
+            );
+
+            // Right path should be clear
+            const rightBlocked = hasObstacleInPath(
+                sidesA.right.x, sidesA.right.y,
+                sidesB.right.x, sidesB.right.y,
+                'right',
+                obstacles
+            );
+
+            assert(leftBlocked === true, 'Test 2a: Left path blocked by C',
+                `Left path should be blocked. Result: ${leftBlocked}`);
+            assert(rightBlocked === false, 'Test 2b: Right path clear',
+                `Right path should be clear. Result: ${rightBlocked}`);
+        }
+
+        // Test 3: No obstacles
+        function testNoObstacles() {
+            elements = [
+                {id: 1, type: 'rect', x: 100, y: 100, width: 120, height: 80},
+                {id: 2, type: 'rect', x: 500, y: 100, width: 120, height: 80}
+            ];
+
+            const boundsA = {x: 100, y: 100, width: 120, height: 80};
+            const boundsB = {x: 500, y: 100, width: 120, height: 80};
+            const sidesA = getSideCenters(boundsA, 'rect');
+            const sidesB = getSideCenters(boundsB, 'rect');
+            const obstacles = getObstacles([1, 2]);
+
+            const topBlocked = hasObstacleInPath(
+                sidesA.top.x, sidesA.top.y,
+                sidesB.top.x, sidesB.top.y,
+                'top',
+                obstacles
+            );
+
+            const bottomBlocked = hasObstacleInPath(
+                sidesA.bottom.x, sidesA.bottom.y,
+                sidesB.bottom.x, sidesB.bottom.y,
+                'bottom',
+                obstacles
+            );
+
+            assert(topBlocked === false, 'Test 3a: Top path clear (no obstacles)',
+                `Result: ${topBlocked}`);
+            assert(bottomBlocked === false, 'Test 3b: Bottom path clear (no obstacles)',
+                `Result: ${bottomBlocked}`);
+        }
+
+        // Test 4: Obstacle between horizontally aligned shapes (should block direct path)
+        function testObstacleBetweenHorizontal() {
+            elements = [
+                {id: 1, type: 'rect', x: 100, y: 200, width: 120, height: 80},  // A
+                {id: 2, type: 'rect', x: 300, y: 200, width: 120, height: 80},  // B (between)
+                {id: 3, type: 'rect', x: 500, y: 200, width: 120, height: 80}   // C
+            ];
+
+            const boundsA = {x: 100, y: 200, width: 120, height: 80};
+            const boundsC = {x: 500, y: 200, width: 120, height: 80};
+            const sidesA = getSideCenters(boundsA, 'rect');
+            const sidesC = getSideCenters(boundsC, 'rect');
+            const obstacles = getObstacles([1, 3]);
+
+            // Direct horizontal path should be blocked
+            const directBlocked = hasObstacleInPath(
+                sidesA.right.x, sidesA.right.y,
+                sidesC.left.x, sidesC.left.y,
+                null,
+                obstacles
+            );
+
+            assert(directBlocked === true, 'Test 4: Direct horizontal path blocked by B',
+                `Direct path should be blocked. Result: ${directBlocked}`);
+        }
+
+        // Test 5: Obstacle below horizontal shapes (shouldn't block bottom path)
+        function testObstacleFarBelow() {
+            elements = [
+                {id: 1, type: 'rect', x: 100, y: 200, width: 120, height: 80},  // A
+                {id: 2, type: 'rect', x: 500, y: 200, width: 120, height: 80},  // B
+                {id: 3, type: 'rect', x: 300, y: 400, width: 120, height: 80}   // C (far below)
+            ];
+
+            const boundsA = {x: 100, y: 200, width: 120, height: 80};
+            const boundsB = {x: 500, y: 200, width: 120, height: 80};
+            const sidesA = getSideCenters(boundsA, 'rect');
+            const sidesB = getSideCenters(boundsB, 'rect');
+            const obstacles = getObstacles([1, 2]);
+
+            const bottomBlocked = hasObstacleInPath(
+                sidesA.bottom.x, sidesA.bottom.y,
+                sidesB.bottom.x, sidesB.bottom.y,
+                'bottom',
+                obstacles
+            );
+
+            assert(bottomBlocked === true, 'Test 5: Bottom path blocked by C far below',
+                `C is far below (${200 + 80} -> ${400}), should block bottom routing. Result: ${bottomBlocked}`);
+        }
+
+        // Test 6: Multiple obstacles above (should all block top path)
+        function testMultipleObstaclesAbove() {
+            elements = [
+                {id: 1, type: 'rect', x: 100, y: 500, width: 120, height: 80},  // A
+                {id: 2, type: 'rect', x: 800, y: 500, width: 120, height: 80},  // B
+                {id: 3, type: 'rect', x: 250, y: 300, width: 100, height: 60},  // Obstacle 1 above
+                {id: 4, type: 'rect', x: 450, y: 350, width: 100, height: 60},  // Obstacle 2 above
+                {id: 5, type: 'rect', x: 650, y: 320, width: 100, height: 60}   // Obstacle 3 above
+            ];
+
+            const boundsA = {x: 100, y: 500, width: 120, height: 80};
+            const boundsB = {x: 800, y: 500, width: 120, height: 80};
+            const sidesA = getSideCenters(boundsA, 'rect');
+            const sidesB = getSideCenters(boundsB, 'rect');
+            const obstacles = getObstacles([1, 2]);
+
+            const topBlocked = hasObstacleInPath(
+                sidesA.top.x, sidesA.top.y,
+                sidesB.top.x, sidesB.top.y,
+                'top',
+                obstacles
+            );
+
+            const bottomBlocked = hasObstacleInPath(
+                sidesA.bottom.x, sidesA.bottom.y,
+                sidesB.bottom.x, sidesB.bottom.y,
+                'bottom',
+                obstacles
+            );
+
+            assert(topBlocked === true, 'Test 6a: Top path blocked by multiple obstacles above',
+                `Should detect at least one obstacle above. Result: ${topBlocked}`);
+            assert(bottomBlocked === false, 'Test 6b: Bottom path clear with multiple obstacles above',
+                `Bottom should be clear. Result: ${bottomBlocked}`);
+        }
+
+        // Test 7: Tunnel scenario - obstacles above AND below, only one path clear
+        function testTunnelScenario() {
+            elements = [
+                {id: 1, type: 'rect', x: 100, y: 300, width: 120, height: 80},  // A
+                {id: 2, type: 'rect', x: 600, y: 300, width: 120, height: 80},  // B
+                {id: 3, type: 'rect', x: 300, y: 150, width: 150, height: 60},  // Obstacle above
+                {id: 4, type: 'rect', x: 300, y: 470, width: 150, height: 60}   // Obstacle below
+            ];
+
+            const boundsA = {x: 100, y: 300, width: 120, height: 80};
+            const boundsB = {x: 600, y: 300, width: 120, height: 80};
+            const sidesA = getSideCenters(boundsA, 'rect');
+            const sidesB = getSideCenters(boundsB, 'rect');
+            const obstacles = getObstacles([1, 2]);
+
+            const topBlocked = hasObstacleInPath(
+                sidesA.top.x, sidesA.top.y,
+                sidesB.top.x, sidesB.top.y,
+                'top',
+                obstacles
+            );
+
+            const bottomBlocked = hasObstacleInPath(
+                sidesA.bottom.x, sidesA.bottom.y,
+                sidesB.bottom.x, sidesB.bottom.y,
+                'bottom',
+                obstacles
+            );
+
+            assert(topBlocked === true, 'Test 7a: Top path blocked in tunnel scenario',
+                `Top should be blocked. Result: ${topBlocked}`);
+            assert(bottomBlocked === true, 'Test 7b: Bottom path blocked in tunnel scenario',
+                `Bottom should be blocked. Result: ${bottomBlocked}`);
+        }
+
+        // Test 8: Obstacle at exact boundary (30px tolerance test)
+        function testBoundaryTolerance() {
+            elements = [
+                {id: 1, type: 'rect', x: 100, y: 300, width: 120, height: 80},  // A (bottom at 380)
+                {id: 2, type: 'rect', x: 500, y: 300, width: 120, height: 80},  // B
+                {id: 3, type: 'rect', x: 300, y: 415, width: 100, height: 60}   // Obstacle at 380 + 35px = just outside tolerance
+            ];
+
+            const boundsA = {x: 100, y: 300, width: 120, height: 80};
+            const boundsB = {x: 500, y: 300, width: 120, height: 80};
+            const sidesA = getSideCenters(boundsA, 'rect');
+            const sidesB = getSideCenters(boundsB, 'rect');
+            const obstacles = getObstacles([1, 2]);
+
+            const bottomBlocked = hasObstacleInPath(
+                sidesA.bottom.x, sidesA.bottom.y,
+                sidesB.bottom.x, sidesB.bottom.y,
+                'bottom',
+                obstacles
+            );
+
+            // At 415, obstacle top is 35px below bottom edge (380), should block (>30px tolerance)
+            assert(bottomBlocked === true, 'Test 8a: Obstacle just outside 30px tolerance blocks',
+                `Obstacle at 415 (35px below 380) should block. Result: ${bottomBlocked}`);
+
+            // Now test just inside tolerance
+            elements[2] = {id: 3, type: 'rect', x: 300, y: 405, width: 100, height: 60}; // 25px below
+            const obstacles2 = getObstacles([1, 2]);
+            const bottomBlocked2 = hasObstacleInPath(
+                sidesA.bottom.x, sidesA.bottom.y,
+                sidesB.bottom.x, sidesB.bottom.y,
+                'bottom',
+                obstacles2
+            );
+
+            assert(bottomBlocked2 === false, 'Test 8b: Obstacle within 30px tolerance is clear',
+                `Obstacle at 405 (25px below 380) should not block. Result: ${bottomBlocked2}`);
+        }
+
+        // Test 9: Staggered obstacles (checkerboard pattern)
+        function testStaggeredObstacles() {
+            elements = [
+                {id: 1, type: 'rect', x: 100, y: 400, width: 120, height: 80},  // A
+                {id: 2, type: 'rect', x: 900, y: 400, width: 120, height: 80},  // B
+                {id: 3, type: 'rect', x: 250, y: 250, width: 80, height: 60},   // Above-left
+                {id: 4, type: 'rect', x: 450, y: 550, width: 80, height: 60},   // Below-middle
+                {id: 5, type: 'rect', x: 650, y: 280, width: 80, height: 60},   // Above-right
+                {id: 6, type: 'rect', x: 800, y: 520, width: 80, height: 60}    // Below-right
+            ];
+
+            const boundsA = {x: 100, y: 400, width: 120, height: 80};
+            const boundsB = {x: 900, y: 400, width: 120, height: 80};
+            const sidesA = getSideCenters(boundsA, 'rect');
+            const sidesB = getSideCenters(boundsB, 'rect');
+            const obstacles = getObstacles([1, 2]);
+
+            const topBlocked = hasObstacleInPath(
+                sidesA.top.x, sidesA.top.y,
+                sidesB.top.x, sidesB.top.y,
+                'top',
+                obstacles
+            );
+
+            const bottomBlocked = hasObstacleInPath(
+                sidesA.bottom.x, sidesA.bottom.y,
+                sidesB.bottom.x, sidesB.bottom.y,
+                'bottom',
+                obstacles
+            );
+
+            assert(topBlocked === true, 'Test 9a: Top path blocked by staggered obstacles',
+                `Staggered obstacles above should block. Result: ${topBlocked}`);
+            assert(bottomBlocked === true, 'Test 9b: Bottom path blocked by staggered obstacles',
+                `Staggered obstacles below should block. Result: ${bottomBlocked}`);
+        }
+
+        // Test 10: Dense vertical obstacle field
+        function testDenseObstacleField() {
+            elements = [
+                {id: 1, type: 'rect', x: 100, y: 300, width: 120, height: 80},  // A
+                {id: 2, type: 'rect', x: 100, y: 600, width: 120, height: 80},  // B (below A)
+                {id: 3, type: 'rect', x: 50, y: 450, width: 60, height: 50},    // Left-1
+                {id: 4, type: 'rect', x: 30, y: 520, width: 60, height: 50},    // Left-2
+                {id: 5, type: 'rect', x: 280, y: 430, width: 60, height: 50},   // Right-1
+                {id: 6, type: 'rect', x: 300, y: 500, width: 60, height: 50}    // Right-2
+            ];
+
+            const boundsA = {x: 100, y: 300, width: 120, height: 80};
+            const boundsB = {x: 100, y: 600, width: 120, height: 80};
+            const sidesA = getSideCenters(boundsA, 'rect');
+            const sidesB = getSideCenters(boundsB, 'rect');
+            const obstacles = getObstacles([1, 2]);
+
+            const leftBlocked = hasObstacleInPath(
+                sidesA.left.x, sidesA.left.y,
+                sidesB.left.x, sidesB.left.y,
+                'left',
+                obstacles
+            );
+
+            const rightBlocked = hasObstacleInPath(
+                sidesA.right.x, sidesA.right.y,
+                sidesB.right.x, sidesB.right.y,
+                'right',
+                obstacles
+            );
+
+            assert(leftBlocked === true, 'Test 10a: Left path blocked by dense obstacles',
+                `Dense left obstacles should block. Result: ${leftBlocked}`);
+            assert(rightBlocked === true, 'Test 10b: Right path blocked by dense obstacles',
+                `Dense right obstacles should block. Result: ${rightBlocked}`);
+        }
+
+        // Test 11: Edge case - obstacle exactly at same level (within 30px)
+        function testObstacleAtExactLevel() {
+            elements = [
+                {id: 1, type: 'rect', x: 100, y: 300, width: 120, height: 80},  // A (300-380)
+                {id: 2, type: 'rect', x: 600, y: 300, width: 120, height: 80},  // B (300-380)
+                {id: 3, type: 'rect', x: 350, y: 305, width: 100, height: 70}   // C (305-375) overlaps vertically
+            ];
+
+            const boundsA = {x: 100, y: 300, width: 120, height: 80};
+            const boundsB = {x: 600, y: 300, width: 120, height: 80};
+            const sidesA = getSideCenters(boundsA, 'rect');
+            const sidesB = getSideCenters(boundsB, 'rect');
+            const obstacles = getObstacles([1, 2]);
+
+            const topBlocked = hasObstacleInPath(
+                sidesA.top.x, sidesA.top.y,
+                sidesB.top.x, sidesB.top.y,
+                'top',
+                obstacles
+            );
+
+            const bottomBlocked = hasObstacleInPath(
+                sidesA.bottom.x, sidesA.bottom.y,
+                sidesB.bottom.x, sidesB.bottom.y,
+                'bottom',
+                obstacles
+            );
+
+            // Obstacle at exact same level should not block either path
+            assert(topBlocked === false, 'Test 11a: Same-level obstacle does not block top',
+                `Obstacle at same level (305-375 vs 300-380) should not block top. Result: ${topBlocked}`);
+            assert(bottomBlocked === false, 'Test 11b: Same-level obstacle does not block bottom',
+                `Obstacle at same level should not block bottom. Result: ${bottomBlocked}`);
+        }
+
+        // Test 12: Complex real-world scenario (A-B-C-D with E above A and F below C)
+        function testComplexRealWorld() {
+            elements = [
+                {id: 1, type: 'rect', x: 100, y: 500, width: 120, height: 80},  // A
+                {id: 2, type: 'rect', x: 350, y: 500, width: 120, height: 80},  // B
+                {id: 3, type: 'rect', x: 600, y: 500, width: 120, height: 80},  // C
+                {id: 4, type: 'rect', x: 350, y: 350, width: 120, height: 80},  // D (above B)
+                {id: 5, type: 'rect', x: 100, y: 350, width: 120, height: 80},  // E (above A)
+                {id: 6, type: 'rect', x: 600, y: 650, width: 120, height: 80}   // F (below C)
+            ];
+
+            const boundsA = {x: 100, y: 500, width: 120, height: 80};
+            const boundsC = {x: 600, y: 500, width: 120, height: 80};
+            const sidesA = getSideCenters(boundsA, 'rect');
+            const sidesC = getSideCenters(boundsC, 'rect');
+            const obstacles = getObstacles([1, 3]);
+
+            const topBlocked = hasObstacleInPath(
+                sidesA.top.x, sidesA.top.y,
+                sidesC.top.x, sidesC.top.y,
+                'top',
+                obstacles
+            );
+
+            const bottomBlocked = hasObstacleInPath(
+                sidesA.bottom.x, sidesA.bottom.y,
+                sidesC.bottom.x, sidesC.bottom.y,
+                'bottom',
+                obstacles
+            );
+
+            assert(topBlocked === true, 'Test 12a: Complex scenario - top blocked by D and E',
+                `Multiple obstacles above should block. Result: ${topBlocked}`);
+            assert(bottomBlocked === true, 'Test 12b: Complex scenario - bottom blocked by F',
+                `Obstacle F below C should block bottom path. Result: ${bottomBlocked}`);
+        }
+
+        // Test 13: C above B, B to right of A, D below B - connecting C to A
+        function testCAboveBRightOfA() {
+            elements = [
+                {id: 1, type: 'rect', x: 100, y: 400, width: 120, height: 80},  // A
+                {id: 2, type: 'rect', x: 350, y: 400, width: 120, height: 80},  // B (right of A)
+                {id: 3, type: 'rect', x: 350, y: 250, width: 120, height: 80},  // C (above B)
+                {id: 4, type: 'rect', x: 350, y: 550, width: 120, height: 80}   // D (below B)
+            ];
+
+            const boundsA = {x: 100, y: 400, width: 120, height: 80};
+            const boundsC = {x: 350, y: 250, width: 120, height: 80};
+            const sidesA = getSideCenters(boundsA, 'rect');
+            const sidesC = getSideCenters(boundsC, 'rect');
+            const obstacles = getObstacles([1, 3]);
+
+            // Check if direct path from A to C is blocked by B
+            const directBlocked = hasObstacleInPath(
+                sidesA.right.x, sidesA.right.y,
+                sidesC.left.x, sidesC.left.y,
+                null,
+                obstacles
+            );
+
+            assert(directBlocked === true, 'Test 13: Direct path A.right→C.left blocked by B',
+                `B should block direct horizontal path. Result: ${directBlocked}. ` +
+                `For perpendicular mixed anchors (top→left), L-shaped routing naturally avoids obstacles.`);
+        }
+
+        // Test 14: A, B right of A, C above B, D below B, E right of B - connecting E to A
+        function testEToAThroughB() {
+            elements = [
+                {id: 1, type: 'rect', x: 100, y: 400, width: 120, height: 80},  // A
+                {id: 2, type: 'rect', x: 350, y: 400, width: 120, height: 80},  // B (right of A)
+                {id: 3, type: 'rect', x: 350, y: 250, width: 120, height: 80},  // C (above B)
+                {id: 4, type: 'rect', x: 350, y: 550, width: 120, height: 80},  // D (below B)
+                {id: 5, type: 'rect', x: 600, y: 400, width: 120, height: 80}   // E (right of B)
+            ];
+
+            const boundsA = {x: 100, y: 400, width: 120, height: 80};
+            const boundsE = {x: 600, y: 400, width: 120, height: 80};
+            const sidesA = getSideCenters(boundsA, 'rect');
+            const sidesE = getSideCenters(boundsE, 'rect');
+            const obstacles = getObstacles([1, 5]);
+
+            // E to A should detect B (and C, D) as obstacles
+            const directBlocked = hasObstacleInPath(
+                sidesE.left.x, sidesE.left.y,
+                sidesA.right.x, sidesA.right.y,
+                null,
+                obstacles
+            );
+
+            // Check if top path is blocked
+            const topBlocked = hasObstacleInPath(
+                sidesE.top.x, sidesE.top.y,
+                sidesA.top.x, sidesA.top.y,
+                'top',
+                obstacles
+            );
+
+            // Check if bottom path is blocked
+            const bottomBlocked = hasObstacleInPath(
+                sidesE.bottom.x, sidesE.bottom.y,
+                sidesA.bottom.x, sidesA.bottom.y,
+                'bottom',
+                obstacles
+            );
+
+            assert(directBlocked === true, 'Test 14a: Direct path E→A blocked by B',
+                `B should block direct path. Result: ${directBlocked}`);
+            assert(topBlocked === true, 'Test 14b: Top path E→A blocked by C',
+                `C above B should block top path. Result: ${topBlocked}`);
+            assert(bottomBlocked === true, 'Test 14c: Bottom path E→A blocked by D',
+                `D below B should block bottom path. Result: ${bottomBlocked}`);
+        }
+
+        // Test 15: A and D on same plane, B and C nearby but not obstructing
+        function testSamePlaneNoObstruction() {
+            elements = [
+                {id: 1, type: 'rect', x: 100, y: 400, width: 120, height: 80},  // A
+                {id: 2, type: 'rect', x: 350, y: 350, width: 120, height: 80},  // B (slightly above)
+                {id: 3, type: 'rect', x: 600, y: 350, width: 120, height: 80},  // C (slightly above)
+                {id: 4, type: 'rect', x: 850, y: 400, width: 120, height: 80}   // D (same level as A)
+            ];
+
+            const boundsA = {x: 100, y: 400, width: 120, height: 80};
+            const boundsD = {x: 850, y: 400, width: 120, height: 80};
+            const sidesA = getSideCenters(boundsA, 'rect');
+            const sidesD = getSideCenters(boundsD, 'rect');
+            const obstacles = getObstacles([1, 4]);
+
+            // Direct horizontal path should NOT be blocked (B and C are above, not in the way)
+            const directBlocked = hasObstacleInPath(
+                sidesA.right.x, sidesA.right.y,
+                sidesD.left.x, sidesD.left.y,
+                null,
+                obstacles
+            );
+
+            assert(directBlocked === false, 'Test 15: Direct path A→D clear (obstacles above)',
+                `B and C are above the horizontal path and should not block. Result: ${directBlocked}`);
+        }
+
+        // Run all tests
+        testHorizontalWithObstacleAbove();
+        testVerticalWithObstacleSide();
+        testNoObstacles();
+        testObstacleBetweenHorizontal();
+        testObstacleFarBelow();
+        testMultipleObstaclesAbove();
+        testTunnelScenario();
+        testBoundaryTolerance();
+        testStaggeredObstacles();
+        testDenseObstacleField();
+        testObstacleAtExactLevel();
+        testComplexRealWorld();
+        testCAboveBRightOfA();
+        testEToAThroughB();
+        testSamePlaneNoObstruction();
+
+        // Display summary
+        const passed = results.filter(r => r.passed).length;
+        const failed = results.filter(r => !r.passed).length;
+        const summary = document.getElementById('summary');
+        summary.innerHTML = `
+            <span class="pass-count">${passed} passed</span> /
+            <span class="fail-count">${failed} failed</span> /
+            ${results.length} total
+        `;
+    </script>
+</body>
+</html>

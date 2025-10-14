@@ -4604,6 +4604,13 @@ function connectSelectedElements() {
             to.element
         );
 
+        console.log('✓ Connection points returned:', {
+            from: connectionPoints?.from,
+            to: connectionPoints?.to,
+            fromAnchor: connectionPoints?.fromAnchor,
+            toAnchor: connectionPoints?.toAnchor
+        });
+
         if (connectionPoints) {
             // Always use stepped routing in connect mode to enable smart obstacle avoidance
             // This allows the pathfinding algorithm to route around any shapes in between
@@ -4666,6 +4673,7 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal, 
     const excludeIds = [elementA.id, elementB.id];
     const obstacles = getObstacles(excludeIds);
 
+
     const hasObstacleInPath = (x1, y1, x2, y2, anchorDirection = null) => {
         // For same-side anchors, only check obstacles in the routing direction
         if (anchorDirection) {
@@ -4691,32 +4699,66 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal, 
                 const verticalOverlap = obsRect.bottom >= verticalSpan.top && obsRect.top <= verticalSpan.bottom;
 
                 if (anchorDirection === 'top') {
-                    // For top→top, only check obstacles ABOVE the path
-                    // Obstacle must overlap horizontally AND be above the top anchor line
-                    if (horizontalOverlap && obsRect.top < verticalSpan.top) {
-                        return true;
+                    // For top→top, only block if obstacle is clearly ABOVE (not at same level)
+                    // The path goes UP with 60px offset, so check if obstacle is in that upward area
+                    if (horizontalOverlap) {
+                        const startLevel = Math.max(verticalSpan.top, verticalSpan.bottom);
+                        // Obstacle blocks if its BOTTOM is above the start level (it's in the "up" direction)
+                        // Allow 30px tolerance for obstacles close to the level
+                        if (obsRect.bottom < startLevel + 30) {
+                            return true;
+                        }
                     }
                 } else if (anchorDirection === 'bottom') {
-                    // For bottom→bottom, only check obstacles BELOW the path
-                    if (horizontalOverlap && obsRect.bottom > verticalSpan.bottom) {
-                        return true;
+                    // For bottom→bottom, only block if obstacle is clearly BELOW (not at same level)
+                    // The path goes DOWN with 60px offset, so check if obstacle is in that downward area
+                    if (horizontalOverlap) {
+                        // Only block if obstacle is clearly below the bottom edges of both shapes
+                        const bottomEdge = Math.max(verticalSpan.top, verticalSpan.bottom);
+                        // Obstacle blocks only if its TOP is below the bottom edge (it's actually below)
+                        if (obsRect.top > bottomEdge + 30) {
+                            return true;
+                        }
                     }
                 } else if (anchorDirection === 'left') {
-                    // For left→left, only check obstacles to the LEFT
-                    if (verticalOverlap && obsRect.left < horizontalSpan.left) {
-                        return true;
+                    // For left→left, check obstacles in the routing corridor
+                    // Check if obstacle vertically overlaps AND is within routing area
+                    if (verticalOverlap) {
+                        // Check if obstacle is at or left of the starting level
+                        const startLevel = Math.min(horizontalSpan.left, horizontalSpan.right);
+                        if (obsRect.right >= startLevel - 10) { // Allow small tolerance
+                            return true;
+                        }
                     }
                 } else if (anchorDirection === 'right') {
-                    // For right→right, only check obstacles to the RIGHT
-                    if (verticalOverlap && obsRect.right > horizontalSpan.right) {
-                        return true;
+                    // For right→right, check obstacles in the routing corridor
+                    // Check if obstacle vertically overlaps AND is within routing area
+                    if (verticalOverlap) {
+                        // Check if obstacle extends into the rightward routing area
+                        const startLevel = Math.max(horizontalSpan.left, horizontalSpan.right);
+                        if (obsRect.right >= startLevel - 10) { // Obstacle must be at or right of routing area
+                            return true;
+                        }
                     }
                 }
             }
             return false;
         }
 
-        // For direct paths (no anchor direction), use simple rectangle intersection
+        // For direct paths (no anchor direction), check if obstacles actually block the path
+        // For horizontal/vertical paths, require significant overlap to avoid false positives
+        const tolerance = 30; // Obstacle must overlap by at least this much to block
+        const isHorizontalPath = Math.abs(y2 - y1) < 5; // Nearly horizontal
+        const isVerticalPath = Math.abs(x2 - x1) < 5; // Nearly vertical
+
+        console.log('Direct path check:', {
+            from: {x: x1, y: y1},
+            to: {x: x2, y: y2},
+            isHorizontalPath,
+            isVerticalPath,
+            obstacleCount: obstacles.length
+        });
+
         const pathRect = {
             left: Math.min(x1, x2),
             right: Math.max(x1, x2),
@@ -4732,11 +4774,49 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal, 
                 bottom: obs.y + obs.height
             };
 
-            if (obsRect.right >= pathRect.left && obsRect.left <= pathRect.right &&
-                obsRect.bottom >= pathRect.top && obsRect.top <= pathRect.bottom) {
-                return true;
+            // Check horizontal overlap
+            const horizontalOverlap = obsRect.right >= pathRect.left && obsRect.left <= pathRect.right;
+            // Check vertical overlap
+            const verticalOverlap = obsRect.bottom >= pathRect.top && obsRect.top <= pathRect.bottom;
+
+            if (isHorizontalPath) {
+                // For horizontal paths, require obstacle to be within tolerance of the path line
+                if (horizontalOverlap) {
+                    const pathY = y1; // Horizontal path at constant Y
+                    const verticalDist = Math.min(Math.abs(obsRect.top - pathY), Math.abs(obsRect.bottom - pathY));
+                    const blocks = obsRect.top <= pathY + tolerance && obsRect.bottom >= pathY - tolerance;
+
+                    console.log('Horizontal path obstacle check:', {
+                        obstacleId: obs.id,
+                        obsRect,
+                        pathY,
+                        verticalDist,
+                        tolerance,
+                        blocks
+                    });
+
+                    if (blocks) {
+                        return true;
+                    }
+                }
+            } else if (isVerticalPath) {
+                // For vertical paths, require obstacle to be within tolerance of the path line
+                if (verticalOverlap) {
+                    const pathX = x1; // Vertical path at constant X
+                    // Obstacle blocks only if it significantly overlaps the path horizontally
+                    if (obsRect.left <= pathX + tolerance && obsRect.right >= pathX - tolerance) {
+                        return true;
+                    }
+                }
+            } else {
+                // For diagonal paths, use standard rectangle intersection
+                if (horizontalOverlap && verticalOverlap) {
+                    return true;
+                }
             }
         }
+
+        console.log('Direct path is CLEAR');
         return false;
     };
 
@@ -4745,29 +4825,38 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal, 
         if (dx > 0) {
             // B is to the right of A
             // Check if horizontal path is blocked
-            if (hasObstacleInPath(sidesA.right.x, sidesA.right.y, sidesB.left.x, sidesB.left.y)) {
-                // Path blocked - check both top and bottom alternatives
-                const topBlocked = hasObstacleInPath(sidesA.top.x, sidesA.top.y, sidesB.top.x, sidesB.top.y, 'top');
-                const bottomBlocked = hasObstacleInPath(sidesA.bottom.x, sidesA.bottom.y, sidesB.bottom.x, sidesB.bottom.y, 'bottom');
+            const horizontalBlocked = hasObstacleInPath(sidesA.right.x, sidesA.right.y, sidesB.left.x, sidesB.left.y);
+            console.log('→ Horizontal connection decision:', {
+                horizontalBlocked,
+                willUseAlternative: horizontalBlocked
+            });
 
-                console.log('Horizontal path blocked, checking alternatives:', {
-                    topPath: {from: sidesA.top, to: sidesB.top, blocked: topBlocked},
-                    bottomPath: {from: sidesA.bottom, to: sidesB.bottom, blocked: bottomBlocked},
-                    obstacleCount: obstacles.length,
-                    allObstacles: obstacles.map(o => ({
-                        id: o.id,
-                        type: o.type,
-                        bounds: {left: o.x, right: o.x + o.width, top: o.y, bottom: o.y + o.height}
-                    }))
-                });
+            if (horizontalBlocked) {
+                // Path blocked - determine best alternative based on relative position
+                // Check if B is above, below, or at same level as A
+                const yDiff = centerB.y - centerA.y;
+                const isAbove = yDiff < -20; // More than 20px above
+                const isBelow = yDiff > 20;  // More than 20px below
+                const isSameLevel = !isAbove && !isBelow;
 
-                // Choose the clearer path
-                if (!topBlocked && !bottomBlocked) {
-                    // Both clear - choose based on available space
+                if (isSameLevel) {
+                    // Same horizontal level - check both top and bottom for obstacles
                     const topSpace = Math.min(boundsA.y, boundsB.y);
                     const bottomSpace = 1000 - Math.max(boundsA.y + boundsA.height, boundsB.y + boundsB.height);
 
-                    if (bottomSpace > topSpace) {
+                    // Check if obstacles block the routing paths
+                    const topBlocked = hasObstacleInPath(sidesA.top.x, sidesA.top.y, sidesB.top.x, sidesB.top.y, 'top');
+                    const bottomBlocked = hasObstacleInPath(sidesA.bottom.x, sidesA.bottom.y, sidesB.bottom.x, sidesB.bottom.y, 'bottom');
+
+                    // Prefer the clear path, or if both blocked/clear, use space
+                    if (!topBlocked && bottomBlocked) {
+                        return {
+                            from: sidesA.top,
+                            to: sidesB.top,
+                            fromAnchor: 'top',
+                            toAnchor: 'top'
+                        };
+                    } else if (topBlocked && !bottomBlocked) {
                         return {
                             from: sidesA.bottom,
                             to: sidesB.bottom,
@@ -4775,31 +4864,45 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal, 
                             toAnchor: 'bottom'
                         };
                     } else {
-                        return {
-                            from: sidesA.top,
-                            to: sidesB.top,
-                            fromAnchor: 'top',
-                            toAnchor: 'top'
-                        };
+                        // Both clear or both blocked - use space
+                        if (bottomSpace > topSpace) {
+                            return {
+                                from: sidesA.bottom,
+                                to: sidesB.bottom,
+                                fromAnchor: 'bottom',
+                                toAnchor: 'bottom'
+                            };
+                        } else {
+                            return {
+                                from: sidesA.top,
+                                to: sidesB.top,
+                                fromAnchor: 'top',
+                                toAnchor: 'top'
+                            };
+                        }
                     }
-                } else if (!bottomBlocked) {
-                    // Only bottom is clear
-                    return {
-                        from: sidesA.bottom,
-                        to: sidesB.bottom,
-                        fromAnchor: 'bottom',
-                        toAnchor: 'bottom'
-                    };
-                } else {
-                    // Top is clear (or both blocked, prefer top)
+                } else if (isAbove) {
+                    // B is above and to the right - try top→left or right→bottom routing
+                    // For perpendicular mixed anchors, use L-shaped routing which naturally avoids obstacles
+                    // Don't check for obstacles since the L-shape will route around them
                     return {
                         from: sidesA.top,
-                        to: sidesB.top,
+                        to: sidesB.left,
                         fromAnchor: 'top',
-                        toAnchor: 'top'
+                        toAnchor: 'left'
+                    };
+                } else {
+                    // B is below and to the right - use bottom→left routing
+                    // For perpendicular mixed anchors, use L-shaped routing which naturally avoids obstacles
+                    return {
+                        from: sidesA.bottom,
+                        to: sidesB.left,
+                        fromAnchor: 'bottom',
+                        toAnchor: 'left'
                     };
                 }
             }
+            console.log('→ Returning simple RIGHT→LEFT connection');
             return {
                 from: sidesA.right,
                 to: sidesB.left,
@@ -4810,17 +4913,30 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal, 
             // B is to the left of A
             // Check if horizontal path is blocked
             if (hasObstacleInPath(sidesA.left.x, sidesA.left.y, sidesB.right.x, sidesB.right.y)) {
-                // Path blocked - check both top and bottom alternatives
-                const topBlocked = hasObstacleInPath(sidesA.top.x, sidesA.top.y, sidesB.top.x, sidesB.top.y, 'top');
-                const bottomBlocked = hasObstacleInPath(sidesA.bottom.x, sidesA.bottom.y, sidesB.bottom.x, sidesB.bottom.y, 'bottom');
+                // Path blocked - determine best alternative based on relative position
+                const yDiff = centerB.y - centerA.y;
+                const isAbove = yDiff < -20;
+                const isBelow = yDiff > 20;
+                const isSameLevel = !isAbove && !isBelow;
 
-                // Choose the clearer path
-                if (!topBlocked && !bottomBlocked) {
-                    // Both clear - choose based on available space
+                if (isSameLevel) {
+                    // Same horizontal level - check both top and bottom for obstacles
                     const topSpace = Math.min(boundsA.y, boundsB.y);
                     const bottomSpace = 1000 - Math.max(boundsA.y + boundsA.height, boundsB.y + boundsB.height);
 
-                    if (bottomSpace > topSpace) {
+                    // Check if obstacles block the routing paths
+                    const topBlocked = hasObstacleInPath(sidesA.top.x, sidesA.top.y, sidesB.top.x, sidesB.top.y, 'top');
+                    const bottomBlocked = hasObstacleInPath(sidesA.bottom.x, sidesA.bottom.y, sidesB.bottom.x, sidesB.bottom.y, 'bottom');
+
+                    // Prefer the clear path, or if both blocked/clear, use space
+                    if (!topBlocked && bottomBlocked) {
+                        return {
+                            from: sidesA.top,
+                            to: sidesB.top,
+                            fromAnchor: 'top',
+                            toAnchor: 'top'
+                        };
+                    } else if (topBlocked && !bottomBlocked) {
                         return {
                             from: sidesA.bottom,
                             to: sidesB.bottom,
@@ -4828,28 +4944,40 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal, 
                             toAnchor: 'bottom'
                         };
                     } else {
-                        return {
-                            from: sidesA.top,
-                            to: sidesB.top,
-                            fromAnchor: 'top',
-                            toAnchor: 'top'
-                        };
+                        // Both clear or both blocked - use space
+                        if (bottomSpace > topSpace) {
+                            return {
+                                from: sidesA.bottom,
+                                to: sidesB.bottom,
+                                fromAnchor: 'bottom',
+                                toAnchor: 'bottom'
+                            };
+                        } else {
+                            return {
+                                from: sidesA.top,
+                                to: sidesB.top,
+                                fromAnchor: 'top',
+                                toAnchor: 'top'
+                            };
+                        }
                     }
-                } else if (!bottomBlocked) {
-                    // Only bottom is clear
-                    return {
-                        from: sidesA.bottom,
-                        to: sidesB.bottom,
-                        fromAnchor: 'bottom',
-                        toAnchor: 'bottom'
-                    };
-                } else {
-                    // Top is clear (or both blocked, prefer top)
+                } else if (isAbove) {
+                    // B is above and to the left - use top→right routing
+                    // For perpendicular mixed anchors, use L-shaped routing which naturally avoids obstacles
                     return {
                         from: sidesA.top,
-                        to: sidesB.top,
+                        to: sidesB.right,
                         fromAnchor: 'top',
-                        toAnchor: 'top'
+                        toAnchor: 'right'
+                    };
+                } else {
+                    // B is below and to the left - use bottom→right routing
+                    // For perpendicular mixed anchors, use L-shaped routing which naturally avoids obstacles
+                    return {
+                        from: sidesA.bottom,
+                        to: sidesB.right,
+                        fromAnchor: 'bottom',
+                        toAnchor: 'right'
                     };
                 }
             }
@@ -5796,22 +5924,28 @@ function simplifyPath(points) {
 // excludeIds: shape IDs to exclude from obstacle detection (typically the start/end shapes)
 // useSmart: whether to use smart pathfinding to avoid obstacles
 function getSteppedPath(x1, y1, x2, y2, bendPoint = null, startAnchor = null, endAnchor = null, excludeIds = [], useSmart = true) {
-    // Debug: Check all conditions for smart pathfinding
-    console.log('getSteppedPath called:', {
-        useSmart,
-        hasBendPoint: !!bendPoint,
-        startAnchor,
-        endAnchor,
-        excludeIds,
-        willUseSmart: useSmart && !bendPoint && startAnchor && endAnchor && excludeIds.length > 0
-    });
-
     // For same-side anchors (left→left, right→right, top→top, bottom→bottom),
     // use simple 3-segment logic instead of complex A* pathfinding
     const sameSideAnchors = startAnchor === endAnchor;
 
-    // Try smart pathfinding if enabled, not using custom bend point, and NOT same-side anchors
-    if (useSmart && !bendPoint && startAnchor && endAnchor && excludeIds.length > 0 && !sameSideAnchors) {
+    // For perpendicular anchors (vertical↔horizontal like top→left, bottom→right),
+    // use simple L-shaped logic instead of A* pathfinding
+    const startIsVertical = startAnchor === 'top' || startAnchor === 'bottom';
+    const endIsVertical = endAnchor === 'top' || endAnchor === 'bottom';
+    const perpendicularAnchors = startIsVertical !== endIsVertical;
+
+    // For simple opposite anchors at same level (left→right, top→bottom), use simple line
+    // Only shapes that are truly opposite need complex routing
+    const isSimpleOpposite = (startAnchor === 'left' && endAnchor === 'right') ||
+                             (startAnchor === 'right' && endAnchor === 'left') ||
+                             (startAnchor === 'top' && endAnchor === 'bottom') ||
+                             (startAnchor === 'bottom' && endAnchor === 'top');
+
+    // Only use A* for complex same-axis mixed anchors where shapes wrap around each other
+    const needsAStar = !sameSideAnchors && !perpendicularAnchors && !isSimpleOpposite;
+
+    // Try smart pathfinding only when needed
+    if (useSmart && !bendPoint && startAnchor && endAnchor && excludeIds.length > 0 && needsAStar) {
         const smartPath = findSmartPath(x1, y1, x2, y2, startAnchor, endAnchor, excludeIds);
         if (smartPath && smartPath.length > 0) {
             // Smart path already includes correct start/end points
@@ -5829,7 +5963,86 @@ function getSteppedPath(x1, y1, x2, y2, bendPoint = null, startAnchor = null, en
 
         // Special handling for same-side anchors (left→left, right→right, top→top, bottom→bottom)
         if (startAnchor === endAnchor) {
-            const offset = 60; // Distance to extend out before turning
+            let offset = 60; // Default distance to extend out before turning
+
+            // Calculate dynamic offset based on obstacles in the path
+            if (excludeIds && excludeIds.length > 0) {
+                const obstacles = getObstacles(excludeIds);
+
+                if (startAnchor === 'top') {
+                    // For top routing, find highest obstacle (minimum Y) in horizontal span
+                    const horizontalSpan = {left: Math.min(x1, x2), right: Math.max(x1, x2)};
+                    let highestObstacle = Math.min(y1, y2); // Start with connection level
+
+                    obstacles.forEach(obs => {
+                        // Check if obstacle horizontally overlaps the path
+                        if (obs.x + obs.width >= horizontalSpan.left && obs.x <= horizontalSpan.right) {
+                            // Check if obstacle is above the connection level
+                            if (obs.y < highestObstacle) {
+                                highestObstacle = obs.y;
+                            }
+                        }
+                    });
+
+                    // Route above the highest obstacle with clearance
+                    const clearance = 40;
+                    offset = Math.max(60, Math.min(y1, y2) - highestObstacle + clearance);
+                } else if (startAnchor === 'bottom') {
+                    // For bottom routing, find lowest obstacle (maximum Y) in horizontal span
+                    const horizontalSpan = {left: Math.min(x1, x2), right: Math.max(x1, x2)};
+                    let lowestObstacle = Math.max(y1, y2); // Start with connection level
+
+                    obstacles.forEach(obs => {
+                        // Check if obstacle horizontally overlaps the path
+                        if (obs.x + obs.width >= horizontalSpan.left && obs.x <= horizontalSpan.right) {
+                            // Check if obstacle is below the connection level
+                            const obsBottom = obs.y + obs.height;
+                            if (obsBottom > lowestObstacle) {
+                                lowestObstacle = obsBottom;
+                            }
+                        }
+                    });
+
+                    // Route below the lowest obstacle with clearance
+                    const clearance = 40;
+                    offset = Math.max(60, lowestObstacle - Math.max(y1, y2) + clearance);
+                } else if (startAnchor === 'left') {
+                    // For left routing, find leftmost obstacle in vertical span
+                    const verticalSpan = {top: Math.min(y1, y2), bottom: Math.max(y1, y2)};
+                    let leftmostObstacle = Math.min(x1, x2);
+
+                    obstacles.forEach(obs => {
+                        // Check if obstacle vertically overlaps the path
+                        if (obs.y + obs.height >= verticalSpan.top && obs.y <= verticalSpan.bottom) {
+                            // Check if obstacle is left of the connection level
+                            if (obs.x < leftmostObstacle) {
+                                leftmostObstacle = obs.x;
+                            }
+                        }
+                    });
+
+                    const clearance = 40;
+                    offset = Math.max(60, Math.min(x1, x2) - leftmostObstacle + clearance);
+                } else if (startAnchor === 'right') {
+                    // For right routing, find rightmost obstacle in vertical span
+                    const verticalSpan = {top: Math.min(y1, y2), bottom: Math.max(y1, y2)};
+                    let rightmostObstacle = Math.max(x1, x2);
+
+                    obstacles.forEach(obs => {
+                        // Check if obstacle vertically overlaps the path
+                        if (obs.y + obs.height >= verticalSpan.top && obs.y <= verticalSpan.bottom) {
+                            // Check if obstacle is right of the connection level
+                            const obsRight = obs.x + obs.width;
+                            if (obsRight > rightmostObstacle) {
+                                rightmostObstacle = obsRight;
+                            }
+                        }
+                    });
+
+                    const clearance = 40;
+                    offset = Math.max(60, rightmostObstacle - Math.max(x1, x2) + clearance);
+                }
+            }
 
             if (startAnchor === 'left') {
                 // Exit left, go down, enter left
@@ -5857,17 +6070,31 @@ function getSteppedPath(x1, y1, x2, y2, bendPoint = null, startAnchor = null, en
                 points.push({x: x2, y: y2});
             }
         } else if (startIsHorizontal && endIsHorizontal) {
-            // Both horizontal but different sides - go horizontal, vertical, horizontal
-            const midX = bendPoint ? bendPoint.x : (x1 + x2) / 2;
-            points.push({x: midX, y: y1});
-            points.push({x: midX, y: y2});
-            points.push({x: x2, y: y2});
+            // Both horizontal but different sides (left→right or right→left)
+            // If at same level, just draw straight line
+            if (Math.abs(y1 - y2) < 5) {
+                // Straight horizontal line
+                points.push({x: x2, y: y2});
+            } else {
+                // Different levels - go horizontal, vertical, horizontal
+                const midX = bendPoint ? bendPoint.x : (x1 + x2) / 2;
+                points.push({x: midX, y: y1});
+                points.push({x: midX, y: y2});
+                points.push({x: x2, y: y2});
+            }
         } else if (!startIsHorizontal && !endIsHorizontal) {
-            // Both vertical but different sides - go vertical, horizontal, vertical
-            const midY = bendPoint ? bendPoint.y : (y1 + y2) / 2;
-            points.push({x: x1, y: midY});
-            points.push({x: x2, y: midY});
-            points.push({x: x2, y: y2});
+            // Both vertical but different sides (top→bottom or bottom→top)
+            // If at same level, just draw straight line
+            if (Math.abs(x1 - x2) < 5) {
+                // Straight vertical line
+                points.push({x: x2, y: y2});
+            } else {
+                // Different levels - go vertical, horizontal, vertical
+                const midY = bendPoint ? bendPoint.y : (y1 + y2) / 2;
+                points.push({x: x1, y: midY});
+                points.push({x: x2, y: midY});
+                points.push({x: x2, y: y2});
+            }
         } else if (startIsHorizontal && !endIsHorizontal) {
             // Start horizontal, end vertical - go horizontal then vertical
             const turnX = bendPoint ? bendPoint.x : x2;
