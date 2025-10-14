@@ -5057,11 +5057,259 @@ function drawArrow(x1, y1, x2, y2, color, lineStyle = 'solid', lineThickness = 2
     ctx.stroke();
 }
 
+// Smart pathfinding for arrows that avoid obstacles
+// Returns array of obstacles (shapes that should be avoided)
+function getObstacles(excludeIds = []) {
+    return elements.filter(el => {
+        // Exclude connectors (lines, arrows, pens) and excluded IDs
+        if (el.type === 'line' || el.type === 'arrow' || el.type === 'pen') return false;
+        if (excludeIds.includes(el.id)) return false;
+        return true;
+    });
+}
+
+// Check if a rectangle intersects with any obstacles
+function hasObstacleCollision(x, y, width, height, obstacles, margin = 20) {
+    const rect = {
+        left: Math.min(x, x + width) - margin,
+        right: Math.max(x, x + width) + margin,
+        top: Math.min(y, y + height) - margin,
+        bottom: Math.max(y, y + height) + margin
+    };
+
+    for (const obstacle of obstacles) {
+        const obsRect = {
+            left: obstacle.x,
+            right: obstacle.x + obstacle.width,
+            top: obstacle.y,
+            bottom: obstacle.y + obstacle.height
+        };
+
+        // Check if rectangles intersect
+        if (rect.right > obsRect.left &&
+            rect.left < obsRect.right &&
+            rect.bottom > obsRect.top &&
+            rect.top < obsRect.bottom) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// A* pathfinding algorithm for orthogonal routing
+function findSmartPath(startX, startY, endX, endY, startAnchor, endAnchor, excludeIds = []) {
+    const obstacles = getObstacles(excludeIds);
+
+    // Grid resolution for pathfinding
+    const gridSize = 30;
+    const margin = 25; // Margin around obstacles
+    const exitDistance = 50; // Distance to move away from anchor point before pathfinding
+
+    // Convert coordinates to grid
+    const toGrid = (x, y) => ({
+        x: Math.round(x / gridSize),
+        y: Math.round(y / gridSize)
+    });
+
+    const fromGrid = (gx, gy) => ({
+        x: gx * gridSize,
+        y: gy * gridSize
+    });
+
+    // Add intermediate points based on anchor directions
+    // This ensures the path exits/enters in the correct direction
+    let actualStartX = startX;
+    let actualStartY = startY;
+    let actualEndX = endX;
+    let actualEndY = endY;
+
+    // Adjust start point based on start anchor
+    switch (startAnchor) {
+        case 'left':
+            actualStartX -= exitDistance;
+            break;
+        case 'right':
+            actualStartX += exitDistance;
+            break;
+        case 'top':
+            actualStartY -= exitDistance;
+            break;
+        case 'bottom':
+            actualStartY += exitDistance;
+            break;
+    }
+
+    // Adjust end point based on end anchor
+    switch (endAnchor) {
+        case 'left':
+            actualEndX -= exitDistance;
+            break;
+        case 'right':
+            actualEndX += exitDistance;
+            break;
+        case 'top':
+            actualEndY -= exitDistance;
+            break;
+        case 'bottom':
+            actualEndY += exitDistance;
+            break;
+    }
+
+    const start = toGrid(actualStartX, actualStartY);
+    const end = toGrid(actualEndX, actualEndY);
+
+    // Check if a grid cell is blocked by obstacles
+    const isBlocked = (gx, gy) => {
+        const worldPos = fromGrid(gx, gy);
+        for (const obstacle of obstacles) {
+            const obsRect = {
+                left: obstacle.x - margin,
+                right: obstacle.x + obstacle.width + margin,
+                top: obstacle.y - margin,
+                bottom: obstacle.y + obstacle.height + margin
+            };
+
+            if (worldPos.x >= obsRect.left && worldPos.x <= obsRect.right &&
+                worldPos.y >= obsRect.top && worldPos.y <= obsRect.bottom) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    // A* implementation
+    const openSet = [];
+    const closedSet = new Set();
+    const cameFrom = new Map();
+    const gScore = new Map();
+    const fScore = new Map();
+
+    const key = (p) => `${p.x},${p.y}`;
+    const h = (p1, p2) => Math.abs(p1.x - p2.x) + Math.abs(p1.y - p2.y); // Manhattan distance
+
+    openSet.push(start);
+    gScore.set(key(start), 0);
+    fScore.set(key(start), h(start, end));
+
+    // Limit iterations to prevent infinite loops
+    let iterations = 0;
+    const maxIterations = 1000;
+
+    while (openSet.length > 0 && iterations < maxIterations) {
+        iterations++;
+
+        // Find node with lowest fScore
+        openSet.sort((a, b) => (fScore.get(key(a)) || Infinity) - (fScore.get(key(b)) || Infinity));
+        const current = openSet.shift();
+
+        // Reached goal
+        if (current.x === end.x && current.y === end.y) {
+            // Reconstruct path
+            const path = [fromGrid(current.x, current.y)];
+            let temp = current;
+            while (cameFrom.has(key(temp))) {
+                temp = cameFrom.get(key(temp));
+                path.unshift(fromGrid(temp.x, temp.y));
+            }
+
+            // Add anchor exit/entry points at the beginning and end
+            // Add intermediate point at start anchor exit
+            const startExit = {x: actualStartX, y: actualStartY};
+            // Add intermediate point at end anchor entry
+            const endEntry = {x: actualEndX, y: actualEndY};
+
+            // Prepend start points
+            path.unshift(startExit);
+            path.unshift({x: startX, y: startY});
+
+            // Append end points
+            path.push(endEntry);
+            path.push({x: endX, y: endY});
+
+            return path;
+        }
+
+        closedSet.add(key(current));
+
+        // Check neighbors (only orthogonal moves)
+        const neighbors = [
+            {x: current.x + 1, y: current.y},
+            {x: current.x - 1, y: current.y},
+            {x: current.x, y: current.y + 1},
+            {x: current.x, y: current.y - 1}
+        ];
+
+        for (const neighbor of neighbors) {
+            const nKey = key(neighbor);
+
+            if (closedSet.has(nKey)) continue;
+            if (isBlocked(neighbor.x, neighbor.y)) continue;
+
+            const tentativeGScore = (gScore.get(key(current)) || Infinity) + 1;
+
+            if (!openSet.find(p => p.x === neighbor.x && p.y === neighbor.y)) {
+                openSet.push(neighbor);
+            } else if (tentativeGScore >= (gScore.get(nKey) || Infinity)) {
+                continue;
+            }
+
+            cameFrom.set(nKey, current);
+            gScore.set(nKey, tentativeGScore);
+            fScore.set(nKey, tentativeGScore + h(neighbor, end));
+        }
+    }
+
+    // No path found, return straight line
+    return null;
+}
+
+// Simplify path by removing redundant points (co-linear points)
+function simplifyPath(points) {
+    if (points.length <= 2) return points;
+
+    const simplified = [points[0]];
+
+    for (let i = 1; i < points.length - 1; i++) {
+        const prev = simplified[simplified.length - 1];
+        const curr = points[i];
+        const next = points[i + 1];
+
+        // Check if current point is on the same line as prev and next
+        const dx1 = curr.x - prev.x;
+        const dy1 = curr.y - prev.y;
+        const dx2 = next.x - curr.x;
+        const dy2 = next.y - curr.y;
+
+        // If not co-linear, keep this point
+        if (!(dx1 === 0 && dx2 === 0) && !(dy1 === 0 && dy2 === 0)) {
+            simplified.push(curr);
+        } else if ((dx1 === 0 && dx2 === 0) || (dy1 === 0 && dy2 === 0)) {
+            // Co-linear, skip this point (don't add)
+        } else {
+            simplified.push(curr);
+        }
+    }
+
+    simplified.push(points[points.length - 1]);
+    return simplified;
+}
+
 // Calculate stepped path points (orthogonal routing)
 // bendPoint: optional {x, y} to override automatic midpoint calculation
 // startAnchor: direction exiting from ('top', 'bottom', 'left', 'right')
 // endAnchor: direction entering to ('top', 'bottom', 'left', 'right')
-function getSteppedPath(x1, y1, x2, y2, bendPoint = null, startAnchor = null, endAnchor = null) {
+// excludeIds: shape IDs to exclude from obstacle detection (typically the start/end shapes)
+// useSmart: whether to use smart pathfinding to avoid obstacles
+function getSteppedPath(x1, y1, x2, y2, bendPoint = null, startAnchor = null, endAnchor = null, excludeIds = [], useSmart = true) {
+    // Try smart pathfinding if enabled and not using custom bend point
+    if (useSmart && !bendPoint && startAnchor && endAnchor && excludeIds.length > 0) {
+        const smartPath = findSmartPath(x1, y1, x2, y2, startAnchor, endAnchor, excludeIds);
+        if (smartPath && smartPath.length > 0) {
+            // Smart path already includes correct start/end points
+            return simplifyPath(smartPath);
+        }
+    }
+
     const points = [];
     points.push({x: x1, y: y1});
 
@@ -5118,8 +5366,8 @@ function getSteppedPath(x1, y1, x2, y2, bendPoint = null, startAnchor = null, en
     return points;
 }
 
-function drawSteppedLine(x1, y1, x2, y2, color, lineStyle = 'solid', lineThickness = 2, bendPoint = null, startAnchor = null, endAnchor = null) {
-    const points = getSteppedPath(x1, y1, x2, y2, bendPoint, startAnchor, endAnchor);
+function drawSteppedLine(x1, y1, x2, y2, color, lineStyle = 'solid', lineThickness = 2, bendPoint = null, startAnchor = null, endAnchor = null, excludeIds = [], useSmart = true) {
+    const points = getSteppedPath(x1, y1, x2, y2, bendPoint, startAnchor, endAnchor, excludeIds, useSmart);
 
     ctx.strokeStyle = color;
     ctx.lineWidth = lineThickness;
@@ -5138,8 +5386,8 @@ function drawSteppedLine(x1, y1, x2, y2, color, lineStyle = 'solid', lineThickne
     ctx.setLineDash([]);
 }
 
-function drawSteppedArrow(x1, y1, x2, y2, color, lineStyle = 'solid', lineThickness = 2, bendPoint = null, startAnchor = null, endAnchor = null) {
-    const points = getSteppedPath(x1, y1, x2, y2, bendPoint, startAnchor, endAnchor);
+function drawSteppedArrow(x1, y1, x2, y2, color, lineStyle = 'solid', lineThickness = 2, bendPoint = null, startAnchor = null, endAnchor = null, excludeIds = [], useSmart = true) {
+    const points = getSteppedPath(x1, y1, x2, y2, bendPoint, startAnchor, endAnchor, excludeIds, useSmart);
 
     // Draw the stepped line portion
     ctx.strokeStyle = color;
@@ -7159,10 +7407,16 @@ function drawElement(element) {
             break;
         case 'line':
             if (element.lineRouting === 'stepped') {
+                // Build exclude IDs list (start and end shapes)
+                const excludeIds = [];
+                if (element.startShapeId) excludeIds.push(element.startShapeId);
+                if (element.endShapeId) excludeIds.push(element.endShapeId);
+
                 drawSteppedLine(element.x, element.y,
                                element.x + element.width, element.y + element.height,
                                element.strokeColor, lineStyle, element.lineThickness || 2,
-                               element.bendPoint, element.startAnchor, element.endAnchor);
+                               element.bendPoint, element.startAnchor, element.endAnchor,
+                               excludeIds, true);
             } else {
                 drawRoughLine(element.x, element.y,
                              element.x + element.width, element.y + element.height,
@@ -7171,10 +7425,16 @@ function drawElement(element) {
             break;
         case 'arrow':
             if (element.lineRouting === 'stepped') {
+                // Build exclude IDs list (start and end shapes)
+                const excludeIds = [];
+                if (element.startShapeId) excludeIds.push(element.startShapeId);
+                if (element.endShapeId) excludeIds.push(element.endShapeId);
+
                 drawSteppedArrow(element.x, element.y,
                                 element.x + element.width, element.y + element.height,
                                 element.strokeColor, lineStyle, element.lineThickness || 2,
-                                element.bendPoint, element.startAnchor, element.endAnchor);
+                                element.bendPoint, element.startAnchor, element.endAnchor,
+                                excludeIds, true);
             } else {
                 drawArrow(element.x, element.y,
                          element.x + element.width, element.y + element.height,
@@ -9525,7 +9785,12 @@ function elementToSVG(element) {
             const x2 = element.x + element.width;
             const y2 = element.y + element.height;
             if (element.lineRouting === 'stepped') {
-                const points = getSteppedPath(element.x, element.y, x2, y2);
+                // Build exclude IDs list for smart routing
+                const excludeIds = [];
+                if (element.startShapeId) excludeIds.push(element.startShapeId);
+                if (element.endShapeId) excludeIds.push(element.endShapeId);
+
+                const points = getSteppedPath(element.x, element.y, x2, y2, element.bendPoint, element.startAnchor, element.endAnchor, excludeIds, true);
                 let pathData = `M ${points[0].x} ${points[0].y}`;
                 for (let i = 1; i < points.length; i++) {
                     pathData += ` L ${points[i].x} ${points[i].y}`;
@@ -9539,7 +9804,12 @@ function elementToSVG(element) {
             const ax2 = element.x + element.width;
             const ay2 = element.y + element.height;
             if (element.lineRouting === 'stepped') {
-                const points = getSteppedPath(element.x, element.y, ax2, ay2);
+                // Build exclude IDs list for smart routing
+                const excludeIds = [];
+                if (element.startShapeId) excludeIds.push(element.startShapeId);
+                if (element.endShapeId) excludeIds.push(element.endShapeId);
+
+                const points = getSteppedPath(element.x, element.y, ax2, ay2, element.bendPoint, element.startAnchor, element.endAnchor, excludeIds, true);
                 let pathData = `M ${points[0].x} ${points[0].y}`;
                 for (let i = 1; i < points.length; i++) {
                     pathData += ` L ${points[i].x} ${points[i].y}`;
