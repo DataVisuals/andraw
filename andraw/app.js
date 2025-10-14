@@ -1040,7 +1040,9 @@ function insertTemplate(templateKey) {
                 const connectionPoints = getDirectionalConnection(
                     fromBounds, fromElement.type,
                     toBounds, toElement.type,
-                    false // Will be calculated automatically
+                    false, // Will be calculated automatically
+                    fromElement,
+                    toElement
                 );
 
                 if (connectionPoints) {
@@ -2624,6 +2626,27 @@ document.addEventListener('keydown', (e) => {
 
     // 'c' key enters connect mode for drawing arrows between selected elements
     if (key === 'c' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        // Build complete selection list (including selectedElement if not already in array)
+        let completeSelection = [...selectedElements];
+        if (selectedElement && !completeSelection.includes(selectedElement)) {
+            completeSelection.push(selectedElement);
+        }
+
+        // If multiple elements are already selected, connect them immediately
+        if (completeSelection.length > 1) {
+            // Temporarily set selectedElements to the complete list for connectSelectedElements
+            const originalSelectedElements = selectedElements;
+            selectedElements = completeSelection;
+            connectSelectedElements();
+            selectedElements = originalSelectedElements;
+            selectedElements = [];
+            selectedElement = null;
+            saveHistory();
+            redraw();
+            return;
+        }
+
+        // Otherwise enter connect mode for rectangle selection
         isConnectMode = true;
         currentTool = 'select';
         isRectangleSelecting = false;
@@ -2752,9 +2775,13 @@ document.addEventListener('keydown', (e) => {
         'l': 'line', 'a': 'arrow', 'p': 'pen', 't': 'text', 'h': 'hand'
     };
     if (toolMap[key] && !e.ctrlKey && !e.metaKey) {
-        // Handle rectangle dropdown button
+        // Handle shape selector (R key opens shape dropdown)
         if (key === 'r') {
-            rectangleBtn.click();
+            // Find and click the rectangle shape item in the dropdown
+            const rectangleShape = document.querySelector('.shape-item[data-shape="rectangle"]');
+            if (rectangleShape) {
+                rectangleShape.click();
+            }
         } else {
             const btn = document.querySelector(`[data-tool="${toolMap[key]}"]`);
             if (btn) btn.click();
@@ -2872,7 +2899,9 @@ document.addEventListener('keydown', (e) => {
                                     const connectionPoints = getDirectionalConnection(
                                         startBounds, startShape.type,
                                         endBounds, endShape.type,
-                                        isHorizontal
+                                        isHorizontal,
+                                        startShape,
+                                        endShape
                                     );
 
                                     if (connectionPoints) {
@@ -4028,6 +4057,28 @@ function handleMouseDown(e) {
                 return;
             }
 
+            // Check for Ctrl/Cmd+click for multi-select
+            if (e.ctrlKey || e.metaKey) {
+                // Toggle element in multi-selection
+                const index = selectedElements.indexOf(clickedElement);
+                if (index > -1) {
+                    // Remove from selection
+                    selectedElements.splice(index, 1);
+                    if (selectedElement === clickedElement) {
+                        selectedElement = selectedElements.length > 0 ? selectedElements[0] : null;
+                    }
+                } else {
+                    // Add to selection
+                    if (selectedElement && !selectedElements.includes(selectedElement)) {
+                        selectedElements.push(selectedElement);
+                    }
+                    selectedElements.push(clickedElement);
+                    selectedElement = clickedElement;
+                }
+                redraw();
+                return;
+            }
+
             // If clicking on already selected element, keep selection
             if (selectedElements.includes(clickedElement) || clickedElement === selectedElement) {
                 dragMode = 'move';
@@ -4505,25 +4556,36 @@ function connectSelectedElements() {
         y: eb.bounds.y + eb.bounds.height / 2
     }));
 
-    // Determine if we should connect left-to-right or top-to-bottom
-    // Based on which dimension has more variation
-    const xPositions = centers.map(c => c.x);
-    const yPositions = centers.map(c => c.y);
-    const xRange = Math.max(...xPositions) - Math.min(...xPositions);
-    const yRange = Math.max(...yPositions) - Math.min(...yPositions);
-
-    // Sort elements by position
+    // For exactly 2 elements, use selection order (first selected → last selected)
+    // For 3+ elements, sort by position
     let sortedCenters;
-    if (xRange > yRange) {
-        // Connect left to right
-        sortedCenters = centers.sort((a, b) => a.x - b.x);
+    let isHorizontal;
+
+    if (shapesOnly.length === 2) {
+        // Use selection order: first selected → second selected
+        sortedCenters = centers;
+        // Determine flow direction based on relative position
+        const dx = Math.abs(centers[1].x - centers[0].x);
+        const dy = Math.abs(centers[1].y - centers[0].y);
+        isHorizontal = dx > dy;
     } else {
-        // Connect top to bottom
-        sortedCenters = centers.sort((a, b) => a.y - b.y);
+        // For 3+ elements, sort by position (existing behavior)
+        const xPositions = centers.map(c => c.x);
+        const yPositions = centers.map(c => c.y);
+        const xRange = Math.max(...xPositions) - Math.min(...xPositions);
+        const yRange = Math.max(...yPositions) - Math.min(...yPositions);
+
+        if (xRange > yRange) {
+            // Connect left to right
+            sortedCenters = centers.sort((a, b) => a.x - b.x);
+        } else {
+            // Connect top to bottom
+            sortedCenters = centers.sort((a, b) => a.y - b.y);
+        }
+        isHorizontal = xRange > yRange;
     }
 
     // Create arrows between consecutive elements
-    const isHorizontal = xRange > yRange;
 
     for (let i = 0; i < sortedCenters.length - 1; i++) {
         const from = sortedCenters[i];
@@ -4537,20 +4599,15 @@ function connectSelectedElements() {
         const connectionPoints = getDirectionalConnection(
             fromBounds, from.element.type,
             toBounds, to.element.type,
-            isHorizontal
+            isHorizontal,
+            from.element,
+            to.element
         );
 
         if (connectionPoints) {
-            // Check if shapes are aligned on the same plane
-            const ALIGNMENT_THRESHOLD = 20; // pixels
-            const isAlignedHorizontally = Math.abs(connectionPoints.from.y - connectionPoints.to.y) < ALIGNMENT_THRESHOLD;
-            const isAlignedVertically = Math.abs(connectionPoints.from.x - connectionPoints.to.x) < ALIGNMENT_THRESHOLD;
-
-            // Auto-use stepped routing if shapes are not aligned on the same plane
-            let routing = currentLineRouting;
-            if (!isAlignedHorizontally && !isAlignedVertically) {
-                routing = 'stepped';
-            }
+            // Always use stepped routing in connect mode to enable smart obstacle avoidance
+            // This allows the pathfinding algorithm to route around any shapes in between
+            let routing = 'stepped';
 
             const arrow = {
                 id: nextElementId++,
@@ -4582,7 +4639,8 @@ function connectSelectedElements() {
 }
 
 // Get directional connection points based on relative position of shapes
-function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal) {
+// Now obstacle-aware: if direct path is blocked, choose alternative anchors
+function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal, elementA, elementB) {
     const sidesA = getSideCenters(boundsA, typeA);
     const sidesB = getSideCenters(boundsB, typeB);
 
@@ -4604,10 +4662,144 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal) 
     const absDx = Math.abs(dx);
     const absDy = Math.abs(dy);
 
+    // Check if direct path would be blocked by obstacles
+    const excludeIds = [elementA.id, elementB.id];
+    const obstacles = getObstacles(excludeIds);
+
+    const hasObstacleInPath = (x1, y1, x2, y2, anchorDirection = null) => {
+        // For same-side anchors, only check obstacles in the routing direction
+        if (anchorDirection) {
+            const horizontalSpan = {
+                left: Math.min(x1, x2),
+                right: Math.max(x1, x2)
+            };
+            const verticalSpan = {
+                top: Math.min(y1, y2),
+                bottom: Math.max(y1, y2)
+            };
+
+            for (const obs of obstacles) {
+                const obsRect = {
+                    left: obs.x,
+                    right: obs.x + obs.width,
+                    top: obs.y,
+                    bottom: obs.y + obs.height
+                };
+
+                // Check horizontal overlap first
+                const horizontalOverlap = obsRect.right >= horizontalSpan.left && obsRect.left <= horizontalSpan.right;
+                const verticalOverlap = obsRect.bottom >= verticalSpan.top && obsRect.top <= verticalSpan.bottom;
+
+                if (anchorDirection === 'top') {
+                    // For top→top, only check obstacles ABOVE the path
+                    // Obstacle must overlap horizontally AND be above the top anchor line
+                    if (horizontalOverlap && obsRect.top < verticalSpan.top) {
+                        return true;
+                    }
+                } else if (anchorDirection === 'bottom') {
+                    // For bottom→bottom, only check obstacles BELOW the path
+                    if (horizontalOverlap && obsRect.bottom > verticalSpan.bottom) {
+                        return true;
+                    }
+                } else if (anchorDirection === 'left') {
+                    // For left→left, only check obstacles to the LEFT
+                    if (verticalOverlap && obsRect.left < horizontalSpan.left) {
+                        return true;
+                    }
+                } else if (anchorDirection === 'right') {
+                    // For right→right, only check obstacles to the RIGHT
+                    if (verticalOverlap && obsRect.right > horizontalSpan.right) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        // For direct paths (no anchor direction), use simple rectangle intersection
+        const pathRect = {
+            left: Math.min(x1, x2),
+            right: Math.max(x1, x2),
+            top: Math.min(y1, y2),
+            bottom: Math.max(y1, y2)
+        };
+
+        for (const obs of obstacles) {
+            const obsRect = {
+                left: obs.x,
+                right: obs.x + obs.width,
+                top: obs.y,
+                bottom: obs.y + obs.height
+            };
+
+            if (obsRect.right >= pathRect.left && obsRect.left <= pathRect.right &&
+                obsRect.bottom >= pathRect.top && obsRect.top <= pathRect.bottom) {
+                return true;
+            }
+        }
+        return false;
+    };
+
     if (absDx > absDy) {
         // Horizontal connection is more appropriate
         if (dx > 0) {
             // B is to the right of A
+            // Check if horizontal path is blocked
+            if (hasObstacleInPath(sidesA.right.x, sidesA.right.y, sidesB.left.x, sidesB.left.y)) {
+                // Path blocked - check both top and bottom alternatives
+                const topBlocked = hasObstacleInPath(sidesA.top.x, sidesA.top.y, sidesB.top.x, sidesB.top.y, 'top');
+                const bottomBlocked = hasObstacleInPath(sidesA.bottom.x, sidesA.bottom.y, sidesB.bottom.x, sidesB.bottom.y, 'bottom');
+
+                console.log('Horizontal path blocked, checking alternatives:', {
+                    topPath: {from: sidesA.top, to: sidesB.top, blocked: topBlocked},
+                    bottomPath: {from: sidesA.bottom, to: sidesB.bottom, blocked: bottomBlocked},
+                    obstacleCount: obstacles.length,
+                    allObstacles: obstacles.map(o => ({
+                        id: o.id,
+                        type: o.type,
+                        bounds: {left: o.x, right: o.x + o.width, top: o.y, bottom: o.y + o.height}
+                    }))
+                });
+
+                // Choose the clearer path
+                if (!topBlocked && !bottomBlocked) {
+                    // Both clear - choose based on available space
+                    const topSpace = Math.min(boundsA.y, boundsB.y);
+                    const bottomSpace = 1000 - Math.max(boundsA.y + boundsA.height, boundsB.y + boundsB.height);
+
+                    if (bottomSpace > topSpace) {
+                        return {
+                            from: sidesA.bottom,
+                            to: sidesB.bottom,
+                            fromAnchor: 'bottom',
+                            toAnchor: 'bottom'
+                        };
+                    } else {
+                        return {
+                            from: sidesA.top,
+                            to: sidesB.top,
+                            fromAnchor: 'top',
+                            toAnchor: 'top'
+                        };
+                    }
+                } else if (!bottomBlocked) {
+                    // Only bottom is clear
+                    return {
+                        from: sidesA.bottom,
+                        to: sidesB.bottom,
+                        fromAnchor: 'bottom',
+                        toAnchor: 'bottom'
+                    };
+                } else {
+                    // Top is clear (or both blocked, prefer top)
+                    return {
+                        from: sidesA.top,
+                        to: sidesB.top,
+                        fromAnchor: 'top',
+                        toAnchor: 'top'
+                    };
+                }
+            }
             return {
                 from: sidesA.right,
                 to: sidesB.left,
@@ -4616,6 +4808,51 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal) 
             };
         } else {
             // B is to the left of A
+            // Check if horizontal path is blocked
+            if (hasObstacleInPath(sidesA.left.x, sidesA.left.y, sidesB.right.x, sidesB.right.y)) {
+                // Path blocked - check both top and bottom alternatives
+                const topBlocked = hasObstacleInPath(sidesA.top.x, sidesA.top.y, sidesB.top.x, sidesB.top.y, 'top');
+                const bottomBlocked = hasObstacleInPath(sidesA.bottom.x, sidesA.bottom.y, sidesB.bottom.x, sidesB.bottom.y, 'bottom');
+
+                // Choose the clearer path
+                if (!topBlocked && !bottomBlocked) {
+                    // Both clear - choose based on available space
+                    const topSpace = Math.min(boundsA.y, boundsB.y);
+                    const bottomSpace = 1000 - Math.max(boundsA.y + boundsA.height, boundsB.y + boundsB.height);
+
+                    if (bottomSpace > topSpace) {
+                        return {
+                            from: sidesA.bottom,
+                            to: sidesB.bottom,
+                            fromAnchor: 'bottom',
+                            toAnchor: 'bottom'
+                        };
+                    } else {
+                        return {
+                            from: sidesA.top,
+                            to: sidesB.top,
+                            fromAnchor: 'top',
+                            toAnchor: 'top'
+                        };
+                    }
+                } else if (!bottomBlocked) {
+                    // Only bottom is clear
+                    return {
+                        from: sidesA.bottom,
+                        to: sidesB.bottom,
+                        fromAnchor: 'bottom',
+                        toAnchor: 'bottom'
+                    };
+                } else {
+                    // Top is clear (or both blocked, prefer top)
+                    return {
+                        from: sidesA.top,
+                        to: sidesB.top,
+                        fromAnchor: 'top',
+                        toAnchor: 'top'
+                    };
+                }
+            }
             return {
                 from: sidesA.left,
                 to: sidesB.right,
@@ -4627,6 +4864,51 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal) 
         // Vertical connection is more appropriate
         if (dy > 0) {
             // B is below A
+            // Check if vertical path is blocked
+            if (hasObstacleInPath(sidesA.bottom.x, sidesA.bottom.y, sidesB.top.x, sidesB.top.y)) {
+                // Path blocked - check both left and right alternatives
+                const leftBlocked = hasObstacleInPath(sidesA.left.x, sidesA.left.y, sidesB.left.x, sidesB.left.y, 'left');
+                const rightBlocked = hasObstacleInPath(sidesA.right.x, sidesA.right.y, sidesB.right.x, sidesB.right.y, 'right');
+
+                // Choose the clearer path
+                if (!leftBlocked && !rightBlocked) {
+                    // Both clear - choose based on available space
+                    const leftSpace = Math.min(boundsA.x, boundsB.x);
+                    const rightSpace = 1000 - Math.max(boundsA.x + boundsA.width, boundsB.x + boundsB.width);
+
+                    if (rightSpace > leftSpace) {
+                        return {
+                            from: sidesA.right,
+                            to: sidesB.right,
+                            fromAnchor: 'right',
+                            toAnchor: 'right'
+                        };
+                    } else {
+                        return {
+                            from: sidesA.left,
+                            to: sidesB.left,
+                            fromAnchor: 'left',
+                            toAnchor: 'left'
+                        };
+                    }
+                } else if (!rightBlocked) {
+                    // Only right is clear
+                    return {
+                        from: sidesA.right,
+                        to: sidesB.right,
+                        fromAnchor: 'right',
+                        toAnchor: 'right'
+                    };
+                } else {
+                    // Left is clear (or both blocked, prefer left)
+                    return {
+                        from: sidesA.left,
+                        to: sidesB.left,
+                        fromAnchor: 'left',
+                        toAnchor: 'left'
+                    };
+                }
+            }
             return {
                 from: sidesA.bottom,
                 to: sidesB.top,
@@ -4635,6 +4917,51 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal) 
             };
         } else {
             // B is above A
+            // Check if vertical path is blocked
+            if (hasObstacleInPath(sidesA.top.x, sidesA.top.y, sidesB.bottom.x, sidesB.bottom.y)) {
+                // Path blocked - check both left and right alternatives
+                const leftBlocked = hasObstacleInPath(sidesA.left.x, sidesA.left.y, sidesB.left.x, sidesB.left.y, 'left');
+                const rightBlocked = hasObstacleInPath(sidesA.right.x, sidesA.right.y, sidesB.right.x, sidesB.right.y, 'right');
+
+                // Choose the clearer path
+                if (!leftBlocked && !rightBlocked) {
+                    // Both clear - choose based on available space
+                    const leftSpace = Math.min(boundsA.x, boundsB.x);
+                    const rightSpace = 1000 - Math.max(boundsA.x + boundsA.width, boundsB.x + boundsB.width);
+
+                    if (rightSpace > leftSpace) {
+                        return {
+                            from: sidesA.right,
+                            to: sidesB.right,
+                            fromAnchor: 'right',
+                            toAnchor: 'right'
+                        };
+                    } else {
+                        return {
+                            from: sidesA.left,
+                            to: sidesB.left,
+                            fromAnchor: 'left',
+                            toAnchor: 'left'
+                        };
+                    }
+                } else if (!rightBlocked) {
+                    // Only right is clear
+                    return {
+                        from: sidesA.right,
+                        to: sidesB.right,
+                        fromAnchor: 'right',
+                        toAnchor: 'right'
+                    };
+                } else {
+                    // Left is clear (or both blocked, prefer left)
+                    return {
+                        from: sidesA.left,
+                        to: sidesB.left,
+                        fromAnchor: 'left',
+                        toAnchor: 'left'
+                    };
+                }
+            }
             return {
                 from: sidesA.top,
                 to: sidesB.bottom,
@@ -5064,6 +5391,10 @@ function getObstacles(excludeIds = []) {
         // Exclude connectors (lines, arrows, pens) and excluded IDs
         if (el.type === 'line' || el.type === 'arrow' || el.type === 'pen') return false;
         if (excludeIds.includes(el.id)) return false;
+
+        // Also exclude child elements (e.g., text labels belonging to excluded shapes)
+        if (el.parentId && excludeIds.includes(el.parentId)) return false;
+
         return true;
     });
 }
@@ -5099,11 +5430,18 @@ function hasObstacleCollision(x, y, width, height, obstacles, margin = 20) {
 // A* pathfinding algorithm for orthogonal routing
 function findSmartPath(startX, startY, endX, endY, startAnchor, endAnchor, excludeIds = []) {
     const obstacles = getObstacles(excludeIds);
+    console.log('Smart pathfinding:', {
+        start: {x: startX, y: startY, anchor: startAnchor},
+        end: {x: endX, y: endY, anchor: endAnchor},
+        excludeIds,
+        obstacleCount: obstacles.length
+    });
+    console.log('Obstacles:', obstacles.map(o => ({id: o.id, type: o.type, x: o.x, y: o.y, w: o.width, h: o.height})));
 
     // Grid resolution for pathfinding
     const gridSize = 30;
     const margin = 25; // Margin around obstacles
-    const exitDistance = 50; // Distance to move away from anchor point before pathfinding
+    const exitDistance = 60; // Distance to move away from anchor point before pathfinding (must be > margin)
 
     // Convert coordinates to grid
     const toGrid = (x, y) => ({
@@ -5159,7 +5497,33 @@ function findSmartPath(startX, startY, endX, endY, startAnchor, endAnchor, exclu
     const end = toGrid(actualEndX, actualEndY);
 
     // Check if a grid cell is blocked by obstacles
+    // Allow a corridor from start/end in their anchor directions to pass through margins
     const isBlocked = (gx, gy) => {
+        // Allow start and end positions
+        if ((gx === start.x && gy === start.y) || (gx === end.x && gy === end.y)) {
+            return false;
+        }
+
+        // Allow movement in the exit/entry direction even through margins
+        // This creates a "corridor" for the path to escape from tight spaces
+        const isInExitCorridor = (
+            (startAnchor === 'right' && gy === start.y && gx > start.x && gx <= start.x + 3) ||
+            (startAnchor === 'left' && gy === start.y && gx < start.x && gx >= start.x - 3) ||
+            (startAnchor === 'top' && gx === start.x && gy < start.y && gy >= start.y - 3) ||
+            (startAnchor === 'bottom' && gx === start.x && gy > start.y && gy <= start.y + 3)
+        );
+
+        const isInEntryCorridor = (
+            (endAnchor === 'left' && gy === end.y && gx < end.x && gx >= end.x - 3) ||
+            (endAnchor === 'right' && gy === end.y && gx > end.x && gx <= end.x + 3) ||
+            (endAnchor === 'top' && gx === end.x && gy < end.y && gy >= end.y - 3) ||
+            (endAnchor === 'bottom' && gx === end.x && gy > end.y && gy <= end.y + 3)
+        );
+
+        if (isInExitCorridor || isInEntryCorridor) {
+            return false; // Allow pathfinding through margin in exit/entry corridors
+        }
+
         const worldPos = fromGrid(gx, gy);
         for (const obstacle of obstacles) {
             const obsRect = {
@@ -5176,6 +5540,15 @@ function findSmartPath(startX, startY, endX, endY, startAnchor, endAnchor, exclu
         }
         return false;
     };
+
+    console.log('Grid positions:', {
+        actualStart: {x: actualStartX, y: actualStartY},
+        actualEnd: {x: actualEndX, y: actualEndY},
+        gridStart: start,
+        gridEnd: end,
+        startBlocked: isBlocked(start.x + 1, start.y), // Check next cell
+        endBlocked: isBlocked(end.x - 1, end.y)
+    });
 
     // A* implementation
     const openSet = [];
@@ -5202,8 +5575,13 @@ function findSmartPath(startX, startY, endX, endY, startAnchor, endAnchor, exclu
         openSet.sort((a, b) => (fScore.get(key(a)) || Infinity) - (fScore.get(key(b)) || Infinity));
         const current = openSet.shift();
 
+        if (iterations === 1) {
+            console.log('First A* iteration - current:', current, 'end:', end, 'openSet size:', openSet.length);
+        }
+
         // Reached goal
         if (current.x === end.x && current.y === end.y) {
+            console.log('A* reached goal at iteration', iterations);
             // Reconstruct path
             const path = [fromGrid(current.x, current.y)];
             let temp = current;
@@ -5226,6 +5604,7 @@ function findSmartPath(startX, startY, endX, endY, startAnchor, endAnchor, exclu
             path.push(endEntry);
             path.push({x: endX, y: endY});
 
+            console.log('A* found path with', path.length, 'points:', path);
             return path;
         }
 
@@ -5239,16 +5618,22 @@ function findSmartPath(startX, startY, endX, endY, startAnchor, endAnchor, exclu
             {x: current.x, y: current.y - 1}
         ];
 
+        let blockedCount = 0;
+        let addedCount = 0;
         for (const neighbor of neighbors) {
             const nKey = key(neighbor);
 
             if (closedSet.has(nKey)) continue;
-            if (isBlocked(neighbor.x, neighbor.y)) continue;
+            if (isBlocked(neighbor.x, neighbor.y)) {
+                blockedCount++;
+                continue;
+            }
 
             const tentativeGScore = (gScore.get(key(current)) || Infinity) + 1;
 
             if (!openSet.find(p => p.x === neighbor.x && p.y === neighbor.y)) {
                 openSet.push(neighbor);
+                addedCount++;
             } else if (tentativeGScore >= (gScore.get(nKey) || Infinity)) {
                 continue;
             }
@@ -5257,9 +5642,14 @@ function findSmartPath(startX, startY, endX, endY, startAnchor, endAnchor, exclu
             gScore.set(nKey, tentativeGScore);
             fScore.set(nKey, tentativeGScore + h(neighbor, end));
         }
+
+        if (iterations === 1) {
+            console.log('First iteration neighbors: blocked=', blockedCount, 'added=', addedCount, 'openSet after=', openSet.length);
+        }
     }
 
     // No path found, return straight line
+    console.log('A* failed to find path after', iterations, 'iterations');
     return null;
 }
 
@@ -5267,6 +5657,7 @@ function findSmartPath(startX, startY, endX, endY, startAnchor, endAnchor, exclu
 function simplifyPath(points) {
     if (points.length <= 2) return points;
 
+    // First pass: remove co-linear points
     const simplified = [points[0]];
 
     for (let i = 1; i < points.length - 1; i++) {
@@ -5280,18 +5671,122 @@ function simplifyPath(points) {
         const dx2 = next.x - curr.x;
         const dy2 = next.y - curr.y;
 
-        // If not co-linear, keep this point
-        if (!(dx1 === 0 && dx2 === 0) && !(dy1 === 0 && dy2 === 0)) {
-            simplified.push(curr);
-        } else if ((dx1 === 0 && dx2 === 0) || (dy1 === 0 && dy2 === 0)) {
-            // Co-linear, skip this point (don't add)
-        } else {
+        // Keep point if it's a direction change (turning point)
+        const isTurningPoint = !(
+            (dx1 === 0 && dx2 === 0) ||  // All vertical
+            (dy1 === 0 && dy2 === 0)     // All horizontal
+        );
+
+        if (isTurningPoint) {
             simplified.push(curr);
         }
     }
 
     simplified.push(points[points.length - 1]);
-    return simplified;
+
+    // Second pass: remove backtracking segments
+    let cleaned = [simplified[0]];
+    for (let i = 1; i < simplified.length - 1; i++) {
+        const prev = cleaned[cleaned.length - 1];
+        const curr = simplified[i];
+        const next = simplified[i + 1];
+
+        const dx1 = curr.x - prev.x;
+        const dx2 = next.x - curr.x;
+        const dy1 = curr.y - prev.y;
+        const dy2 = next.y - curr.y;
+
+        // Check for backtracking (opposite directions on same axis)
+        const backtrackingX = (dx1 > 0 && dx2 < 0) || (dx1 < 0 && dx2 > 0);
+        const backtrackingY = (dy1 > 0 && dy2 < 0) || (dy1 < 0 && dy2 > 0);
+
+        // If not backtracking, keep the point
+        if (!backtrackingX && !backtrackingY) {
+            cleaned.push(curr);
+        }
+    }
+    cleaned.push(simplified[simplified.length - 1]);
+
+    // Third pass: aggressive simplification for zigzag paths
+    // For paths with many points, find key turning points to create clean orthogonal segments
+    if (cleaned.length > 6) {
+        const start = cleaned[0];
+        const end = cleaned[cleaned.length - 1];
+
+        // Check if this is primarily vertical or horizontal movement
+        const totalDx = Math.abs(end.x - start.x);
+        const totalDy = Math.abs(end.y - start.y);
+
+        // For primarily vertical paths (like left→left or right→right on vertical arrangements)
+        if (totalDy > totalDx && totalDx < 100) {
+            const aggressive = [start];
+
+            // Find the westernmost or easternmost point (the "turn out" point)
+            let extremeX = start.x;
+            let extremeIdx = 0;
+            const isGoingLeft = cleaned[1].x < start.x;
+
+            for (let i = 1; i < cleaned.length - 1; i++) {
+                if (isGoingLeft && cleaned[i].x < extremeX) {
+                    extremeX = cleaned[i].x;
+                    extremeIdx = i;
+                } else if (!isGoingLeft && cleaned[i].x > extremeX) {
+                    extremeX = cleaned[i].x;
+                    extremeIdx = i;
+                }
+            }
+
+            if (extremeIdx > 0) {
+                // Add the turn-out point
+                aggressive.push(cleaned[extremeIdx]);
+
+                // Find another key point about 2/3 of the way through
+                const twoThirdsIdx = Math.floor(cleaned.length * 0.66);
+                if (twoThirdsIdx > extremeIdx + 1 && twoThirdsIdx < cleaned.length - 1) {
+                    aggressive.push(cleaned[twoThirdsIdx]);
+                }
+            }
+
+            aggressive.push(end);
+            return aggressive;
+        }
+
+        // For primarily horizontal paths (like top→top or bottom→bottom on horizontal arrangements)
+        if (totalDx > totalDy && totalDy < 100) {
+            const aggressive = [start];
+
+            // Find the northernmost or southernmost point (the "turn out" point)
+            let extremeY = start.y;
+            let extremeIdx = 0;
+            const isGoingUp = cleaned[1].y < start.y;
+
+            for (let i = 1; i < cleaned.length - 1; i++) {
+                if (isGoingUp && cleaned[i].y < extremeY) {
+                    extremeY = cleaned[i].y;
+                    extremeIdx = i;
+                } else if (!isGoingUp && cleaned[i].y > extremeY) {
+                    extremeY = cleaned[i].y;
+                    extremeIdx = i;
+                }
+            }
+
+            if (extremeIdx > 0) {
+                // Add the turn-out point
+                aggressive.push(cleaned[extremeIdx]);
+
+                // Find another key point about 2/3 of the way through
+                const twoThirdsIdx = Math.floor(cleaned.length * 0.66);
+                if (twoThirdsIdx > extremeIdx + 1 && twoThirdsIdx < cleaned.length - 1) {
+                    aggressive.push(cleaned[twoThirdsIdx]);
+                }
+            }
+
+            aggressive.push(end);
+            return aggressive;
+        }
+    }
+
+    return cleaned;
 }
 
 // Calculate stepped path points (orthogonal routing)
@@ -5301,8 +5796,22 @@ function simplifyPath(points) {
 // excludeIds: shape IDs to exclude from obstacle detection (typically the start/end shapes)
 // useSmart: whether to use smart pathfinding to avoid obstacles
 function getSteppedPath(x1, y1, x2, y2, bendPoint = null, startAnchor = null, endAnchor = null, excludeIds = [], useSmart = true) {
-    // Try smart pathfinding if enabled and not using custom bend point
-    if (useSmart && !bendPoint && startAnchor && endAnchor && excludeIds.length > 0) {
+    // Debug: Check all conditions for smart pathfinding
+    console.log('getSteppedPath called:', {
+        useSmart,
+        hasBendPoint: !!bendPoint,
+        startAnchor,
+        endAnchor,
+        excludeIds,
+        willUseSmart: useSmart && !bendPoint && startAnchor && endAnchor && excludeIds.length > 0
+    });
+
+    // For same-side anchors (left→left, right→right, top→top, bottom→bottom),
+    // use simple 3-segment logic instead of complex A* pathfinding
+    const sameSideAnchors = startAnchor === endAnchor;
+
+    // Try smart pathfinding if enabled, not using custom bend point, and NOT same-side anchors
+    if (useSmart && !bendPoint && startAnchor && endAnchor && excludeIds.length > 0 && !sameSideAnchors) {
         const smartPath = findSmartPath(x1, y1, x2, y2, startAnchor, endAnchor, excludeIds);
         if (smartPath && smartPath.length > 0) {
             // Smart path already includes correct start/end points
@@ -5318,14 +5827,43 @@ function getSteppedPath(x1, y1, x2, y2, bendPoint = null, startAnchor = null, en
         const startIsHorizontal = startAnchor === 'left' || startAnchor === 'right';
         const endIsHorizontal = endAnchor === 'left' || endAnchor === 'right';
 
-        if (startIsHorizontal && endIsHorizontal) {
-            // Both horizontal - go horizontal, vertical, horizontal
+        // Special handling for same-side anchors (left→left, right→right, top→top, bottom→bottom)
+        if (startAnchor === endAnchor) {
+            const offset = 60; // Distance to extend out before turning
+
+            if (startAnchor === 'left') {
+                // Exit left, go down, enter left
+                const outX = Math.min(x1, x2) - offset;
+                points.push({x: outX, y: y1});
+                points.push({x: outX, y: y2});
+                points.push({x: x2, y: y2});
+            } else if (startAnchor === 'right') {
+                // Exit right, go down, enter right
+                const outX = Math.max(x1, x2) + offset;
+                points.push({x: outX, y: y1});
+                points.push({x: outX, y: y2});
+                points.push({x: x2, y: y2});
+            } else if (startAnchor === 'top') {
+                // Exit top, go right, enter top
+                const outY = Math.min(y1, y2) - offset;
+                points.push({x: x1, y: outY});
+                points.push({x: x2, y: outY});
+                points.push({x: x2, y: y2});
+            } else if (startAnchor === 'bottom') {
+                // Exit bottom, go right, enter bottom
+                const outY = Math.max(y1, y2) + offset;
+                points.push({x: x1, y: outY});
+                points.push({x: x2, y: outY});
+                points.push({x: x2, y: y2});
+            }
+        } else if (startIsHorizontal && endIsHorizontal) {
+            // Both horizontal but different sides - go horizontal, vertical, horizontal
             const midX = bendPoint ? bendPoint.x : (x1 + x2) / 2;
             points.push({x: midX, y: y1});
             points.push({x: midX, y: y2});
             points.push({x: x2, y: y2});
         } else if (!startIsHorizontal && !endIsHorizontal) {
-            // Both vertical - go vertical, horizontal, vertical
+            // Both vertical but different sides - go vertical, horizontal, vertical
             const midY = bendPoint ? bendPoint.y : (y1 + y2) / 2;
             points.push({x: x1, y: midY});
             points.push({x: x2, y: midY});
@@ -9346,7 +9884,9 @@ function moveElement(element, dx, dy) {
                         const connectionPoints = getDirectionalConnection(
                             startBounds, startShape.type,
                             endBounds, endShape.type,
-                            isHorizontal
+                            isHorizontal,
+                            startShape,
+                            endShape
                         );
 
                         if (connectionPoints) {
