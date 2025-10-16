@@ -11,13 +11,15 @@
 </head>
 <body>
     <!-- Splash Screen -->
+    <!-- To update version info: run 'git log -1 --format="%h %ci"' and update the values below -->
     <div id="splashScreen" class="splash-screen">
         <div class="splash-card">
             <div class="splash-logo-wrapper">
                 <img src="logo-transparent.png" alt="Andraw Logo" class="splash-logo" width="120" height="120">
             </div>
             <h1 class="splash-title">Andraw</h1>
-            <p class="splash-version">v1.0.2-7615161</p>
+            <p class="splash-version">v1.0.2-<span id="splashGitHash">55461974c</span></p>
+            <p class="splash-date">Last updated: <span id="splashLastEdit">Oct 16, 2025</span></p>
         </div>
     </div>
 
@@ -53,10 +55,10 @@
             <div class="toolbar-group" data-group="tools">
                 <div class="toolbar-group-label">Tools</div>
                 <div class="toolbar-group-content">
-            <button class="tool-btn active" data-tool="select" title="Selection (V)">
+            <button class="tool-btn active" data-tool="select" title="Selection">
                 <svg width="20" height="20" viewBox="0 0 20 20"><path d="M4 3 L4 17 L9 12 L12 17 L14 16 L11 11 L16 11 Z" fill="currentColor"/></svg>
             </button>
-            <button class="tool-btn" data-tool="hand" title="Hand/Pan (H)">
+            <button class="tool-btn" data-tool="hand" title="Hand/Pan">
                 <i class="fas fa-hand-paper"></i>
             </button>
             <div class="divider"></div>
@@ -308,6 +310,53 @@
                                     <span>Arrow</span>
                                 </button>
                             </div>
+                            <div class="line-options-header">Arrowhead Style</div>
+                            <div class="line-options-row">
+                                <button class="arrow-style-btn active" data-arrow-style="triangle" title="Triangle (default)">
+                                    <svg width="48" height="20" viewBox="0 0 48 20">
+                                        <line x1="4" y1="10" x2="34" y2="10" stroke="#666" stroke-width="2"/>
+                                        <polygon points="44,10 34,6 34,14" fill="#666"/>
+                                    </svg>
+                                    <span>Triangle</span>
+                                </button>
+                                <button class="arrow-style-btn" data-arrow-style="circle-filled" title="Circle (filled)">
+                                    <svg width="48" height="20" viewBox="0 0 48 20">
+                                        <line x1="4" y1="10" x2="34" y2="10" stroke="#666" stroke-width="2"/>
+                                        <circle cx="42" cy="10" r="5" fill="#666"/>
+                                    </svg>
+                                    <span>Circle</span>
+                                </button>
+                                <button class="arrow-style-btn" data-arrow-style="circle-hollow" title="Circle (hollow)">
+                                    <svg width="48" height="20" viewBox="0 0 48 20">
+                                        <line x1="4" y1="10" x2="34" y2="10" stroke="#666" stroke-width="2"/>
+                                        <circle cx="42" cy="10" r="5" fill="#fff" stroke="#666" stroke-width="2"/>
+                                    </svg>
+                                    <span>Circle</span>
+                                </button>
+                            </div>
+                            <div class="line-options-row">
+                                <button class="arrow-style-btn" data-arrow-style="diamond-filled" title="Diamond (filled)">
+                                    <svg width="48" height="20" viewBox="0 0 48 20">
+                                        <line x1="4" y1="10" x2="33" y2="10" stroke="#666" stroke-width="2"/>
+                                        <polygon points="42,10 37,6 32,10 37,14" fill="#666"/>
+                                    </svg>
+                                    <span>Diamond</span>
+                                </button>
+                                <button class="arrow-style-btn" data-arrow-style="diamond-hollow" title="Diamond (hollow)">
+                                    <svg width="48" height="20" viewBox="0 0 48 20">
+                                        <line x1="4" y1="10" x2="33" y2="10" stroke="#666" stroke-width="2"/>
+                                        <polygon points="42,10 37,6 32,10 37,14" fill="#fff" stroke="#666" stroke-width="2"/>
+                                    </svg>
+                                    <span>Diamond</span>
+                                </button>
+                                <button class="arrow-style-btn" data-arrow-style="line" title="Simple line">
+                                    <svg width="48" height="20" viewBox="0 0 48 20">
+                                        <line x1="4" y1="10" x2="36" y2="10" stroke="#666" stroke-width="2"/>
+                                        <line x1="36" y1="6" x2="36" y2="14" stroke="#666" stroke-width="2"/>
+                                    </svg>
+                                    <span>Line</span>
+                                </button>
+                            </div>
                             <div class="line-options-header">Straight Lines</div>
                             <div class="line-options-row">
                                 <button class="line-combo-btn" data-style="solid" data-routing="straight" data-thickness="1" title="Straight · Solid · 1px">
@@ -468,10 +517,10 @@
             <div class="toolbar-group" data-group="arrange">
                 <div class="toolbar-group-label">Arrange</div>
                 <div class="toolbar-group-content">
-            <button class="action-btn" id="layoutHorizontalBtn" title="Layout Horizontally">
+            <button class="action-btn" id="layoutHorizontalBtn" title="Layout Horizontally (H)">
                 <i class="fas fa-arrows-alt-h"></i>
             </button>
-            <button class="action-btn" id="layoutVerticalBtn" title="Layout Vertically">
+            <button class="action-btn" id="layoutVerticalBtn" title="Layout Vertically (V)">
                 <i class="fas fa-arrows-alt-v"></i>
             </button>
             <div class="divider"></div>
@@ -1038,13 +1087,11 @@
                 <div class="help-grid-compact">
                     <div class="help-section">
                         <h3>Tools</h3>
-                        <div class="shortcut"><kbd>V</kbd><span>Select</span></div>
                         <div class="shortcut"><kbd>R</kbd><span>Rectangle</span></div>
                         <div class="shortcut"><kbd>L</kbd><span>Line</span></div>
                         <div class="shortcut"><kbd>A</kbd><span>Arrow</span></div>
                         <div class="shortcut"><kbd>P</kbd><span>Pen</span></div>
                         <div class="shortcut"><kbd>T</kbd><span>Text</span></div>
-                        <div class="shortcut"><kbd>H</kbd><span>Hand/Pan</span></div>
                         <div class="shortcut"><kbd>I</kbd><span>Color Picker</span></div>
                     </div>
                     <div class="help-section">
@@ -1086,11 +1133,14 @@
                         <div class="shortcut"><kbd>Shift+Arrows</kbd><span>Move 10px</span></div>
                     </div>
                     <div class="help-section">
-                        <h3>View & Other</h3>
+                        <h3>View & Layout</h3>
+                        <div class="shortcut"><kbd>F</kbd><span>Center & Fit (100%)</span></div>
                         <div class="shortcut"><kbd>G</kbd><span>Toggle Grid</span></div>
                         <div class="shortcut"><kbd>Shift+R</kbd><span>Toggle Rulers</span></div>
                         <div class="shortcut"><kbd>Space</kbd><span>Pan Canvas</span></div>
-                        <div class="shortcut"><kbd>C</kbd><span>Connect Mode</span></div>
+                        <div class="shortcut"><kbd>H</kbd><span>Layout Horizontally</span></div>
+                        <div class="shortcut"><kbd>V</kbd><span>Layout Vertically</span></div>
+                        <div class="shortcut"><kbd>C</kbd><span>Connect / Connect All</span></div>
                         <div class="shortcut"><kbd>M</kbd><span>Duplicate Last</span></div>
                         <div class="shortcut"><kbd>Ctrl/⌘+L</kbd><span>Lock/Unlock</span></div>
                         <div class="shortcut"><kbd>?</kbd><span>This Help</span></div>
