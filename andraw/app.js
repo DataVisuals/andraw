@@ -5148,8 +5148,9 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal, 
             if (horizontalBlocked) {
                 return true;
             }
-            // Check if horizontal segment passes through source or target shapes
-            if (segmentIntersectsShape(x1, y1, x2, y1, boundsA) || segmentIntersectsShape(x1, y1, x2, y1, boundsB)) {
+            // Check if horizontal segment passes through target shape only
+            // Don't check source - the segment is exiting from the source at its anchor
+            if (segmentIntersectsShape(x1, y1, x2, y1, boundsB)) {
                 return true;
             }
             // Check vertical segment: (x2,y1) to (x2,y2)
@@ -5158,7 +5159,7 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal, 
                 return true;
             }
             // Check if vertical segment passes through source shape only
-            // Don't check target - the segment is supposed to enter the target at its anchor
+            // Don't check target - the segment is entering the target at its anchor
             if (segmentIntersectsShape(x2, y1, x2, y2, boundsA)) {
                 return true;
             }
@@ -5171,8 +5172,9 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal, 
             if (verticalBlocked) {
                 return true;
             }
-            // Check if vertical segment passes through source or target shapes
-            if (segmentIntersectsShape(x1, y1, x1, y2, boundsA) || segmentIntersectsShape(x1, y1, x1, y2, boundsB)) {
+            // Check if vertical segment passes through target shape only
+            // Don't check source - the segment is exiting from the source at its anchor
+            if (segmentIntersectsShape(x1, y1, x1, y2, boundsB)) {
                 return true;
             }
             // Check horizontal segment: (x1,y2) to (x2,y2)
@@ -5181,7 +5183,7 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal, 
                 return true;
             }
             // Check if horizontal segment passes through source shape only
-            // Don't check target - the segment is supposed to enter the target at its anchor
+            // Don't check target - the segment is entering the target at its anchor
             if (segmentIntersectsShape(x1, y2, x2, y2, boundsA)) {
                 return true;
             }
