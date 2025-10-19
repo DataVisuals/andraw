@@ -160,6 +160,12 @@ python3 -m http.server 8000
 
 ## 📖 What's New
 
+### 2025-10-19
+✨ Intelligent arrow routing with stepped path obstacle detection
+✨ BOTTOM→BOTTOM fallback routing for nearly-aligned shapes with blocked paths
+✨ Comprehensive test suite (90+ tests) for arrow routing edge cases
+✨ Fixed arrows routing through obstacles when shapes are nearly horizontally aligned
+
 ### 2025-10-06
 ✨ Font Awesome icon library - searchable selector with 60+ popular icons
 ✨ Icons are resizable, moveable, and color customizable

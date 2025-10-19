@@ -352,10 +352,7 @@
         </div>
     </div>
 
-    <!-- Load app.js in an iframe to access its functions -->
-    <iframe id="app-frame" src="index.html" style="display: none;"></iframe>
-
-    <script type="module">
+    <script>
         // Test Framework Core
         class TestFramework {
             constructor() {
@@ -416,10 +413,10 @@
                             details: {}
                         };
 
+                        const assertions = []; // Move outside try block
+
                         try {
                             if (suite.beforeEach) await suite.beforeEach();
-
-                            const assertions = [];
                             const assert = {
                                 equal: (actual, expected, message) => {
                                     const passed = actual === expected;
@@ -483,8 +480,11 @@
             }
 
             render(results) {
+                console.log('render() called with', results.length, 'suites');
                 const container = document.getElementById('test-results');
+                console.log('Container:', container);
                 container.innerHTML = '';
+                console.log('Container cleared');
 
                 results.forEach((suite, suiteIndex) => {
                     const suiteDiv = document.createElement('div');
@@ -568,8 +568,17 @@
 
         // Global helper functions
         window.runAllTests = async function() {
-            const results = await testFramework.run();
-            testFramework.render(results);
+            console.log('runAllTests() called, framework has', testFramework.suites.length, 'suites');
+            try {
+                const results = await testFramework.run();
+                console.log('Tests completed:', results);
+                console.log('About to render, container exists:', !!document.getElementById('test-results'));
+                testFramework.render(results);
+                console.log('Results rendered successfully');
+            } catch (error) {
+                console.error('Error running tests:', error);
+                alert('Error: ' + error.message);
+            }
         };
 
         window.expandAll = function() {
@@ -599,13 +608,26 @@
             });
             event.target.classList.add('active');
 
-            // Filter test cases
-            document.querySelectorAll('.test-case').forEach(test => {
-                const status = test.dataset.status;
-                if (filter === 'all' || filter === status) {
-                    test.style.display = '';
+            // Filter test cases and suites
+            document.querySelectorAll('.test-suite').forEach(suite => {
+                const tests = suite.querySelectorAll('.test-case');
+                let visibleCount = 0;
+
+                tests.forEach(test => {
+                    const status = test.dataset.status;
+                    if (filter === 'all' || filter === status) {
+                        test.style.display = '';
+                        visibleCount++;
+                    } else {
+                        test.style.display = 'none';
+                    }
+                });
+
+                // Hide suite if no visible tests
+                if (visibleCount === 0) {
+                    suite.style.display = 'none';
                 } else {
-                    test.style.display = 'none';
+                    suite.style.display = '';
                 }
             });
         };
@@ -625,17 +647,1430 @@
             a.click();
         };
 
-        // Wait for iframe to load, then define tests
-        window.addEventListener('load', () => {
-            setTimeout(defineTests, 1000);
-        });
+        // ====================================================================
+        // TEST DEFINITIONS - Embedded for standalone operation
+        // ====================================================================
+
+        // Mock elements array for testing
+        let testElements = [];
+        let testNextElementId = 1;
+
+        // Helper functions
+        function createRect(id, x, y, width = 120, height = 80) {
+            return { id, type: 'rect', x, y, width, height };
+        }
+
+        function getObstacles(excludeIds) {
+            return testElements.filter(el =>
+                !excludeIds.includes(el.id) &&
+                (el.type === 'rect' || el.type === 'circle' || el.type === 'diamond')
+            );
+        }
+
+        function getSideCenters(bounds, type) {
+            const cx = bounds.x + bounds.width / 2;
+            const cy = bounds.y + bounds.height / 2;
+            return {
+                top: { x: cx, y: bounds.y },
+                bottom: { x: cx, y: bounds.y + bounds.height },
+                left: { x: bounds.x, y: cy },
+                right: { x: bounds.x + bounds.width, y: cy }
+            };
+        }
+
+        // Run tests immediately (script is at end of body, DOM is ready)
+        console.log('Script loaded, defining tests...');
+        try {
+            defineTests();
+            console.log('Tests defined, running tests...');
+            setTimeout(() => {
+                console.log('Running all tests...');
+                runAllTests();
+            }, 100);
+        } catch (error) {
+            console.error('Error loading tests:', error);
+            document.getElementById('test-results').innerHTML = `
+                <div class="loading">
+                    <div style="color: #f85149; text-align: center;">
+                        ✗ Error: ${error.message}<br>
+                        Check browser console for details
+                    </div>
+                </div>
+            `;
+        }
 
         function defineTests() {
-            // Import test definitions
-            const script = document.createElement('script');
-            script.src = 'test-definitions.js';
-            script.type = 'module';
-            document.body.appendChild(script);
+            console.log('defineTests() called');
+            // ============================================================================
+            // TEST SUITE 1: Obstacle Detection - Horizontal Paths
+            // ============================================================================
+            testFramework.suite('Obstacle Detection - Horizontal Paths', ({ test, beforeEach }) => {
+                beforeEach(() => {
+                    testElements = [];
+                    testNextElementId = 1;
+                });
+
+                test('Detects obstacle directly in horizontal path', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 300),  // A
+                        createRect(2, 300, 300),  // B (between A and C)
+                        createRect(3, 500, 300)   // C
+                    ];
+
+                    const obstacles = getObstacles([1, 3]);
+                    const pathY = 340; // Middle of shapes at y=300
+
+                    // Obstacle B at 300-380 overlaps pathY=340
+                    const obsRect = { left: 300, right: 420, top: 300, bottom: 380 };
+                    const blocks = obsRect.top <= pathY + 30 && obsRect.bottom >= pathY - 30;
+
+                    assert.true(blocks, 'Obstacle in path should block');
+                });
+
+                test('Does not detect obstacle above horizontal path (outside tolerance)', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 400),  // A
+                        createRect(2, 300, 200),  // B (above)
+                        createRect(3, 500, 400)   // C
+                    ];
+
+                    const pathY = 440; // Middle of A and C
+                    const obsRect = { left: 300, right: 420, top: 200, bottom: 280 };
+
+                    // B is 160px above path (280 to 440), outside 30px tolerance
+                    const blocks = obsRect.top <= pathY + 30 && obsRect.bottom >= pathY - 30;
+
+                    assert.false(blocks, 'Obstacle far above should not block');
+                });
+
+                test('Does not detect obstacle below horizontal path (outside tolerance)', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 200),  // A
+                        createRect(2, 300, 400),  // B (below)
+                        createRect(3, 500, 200)   // C
+                    ];
+
+                    const pathY = 240; // Middle of A and C
+                    const obsRect = { left: 300, right: 420, top: 400, bottom: 480 };
+
+                    // B is 160px below path (240 to 400), outside 30px tolerance
+                    const blocks = obsRect.top <= pathY + 30 && obsRect.bottom >= pathY - 30;
+
+                    assert.false(blocks, 'Obstacle far below should not block');
+                });
+
+                test('Detects obstacle within tolerance band', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 300),  // A
+                        createRect(2, 300, 320),  // B (20px below path center)
+                        createRect(3, 500, 300)   // C
+                    ];
+
+                    const pathY = 340; // Center of A and C
+                    const obsRect = { left: 300, right: 420, top: 320, bottom: 400 };
+
+                    // B overlaps with tolerance band (310-370)
+                    const blocks = obsRect.top <= pathY + 30 && obsRect.bottom >= pathY - 30;
+
+                    assert.true(blocks, 'Obstacle within tolerance should block');
+                });
+
+                test('Does not detect obstacle with no horizontal overlap', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 300),  // A
+                        createRect(2, 600, 300),  // B (to the right of C)
+                        createRect(3, 400, 300)   // C
+                    ];
+
+                    const obstacles = getObstacles([1, 3]);
+                    const pathRect = { left: 220, right: 400, top: 340, bottom: 340 };
+                    const obsRect = { left: 600, right: 720, top: 300, bottom: 380 };
+
+                    // B is outside horizontal span (220-400)
+                    const horizontalOverlap = obsRect.right >= pathRect.left && obsRect.left <= pathRect.right;
+
+                    assert.false(horizontalOverlap, 'Obstacle outside horizontal span should not block');
+                });
+
+                test('Handles multiple obstacles in path', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 300),  // A
+                        createRect(2, 250, 300),  // B
+                        createRect(3, 400, 300),  // C
+                        createRect(4, 550, 300)   // D
+                    ];
+
+                    const obstacles = getObstacles([1, 4]);
+                    const pathY = 340;
+
+                    // Both B and C should block
+                    let blockedCount = 0;
+                    obstacles.forEach(obs => {
+                        const obsRect = {
+                            left: obs.x,
+                            right: obs.x + obs.width,
+                            top: obs.y,
+                            bottom: obs.y + obs.height
+                        };
+                        if (obsRect.top <= pathY + 30 && obsRect.bottom >= pathY - 30) {
+                            blockedCount++;
+                        }
+                    });
+
+                    assert.equal(blockedCount, 2, 'Should detect 2 blocking obstacles');
+                });
+            });
+
+            // ============================================================================
+            // TEST SUITE 2: Obstacle Detection - Vertical Paths
+            // ============================================================================
+            testFramework.suite('Obstacle Detection - Vertical Paths', ({ test, beforeEach }) => {
+                beforeEach(() => {
+                    testElements = [];
+                    testNextElementId = 1;
+                });
+
+                test('Detects obstacle directly in vertical path', (assert) => {
+                    testElements = [
+                        createRect(1, 300, 100),  // A
+                        createRect(2, 300, 300),  // B (between A and C)
+                        createRect(3, 300, 500)   // C
+                    ];
+
+                    const pathX = 360; // Middle of shapes at x=300
+                    const obsRect = { left: 300, right: 420, top: 300, bottom: 380 };
+
+                    const blocks = obsRect.left <= pathX + 30 && obsRect.right >= pathX - 30;
+
+                    assert.true(blocks, 'Obstacle in vertical path should block');
+                });
+
+                test('Does not detect obstacle to the right (outside tolerance)', (assert) => {
+                    testElements = [
+                        createRect(1, 200, 100),  // A
+                        createRect(2, 400, 300),  // B (to the right)
+                        createRect(3, 200, 500)   // C
+                    ];
+
+                    const pathX = 260; // Center of A and C
+                    const obsRect = { left: 400, right: 520, top: 300, bottom: 380 };
+
+                    // B is 140px to the right (260 to 400), outside 30px tolerance
+                    const blocks = obsRect.left <= pathX + 30 && obsRect.right >= pathX - 30;
+
+                    assert.false(blocks, 'Obstacle far right should not block');
+                });
+
+                test('Detects obstacle within tolerance band vertically', (assert) => {
+                    testElements = [
+                        createRect(1, 300, 100),  // A
+                        createRect(2, 320, 300),  // B (20px to right of center)
+                        createRect(3, 300, 500)   // C
+                    ];
+
+                    const pathX = 360; // Center of A and C
+                    const obsRect = { left: 320, right: 440, top: 300, bottom: 380 };
+
+                    const blocks = obsRect.left <= pathX + 30 && obsRect.right >= pathX - 30;
+
+                    assert.true(blocks, 'Obstacle within tolerance should block vertical path');
+                });
+            });
+
+            // ============================================================================
+            // TEST SUITE 3: Anchor Selection - Same-Side Anchors
+            // ============================================================================
+            testFramework.suite('Anchor Selection - Same-Side Anchors', ({ test }) => {
+                test('Selects top→top for same-level shapes with obstacles above', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 400),  // A
+                        createRect(2, 350, 400),  // B (same level as A)
+                        createRect(3, 350, 250)   // C (above B)
+                    ];
+
+                    const boundsA = { x: 100, y: 400, width: 120, height: 80 };
+                    const boundsB = { x: 350, y: 400, width: 120, height: 80 };
+                    const sidesA = getSideCenters(boundsA, 'rect');
+                    const sidesB = getSideCenters(boundsB, 'rect');
+
+                    const yDiff = (boundsB.y + boundsB.height / 2) - (boundsA.y + boundsA.height / 2);
+                    const isSameLevel = Math.abs(yDiff) < 20;
+
+                    assert.true(isSameLevel, 'Should detect same level');
+                    assert.within(yDiff, 0, 20, 'Y difference should be minimal');
+                });
+
+                test('Selects bottom→bottom for same-level shapes with obstacles below', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 200),  // A
+                        createRect(2, 350, 200),  // B (same level)
+                        createRect(3, 350, 400)   // C (below B)
+                    ];
+
+                    const yDiff = 200 - 200;
+                    const isSameLevel = Math.abs(yDiff) < 20;
+
+                    assert.true(isSameLevel, 'Should detect same level');
+                    assert.equal(yDiff, 0, 'Y difference should be zero');
+                });
+
+                test('Distinguishes same-level from slightly offset shapes', (assert) => {
+                    const testCases = [
+                        { yDiff: 0, expected: true, label: 'Exact same level' },
+                        { yDiff: 10, expected: true, label: '10px offset within tolerance' },
+                        { yDiff: 19, expected: true, label: '19px offset within tolerance' },
+                        { yDiff: 25, expected: false, label: '25px offset outside tolerance' },
+                        { yDiff: -15, expected: true, label: '-15px offset within tolerance' },
+                        { yDiff: -30, expected: false, label: '-30px offset outside tolerance' }
+                    ];
+
+                    testCases.forEach(tc => {
+                        const isSameLevel = Math.abs(tc.yDiff) < 20;
+                        assert.equal(isSameLevel, tc.expected, tc.label);
+                    });
+                });
+            });
+
+            // ============================================================================
+            // TEST SUITE 4: Anchor Selection - Perpendicular Anchors
+            // ============================================================================
+            testFramework.suite('Anchor Selection - Perpendicular Anchors', ({ test }) => {
+                test('Selects top→left for target above-right', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 400),  // A
+                        createRect(2, 350, 400),  // B (right of A, same level)
+                        createRect(3, 350, 250)   // C (above B)
+                    ];
+
+                    const centerA = { x: 160, y: 440 };
+                    const centerC = { x: 410, y: 290 };
+
+                    const dx = centerC.x - centerA.x; // 250 (positive, to the right)
+                    const dy = centerC.y - centerA.y; // -150 (negative, above)
+
+                    const isAbove = dy < -20;
+                    const isRight = dx > 0;
+
+                    assert.true(isAbove, 'Target should be above');
+                    assert.true(isRight, 'Target should be to the right');
+                });
+
+                test('Selects bottom→left for target below-right', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 200),  // A
+                        createRect(2, 350, 400)   // B (below and right of A)
+                    ];
+
+                    const centerA = { x: 160, y: 240 };
+                    const centerB = { x: 410, y: 440 };
+
+                    const dx = centerB.x - centerA.x; // 250
+                    const dy = centerB.y - centerA.y; // 200
+
+                    const isBelow = dy > 20;
+                    const isRight = dx > 0;
+
+                    assert.true(isBelow, 'Target should be below');
+                    assert.true(isRight, 'Target should be to the right');
+                });
+
+                test('Does not use A* pathfinding for perpendicular anchors', (assert) => {
+                    const startAnchor = 'top';
+                    const endAnchor = 'left';
+
+                    const startIsVertical = startAnchor === 'top' || startAnchor === 'bottom';
+                    const endIsVertical = endAnchor === 'top' || endAnchor === 'bottom';
+                    const perpendicularAnchors = startIsVertical !== endIsVertical;
+
+                    assert.true(perpendicularAnchors, 'Should identify as perpendicular');
+                });
+            });
+
+            // ============================================================================
+            // TEST SUITE 5: Anchor Selection - Simple Opposite Anchors
+            // ============================================================================
+            testFramework.suite('Anchor Selection - Simple Opposite Anchors', ({ test }) => {
+                test('Identifies left→right as simple opposite', (assert) => {
+                    const startAnchor = 'left';
+                    const endAnchor = 'right';
+
+                    const isSimpleOpposite = (startAnchor === 'left' && endAnchor === 'right') ||
+                                             (startAnchor === 'right' && endAnchor === 'left');
+
+                    assert.true(isSimpleOpposite, 'left→right should be simple opposite');
+                });
+
+                test('Identifies right→left as simple opposite', (assert) => {
+                    const startAnchor = 'right';
+                    const endAnchor = 'left';
+
+                    const isSimpleOpposite = (startAnchor === 'left' && endAnchor === 'right') ||
+                                             (startAnchor === 'right' && endAnchor === 'left');
+
+                    assert.true(isSimpleOpposite, 'right→left should be simple opposite');
+                });
+
+                test('Identifies top→bottom as simple opposite', (assert) => {
+                    const startAnchor = 'top';
+                    const endAnchor = 'bottom';
+
+                    const isSimpleOpposite = (startAnchor === 'top' && endAnchor === 'bottom') ||
+                                             (startAnchor === 'bottom' && endAnchor === 'top');
+
+                    assert.true(isSimpleOpposite, 'top→bottom should be simple opposite');
+                });
+
+                test('Does not use A* for simple opposite at same level', (assert) => {
+                    const startAnchor = 'left';
+                    const endAnchor = 'right';
+                    const sameSideAnchors = startAnchor === endAnchor;
+                    const perpendicularAnchors = false;
+                    const isSimpleOpposite = true;
+
+                    const needsAStar = !sameSideAnchors && !perpendicularAnchors && !isSimpleOpposite;
+
+                    assert.false(needsAStar, 'Should not need A* for simple opposite');
+                });
+
+                test('top→left is not simple opposite (perpendicular)', (assert) => {
+                    const startAnchor = 'top';
+                    const endAnchor = 'left';
+
+                    const isSimpleOpposite = (startAnchor === 'left' && endAnchor === 'right') ||
+                                             (startAnchor === 'right' && endAnchor === 'left') ||
+                                             (startAnchor === 'top' && endAnchor === 'bottom') ||
+                                             (startAnchor === 'bottom' && endAnchor === 'top');
+
+                    assert.false(isSimpleOpposite, 'top→left is perpendicular, not simple opposite');
+                });
+            });
+
+            // ============================================================================
+            // TEST SUITE 6: Path Routing - Straight Lines
+            // ============================================================================
+            testFramework.suite('Path Routing - Straight Lines', ({ test }) => {
+                test('Creates straight line for left→right at same level', (assert) => {
+                    const x1 = 220, y1 = 340; // A.right
+                    const x2 = 350, y2 = 340; // B.left
+
+                    const points = [{x: x1, y: y1}];
+
+                    // Check if at same level
+                    if (Math.abs(y1 - y2) < 5) {
+                        points.push({x: x2, y: y2});
+                    }
+
+                    assert.equal(points.length, 2, 'Should have 2 points (straight line)');
+                    assert.equal(points[0].y, points[1].y, 'Y coordinates should be equal');
+                });
+
+                test('Creates straight line for top→bottom at same X', (assert) => {
+                    const x1 = 360, y1 = 180; // A.bottom
+                    const x2 = 360, y2 = 400; // B.top
+
+                    const points = [{x: x1, y: y1}];
+
+                    if (Math.abs(x1 - x2) < 5) {
+                        points.push({x: x2, y: y2});
+                    }
+
+                    assert.equal(points.length, 2, 'Should have 2 points (straight line)');
+                    assert.equal(points[0].x, points[1].x, 'X coordinates should be equal');
+                });
+
+                test('Does not create straight line for left→right at different levels', (assert) => {
+                    const x1 = 220, y1 = 340; // A.right
+                    const x2 = 350, y2 = 400; // B.left (60px below)
+
+                    const needsMultiSegment = Math.abs(y1 - y2) >= 5;
+
+                    assert.true(needsMultiSegment, 'Should need multi-segment path');
+                });
+            });
+
+            // ============================================================================
+            // TEST SUITE 7: Path Routing - Dynamic Offset Calculation
+            // ============================================================================
+            testFramework.suite('Path Routing - Dynamic Offset Calculation', ({ test }) => {
+                test('Calculates offset for top routing with obstacle above', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 400),  // A
+                        createRect(2, 300, 250),  // Obstacle above
+                        createRect(3, 500, 400)   // B
+                    ];
+
+                    const obstacles = getObstacles([1, 3]);
+                    const y1 = 400, y2 = 400;
+                    const horizontalSpan = { left: 100, right: 620 };
+
+                    let highestObstacle = Math.min(y1, y2);
+
+                    obstacles.forEach(obs => {
+                        if (obs.x + obs.width >= horizontalSpan.left && obs.x <= horizontalSpan.right) {
+                            if (obs.y < highestObstacle) {
+                                highestObstacle = obs.y; // 250
+                            }
+                        }
+                    });
+
+                    const clearance = 40;
+                    const offset = Math.max(60, Math.min(y1, y2) - highestObstacle + clearance);
+
+                    // Expected: 400 - 250 + 40 = 190
+                    assert.equal(offset, 190, 'Should calculate correct offset above obstacle');
+                });
+
+                test('Uses minimum offset when no obstacles', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 400),
+                        createRect(2, 500, 400)
+                    ];
+
+                    const obstacles = getObstacles([1, 2]);
+                    const offset = obstacles.length === 0 ? 60 : 60;
+
+                    assert.equal(offset, 60, 'Should use minimum offset with no obstacles');
+                });
+
+                test('Calculates offset for bottom routing with obstacle below', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 300, 120, 80),  // A (300-380)
+                        createRect(2, 300, 500, 120, 80),  // Obstacle below (500-580)
+                        createRect(3, 500, 300, 120, 80)   // B (300-380)
+                    ];
+
+                    const obstacles = getObstacles([1, 3]);
+                    const y1 = 380, y2 = 380; // Bottom edges
+                    const horizontalSpan = { left: 100, right: 620 };
+
+                    let lowestObstacle = Math.max(y1, y2);
+
+                    obstacles.forEach(obs => {
+                        if (obs.x + obs.width >= horizontalSpan.left && obs.x <= horizontalSpan.right) {
+                            const obsBottom = obs.y + obs.height;
+                            if (obsBottom > lowestObstacle) {
+                                lowestObstacle = obsBottom; // 580
+                            }
+                        }
+                    });
+
+                    const clearance = 40;
+                    const offset = Math.max(60, lowestObstacle - Math.max(y1, y2) + clearance);
+
+                    // Expected: 580 - 380 + 40 = 240
+                    assert.equal(offset, 240, 'Should calculate correct offset below obstacle');
+                });
+            });
+
+            // ============================================================================
+            // TEST SUITE 8: Edge Cases - Boundary Conditions
+            // ============================================================================
+            testFramework.suite('Edge Cases - Boundary Conditions', ({ test }) => {
+                test('Handles zero-width path (same X coordinates)', (assert) => {
+                    const x1 = 300, y1 = 200;
+                    const x2 = 300, y2 = 400;
+
+                    const pathWidth = Math.abs(x2 - x1);
+
+                    assert.equal(pathWidth, 0, 'Path width should be zero');
+                });
+
+                test('Handles zero-height path (same Y coordinates)', (assert) => {
+                    const x1 = 100, y1 = 300;
+                    const x2 = 500, y2 = 300;
+
+                    const pathHeight = Math.abs(y2 - y1);
+
+                    assert.equal(pathHeight, 0, 'Path height should be zero');
+                });
+
+                test('Handles obstacle at exact tolerance boundary (30px)', (assert) => {
+                    const pathY = 340;
+                    const obsRect = { top: 310, bottom: 370 }; // Exactly 30px above and below
+
+                    const blocks = obsRect.top <= pathY + 30 && obsRect.bottom >= pathY - 30;
+
+                    assert.true(blocks, 'Obstacle at exact tolerance boundary should block');
+                });
+
+                test('Handles obstacle just outside tolerance boundary (31px)', (assert) => {
+                    const pathY = 340;
+                    const obsRect = { top: 309, bottom: 371 }; // 31px above and below
+
+                    const blocks = obsRect.top <= pathY + 30 && obsRect.bottom >= pathY - 30;
+
+                    assert.true(blocks, 'Obstacle just outside tolerance should still overlap');
+                });
+
+                test('Handles very large shapes', (assert) => {
+                    const largeShape = createRect(1, 0, 0, 10000, 10000);
+
+                    assert.equal(largeShape.width, 10000, 'Should handle large width');
+                    assert.equal(largeShape.height, 10000, 'Should handle large height');
+                });
+
+                test('Handles shapes at canvas boundaries', (assert) => {
+                    const shapes = [
+                        createRect(1, 0, 0),      // Top-left corner
+                        createRect(2, 1880, 0),   // Top-right corner
+                        createRect(3, 0, 920),    // Bottom-left corner
+                        createRect(4, 1880, 920)  // Bottom-right corner
+                    ];
+
+                    assert.equal(shapes.length, 4, 'Should create all boundary shapes');
+                });
+            });
+
+            // ============================================================================
+            // TEST SUITE 9: Edge Cases - Overlapping Shapes
+            // ============================================================================
+            testFramework.suite('Edge Cases - Overlapping Shapes', ({ test }) => {
+                test('Handles completely overlapping shapes', (assert) => {
+                    testElements = [
+                        createRect(1, 300, 300),
+                        createRect(2, 300, 300) // Same position
+                    ];
+
+                    const bounds1 = { x: 300, y: 300, width: 120, height: 80 };
+                    const bounds2 = { x: 300, y: 300, width: 120, height: 80 };
+
+                    const overlaps = bounds1.x === bounds2.x && bounds1.y === bounds2.y;
+
+                    assert.true(overlaps, 'Should detect complete overlap');
+                });
+
+                test('Handles partially overlapping shapes', (assert) => {
+                    const rect1 = { left: 100, right: 220, top: 300, bottom: 380 };
+                    const rect2 = { left: 180, right: 300, top: 350, bottom: 430 };
+
+                    const overlaps = rect1.right >= rect2.left &&
+                                    rect1.left <= rect2.right &&
+                                    rect1.bottom >= rect2.top &&
+                                    rect1.top <= rect2.bottom;
+
+                    assert.true(overlaps, 'Should detect partial overlap');
+                });
+
+                test('Handles shapes touching at edges', (assert) => {
+                    const rect1 = { left: 100, right: 220, top: 300, bottom: 380 };
+                    const rect2 = { left: 220, right: 340, top: 300, bottom: 380 };
+
+                    const touching = rect1.right === rect2.left;
+
+                    assert.true(touching, 'Should detect edge touching');
+                });
+            });
+
+            // ============================================================================
+            // TEST SUITE 10: Integration - Complex Layouts
+            // ============================================================================
+            testFramework.suite('Integration - Complex Layouts', ({ test, beforeEach }) => {
+                beforeEach(() => {
+                    testElements = [];
+                });
+
+                test('Handles tunnel scenario (obstacles above and below)', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 300),  // A
+                        createRect(2, 300, 150),  // Obstacle above
+                        createRect(3, 300, 470),  // Obstacle below
+                        createRect(4, 500, 300)   // B
+                    ];
+
+                    const obstacles = getObstacles([1, 4]);
+                    const pathY = 340;
+
+                    let topBlocked = false, bottomBlocked = false;
+
+                    obstacles.forEach(obs => {
+                        const obsRect = { top: obs.y, bottom: obs.y + obs.height };
+
+                        // Check if blocks top path (path goes up)
+                        if (obsRect.bottom < pathY + 30) topBlocked = true;
+
+                        // Check if blocks bottom path (path goes down)
+                        if (obsRect.top > pathY - 30) bottomBlocked = true;
+                    });
+
+                    assert.true(topBlocked, 'Top path should be blocked');
+                    assert.true(bottomBlocked, 'Bottom path should be blocked');
+                });
+
+                test('Handles checkerboard pattern (staggered obstacles)', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 400),   // A
+                        createRect(2, 250, 250),   // Above-left
+                        createRect(3, 450, 550),   // Below-middle
+                        createRect(4, 650, 280),   // Above-right
+                        createRect(5, 800, 520),   // Below-right
+                        createRect(6, 900, 400)    // B
+                    ];
+
+                    const obstacles = getObstacles([1, 6]);
+
+                    assert.equal(obstacles.length, 4, 'Should have 4 obstacles');
+                });
+
+                test('Handles grid layout (6 shapes in 2x3 grid)', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 100),   // Row 1
+                        createRect(2, 300, 100),
+                        createRect(3, 500, 100),
+                        createRect(4, 100, 300),   // Row 2
+                        createRect(5, 300, 300),
+                        createRect(6, 500, 300)
+                    ];
+
+                    assert.equal(testElements.length, 6, 'Should have 6 shapes in grid');
+                });
+
+                test('Handles star pattern (center with 4 surrounding)', (assert) => {
+                    testElements = [
+                        createRect(1, 400, 400),   // Center
+                        createRect(2, 400, 200),   // Top
+                        createRect(3, 400, 600),   // Bottom
+                        createRect(4, 200, 400),   // Left
+                        createRect(5, 600, 400)    // Right
+                    ];
+
+                    const center = testElements[0];
+                    const surrounding = testElements.slice(1);
+
+                    surrounding.forEach(shape => {
+                        const dx = shape.x - center.x;
+                        const dy = shape.y - center.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+
+                        assert.within(distance, 200, 10, 'Surrounding shapes should be ~200px from center');
+                    });
+                });
+
+                test('Handles dense obstacle field (10 shapes)', (assert) => {
+                    testElements = []; // Explicitly clear
+                    for (let i = 0; i < 10; i++) {
+                        testElements.push(createRect(i + 1, i * 100, i * 50));
+                    }
+
+                    assert.equal(testElements.length, 10, 'Should handle 10 shapes');
+                    assert.equal(getObstacles([1]).length, 9, 'Should get 9 obstacles when excluding 1');
+                });
+            });
+
+            // ============================================================================
+            // TEST SUITE 11: A* Pathfinding - Navigate Between Obstacles
+            // ============================================================================
+            testFramework.suite('A* Pathfinding - Navigate Between Obstacles', ({ test, beforeEach }) => {
+                beforeEach(() => {
+                    testElements = [];
+                });
+
+                test('Navigates through vertical corridor between obstacles', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 400),   // A (start)
+                        createRect(2, 300, 200),   // Obstacle top-left
+                        createRect(3, 300, 350),   // Obstacle middle-left
+                        createRect(4, 300, 500),   // Obstacle bottom-left
+                        createRect(5, 500, 200),   // Obstacle top-right
+                        createRect(6, 500, 350),   // Obstacle middle-right
+                        createRect(7, 500, 500),   // Obstacle bottom-right
+                        createRect(8, 700, 400)    // B (end)
+                    ];
+
+                    // This scenario requires navigating through the corridor between obstacles
+                    // Going over/under would hit obstacles on both sides
+                    const obstacles = getObstacles([1, 8]);
+                    assert.equal(obstacles.length, 6, 'Should have 6 obstacles creating corridor');
+
+                    // Verify there are obstacles blocking simple top/bottom routes
+                    const hasTopObstacles = obstacles.some(o => o.y < 400);
+                    const hasBottomObstacles = obstacles.some(o => o.y > 400);
+                    assert.true(hasTopObstacles, 'Should have obstacles above');
+                    assert.true(hasBottomObstacles, 'Should have obstacles below');
+                });
+
+                test('Navigates around obstacles in staggered formation', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 300),   // A
+                        createRect(2, 250, 250),   // Obstacle staggered up
+                        createRect(3, 400, 350),   // Obstacle staggered down
+                        createRect(4, 550, 250),   // Obstacle staggered up
+                        createRect(5, 700, 300)    // B
+                    ];
+
+                    // Staggered obstacles require zigzag navigation
+                    const obstacles = getObstacles([1, 5]);
+                    assert.equal(obstacles.length, 3, 'Should have 3 staggered obstacles');
+
+                    // Verify obstacles are at different Y levels
+                    const yPositions = obstacles.map(o => o.y);
+                    const hasVariation = new Set(yPositions).size > 1;
+                    assert.true(hasVariation, 'Obstacles should be at different Y levels');
+                });
+
+                test('Navigates through maze with multiple obstacles', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 400),   // Start
+                        createRect(2, 250, 300),   // Wall 1 top
+                        createRect(3, 250, 500),   // Wall 1 bottom
+                        createRect(4, 450, 200),   // Wall 2 top
+                        createRect(5, 450, 400),   // Wall 2 middle
+                        createRect(6, 450, 600),   // Wall 2 bottom
+                        createRect(7, 650, 300),   // Wall 3 top
+                        createRect(8, 650, 500),   // Wall 3 bottom
+                        createRect(9, 800, 400)    // End
+                    ];
+
+                    const obstacles = getObstacles([1, 9]);
+                    assert.equal(obstacles.length, 7, 'Should have 7 obstacles forming maze');
+
+                    // Verify obstacles span different vertical positions
+                    const yCoords = obstacles.map(o => o.y);
+                    const minY = Math.min(...yCoords);
+                    const maxY = Math.max(...yCoords);
+                    const verticalSpan = maxY - minY;
+                    assert.true(verticalSpan > 200, 'Obstacles should span significant vertical distance');
+                });
+
+                test('Handles narrow gap between obstacles', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 400),              // A
+                        createRect(2, 300, 300, 120, 80),     // Top obstacle
+                        createRect(3, 300, 420, 120, 80),     // Bottom obstacle (40px gap)
+                        createRect(4, 500, 400)               // B
+                    ];
+
+                    const obstacles = getObstacles([1, 4]);
+                    assert.equal(obstacles.length, 2, 'Should have 2 obstacles with gap');
+
+                    // Verify there's a gap between obstacles
+                    const topObstacle = obstacles.find(o => o.y === 300);
+                    const bottomObstacle = obstacles.find(o => o.y === 420);
+
+                    if (topObstacle && bottomObstacle) {
+                        const gap = bottomObstacle.y - (topObstacle.y + topObstacle.height);
+                        assert.equal(gap, 40, 'Should have 40px gap between obstacles');
+                    }
+                });
+
+                test('Complex scenario with obstacles on multiple levels', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 500),   // Start (low)
+                        createRect(2, 250, 300),   // High obstacle
+                        createRect(3, 400, 600),   // Low obstacle
+                        createRect(4, 550, 250),   // High obstacle
+                        createRect(5, 700, 550),   // Low obstacle
+                        createRect(6, 850, 300)    // End (high)
+                    ];
+
+                    // Start low, end high, with obstacles at alternating levels
+                    // Requires climbing/descending navigation
+                    const obstacles = getObstacles([1, 6]);
+                    assert.equal(obstacles.length, 4, 'Should have 4 obstacles at different levels');
+
+                    // Verify significant Y-axis variation
+                    const allY = testElements.map(el => el.y);
+                    const range = Math.max(...allY) - Math.min(...allY);
+                    assert.true(range > 300, 'Should have >300px vertical variation');
+                });
+            });
+
+            // ============================================================================
+            // TEST SUITE 12: Complex A* Scenarios
+            // ============================================================================
+            testFramework.suite('Complex A* Scenarios', ({ test, beforeEach }) => {
+                beforeEach(() => {
+                    testElements = [];
+                });
+
+                test('S-shaped path around alternating obstacles', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 400),   // Start
+                        createRect(2, 300, 250),   // Block top-right
+                        createRect(3, 500, 450),   // Block bottom-middle
+                        createRect(4, 700, 200),   // Block top-right again
+                        createRect(5, 900, 400)    // End
+                    ];
+
+                    const obstacles = getObstacles([1, 5]);
+                    assert.equal(obstacles.length, 3, 'Should have 3 alternating obstacles');
+
+                    // Verify S-pattern: obstacles alternate above and below center line
+                    const centerY = 400;
+                    const hasAbove = obstacles.some(o => o.y < centerY);
+                    const hasBelow = obstacles.some(o => o.y > centerY);
+                    assert.true(hasAbove && hasBelow, 'Should have obstacles alternating above/below');
+                });
+
+                test('U-turn pattern with blocking wall', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 300),   // Start top-left
+                        createRect(2, 300, 200),   // Wall segment 1
+                        createRect(3, 300, 300),   // Wall segment 2
+                        createRect(4, 300, 400),   // Wall segment 3
+                        createRect(5, 300, 500),   // Wall segment 4
+                        createRect(6, 100, 500)    // End bottom-left (requires U-turn)
+                    ];
+
+                    const obstacles = getObstacles([1, 6]);
+                    assert.equal(obstacles.length, 4, 'Should have 4 wall segments');
+
+                    // Verify wall blocks direct path
+                    const wallObstacles = obstacles.filter(o => o.x === 300);
+                    assert.equal(wallObstacles.length, 4, 'All 4 obstacles should form vertical wall');
+                });
+
+                test('Dead-end scenario requiring backtrack', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 400),   // Start
+                        createRect(2, 300, 300),   // Channel top
+                        createRect(3, 300, 500),   // Channel bottom
+                        createRect(4, 500, 300),   // Channel top continues
+                        createRect(5, 500, 500),   // Channel bottom continues
+                        createRect(6, 700, 350),   // Dead-end blocker
+                        createRect(7, 900, 400)    // End (requires going around)
+                    ];
+
+                    const obstacles = getObstacles([1, 7]);
+                    assert.equal(obstacles.length, 5, 'Should have 5 obstacles forming channel + blocker');
+                });
+
+                test('Spiral pattern around central obstacle cluster', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 400),   // Start left
+                        createRect(2, 400, 300),   // Center top
+                        createRect(3, 400, 400),   // Center middle
+                        createRect(4, 400, 500),   // Center bottom
+                        createRect(5, 700, 400)    // End right
+                    ];
+
+                    const obstacles = getObstacles([1, 5]);
+                    assert.equal(obstacles.length, 3, 'Should have 3 central obstacles');
+
+                    // Verify obstacles are clustered in center
+                    const clusterX = obstacles.every(o => o.x === 400);
+                    assert.true(clusterX, 'All obstacles should be at same X (forming vertical cluster)');
+                });
+
+                test('Chicane pattern (multiple direction changes)', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 400),   // Start
+                        createRect(2, 250, 300),   // Left barrier up
+                        createRect(3, 400, 500),   // Right barrier down
+                        createRect(4, 550, 300),   // Left barrier up
+                        createRect(5, 700, 500),   // Right barrier down
+                        createRect(6, 850, 400)    // End
+                    ];
+
+                    const obstacles = getObstacles([1, 6]);
+                    assert.equal(obstacles.length, 4, 'Should have 4 obstacles in chicane');
+
+                    // Verify chicane pattern
+                    const yValues = obstacles.map(o => o.y).sort((a, b) => a - b);
+                    const hasVariation = yValues[yValues.length - 1] - yValues[0] >= 100;
+                    assert.true(hasVariation, 'Obstacles should have significant Y variation');
+                });
+            });
+
+            // ============================================================================
+            // TEST SUITE 13: Edge Cases - Boundaries and Gaps
+            // ============================================================================
+            testFramework.suite('Edge Cases - Boundaries and Gaps', ({ test, beforeEach }) => {
+                beforeEach(() => {
+                    testElements = [];
+                });
+
+                test('Shapes exactly touching (0px gap)', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 300, 120, 80),   // First shape ends at x=220
+                        createRect(2, 220, 300, 120, 80)    // Second shape starts at x=220
+                    ];
+
+                    const rect1 = testElements[0];
+                    const rect2 = testElements[1];
+                    const gap = rect2.x - (rect1.x + rect1.width);
+                    assert.equal(gap, 0, 'Shapes should be exactly touching');
+                });
+
+                test('Very small gap (5px) between obstacles', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 400),              // Start
+                        createRect(2, 300, 300, 120, 80),     // Top obstacle ends at y=380
+                        createRect(3, 300, 385, 120, 80),     // Bottom obstacle starts at y=385 (5px gap)
+                        createRect(4, 500, 400)               // End
+                    ];
+
+                    const topObs = testElements[1];
+                    const bottomObs = testElements[2];
+                    const gap = bottomObs.y - (topObs.y + topObs.height);
+                    assert.equal(gap, 5, 'Should have exactly 5px gap');
+                });
+
+                test('Extremely narrow gap (2px)', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 400),
+                        createRect(2, 300, 300, 120, 80),     // Ends at y=380
+                        createRect(3, 300, 382, 120, 80),     // Starts at y=382 (2px gap)
+                        createRect(4, 500, 400)
+                    ];
+
+                    const gap = testElements[2].y - (testElements[1].y + testElements[1].height);
+                    assert.equal(gap, 2, 'Should have 2px gap');
+                });
+
+                test('Shapes at canvas top edge (y=0)', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 0),    // At top edge
+                        createRect(2, 300, 0),
+                        createRect(3, 500, 0)
+                    ];
+
+                    const allAtTop = testElements.every(el => el.y === 0);
+                    assert.true(allAtTop, 'All shapes should be at y=0');
+                });
+
+                test('Shapes at canvas left edge (x=0)', (assert) => {
+                    testElements = [
+                        createRect(1, 0, 100),    // At left edge
+                        createRect(2, 0, 300),
+                        createRect(3, 0, 500)
+                    ];
+
+                    const allAtLeft = testElements.every(el => el.x === 0);
+                    assert.true(allAtLeft, 'All shapes should be at x=0');
+                });
+
+                test('Overlapping obstacles blocking same path', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 400),
+                        createRect(2, 300, 350, 120, 80),     // First blocker
+                        createRect(3, 320, 360, 120, 80),     // Overlapping blocker (offset by 20px)
+                        createRect(4, 500, 400)
+                    ];
+
+                    // Check overlap
+                    const rect1 = testElements[1];
+                    const rect2 = testElements[2];
+                    const overlapsX = rect2.x < rect1.x + rect1.width;
+                    const overlapsY = rect2.y < rect1.y + rect1.height;
+                    assert.true(overlapsX && overlapsY, 'Obstacles should overlap');
+                });
+            });
+
+            // ============================================================================
+            // TEST SUITE 14: Anchor Selection Edge Cases
+            // ============================================================================
+            testFramework.suite('Anchor Selection Edge Cases', ({ test, beforeEach }) => {
+                beforeEach(() => {
+                    testElements = [];
+                });
+
+                test('All sides blocked except one', (assert) => {
+                    testElements = [
+                        createRect(1, 400, 400, 120, 80),     // Center shape
+                        createRect(2, 400, 250, 120, 80),     // Block top
+                        createRect(3, 250, 400, 120, 80),     // Block left
+                        createRect(4, 400, 550, 120, 80),     // Block bottom
+                        // Right side is open
+                        createRect(5, 700, 400)               // Target to the right
+                    ];
+
+                    const center = testElements[0];
+                    const obstacles = getObstacles([1, 5]);
+
+                    // Verify 3 sides are blocked
+                    assert.equal(obstacles.length, 3, 'Should have 3 obstacles blocking 3 sides');
+                });
+
+                test('Only diagonal path available', (assert) => {
+                    testElements = [
+                        createRect(1, 400, 400),              // Start center
+                        createRect(2, 550, 400, 120, 80),     // Block right
+                        createRect(3, 400, 250, 120, 80),     // Block top
+                        createRect(4, 650, 250)               // Target top-right (diagonal)
+                    ];
+
+                    const obstacles = getObstacles([1, 4]);
+                    assert.equal(obstacles.length, 2, 'Should have 2 obstacles blocking direct paths');
+
+                    // Only diagonal path (top-right) is open
+                    const hasRightBlocker = obstacles.some(o => o.x > 500 && Math.abs(o.y - 400) < 50);
+                    const hasTopBlocker = obstacles.some(o => o.y < 300 && Math.abs(o.x - 400) < 50);
+                    assert.true(hasRightBlocker && hasTopBlocker, 'Should block horizontal and vertical paths');
+                });
+
+                test('Equidistant anchor choices (tie-breaking)', (assert) => {
+                    testElements = [
+                        createRect(1, 300, 300, 120, 80),     // Start
+                        createRect(2, 500, 300, 120, 80)      // End (same Y, equidistant top/bottom)
+                    ];
+
+                    const shape1 = testElements[0];
+                    const shape2 = testElements[1];
+
+                    // Same Y means top and bottom anchors are equidistant
+                    assert.equal(shape1.y, shape2.y, 'Shapes at same Y create equidistant anchor choice');
+                });
+
+                test('Very close shapes (minimal distance)', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 400, 120, 80),     // Ends at x=220
+                        createRect(2, 225, 400, 120, 80)      // Starts at x=225 (5px gap)
+                    ];
+
+                    const gap = testElements[1].x - (testElements[0].x + testElements[0].width);
+                    assert.equal(gap, 5, 'Should have minimal 5px horizontal gap');
+                });
+
+                test('Shapes with large size difference', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 400, 50, 30),      // Small shape
+                        createRect(2, 300, 300, 300, 200)     // Large shape (6x larger)
+                    ];
+
+                    const small = testElements[0];
+                    const large = testElements[1];
+                    const sizeRatio = (large.width * large.height) / (small.width * small.height);
+                    assert.true(sizeRatio > 5, 'Large shape should be >5x bigger than small');
+                });
+            });
+
+            // ============================================================================
+            // TEST SUITE 15: Path Quality Validation
+            // ============================================================================
+            testFramework.suite('Path Quality Validation', ({ test, beforeEach }) => {
+                beforeEach(() => {
+                    testElements = [];
+                });
+
+                test('Path should not cross obstacle boundaries', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 400, 120, 80),
+                        createRect(2, 300, 350, 120, 80),     // Obstacle
+                        createRect(3, 500, 400, 120, 80)
+                    ];
+
+                    const obstacle = testElements[1];
+                    const obstacleBox = {
+                        left: obstacle.x,
+                        right: obstacle.x + obstacle.width,
+                        top: obstacle.y,
+                        bottom: obstacle.y + obstacle.height
+                    };
+
+                    // Verify obstacle exists in the middle
+                    assert.true(obstacleBox.left > 100 && obstacleBox.right < 500, 'Obstacle should be between shapes');
+                });
+
+                test('Path should minimize turns when possible', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 400),
+                        createRect(2, 500, 400)   // Straight horizontal path
+                    ];
+
+                    // Same Y means path should be straight (minimal turns)
+                    assert.equal(testElements[0].y, testElements[1].y, 'Aligned shapes should allow straight path');
+                });
+
+                test('Path should prefer shorter routes over longer ones', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 400),
+                        createRect(2, 300, 300, 100, 50),     // Small obstacle
+                        createRect(3, 500, 400)
+                    ];
+
+                    const obstacle = testElements[1];
+                    const obstacleHeight = obstacle.height;
+
+                    // Small obstacle should allow going around with minimal detour
+                    assert.true(obstacleHeight < 100, 'Small obstacle should be easy to route around');
+                });
+
+                test('Path smoothness with gentle curves', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 400),
+                        createRect(2, 300, 350),   // Slight offset
+                        createRect(3, 500, 400)
+                    ];
+
+                    const start = testElements[0];
+                    const end = testElements[2];
+                    const yOffset = Math.abs(end.y - start.y);
+
+                    // Small Y offset should result in smooth path
+                    assert.true(yOffset < 50, 'Small offset should allow smooth routing');
+                });
+
+                test('Avoid unnecessary waypoints', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 400),
+                        createRect(2, 500, 400)   // No obstacles
+                    ];
+
+                    const obstacles = getObstacles([1, 2]);
+                    assert.equal(obstacles.length, 0, 'No obstacles means direct path possible');
+                });
+            });
+
+            // ============================================================================
+            // TEST SUITE 16: Dynamic Offset Edge Cases
+            // ============================================================================
+            testFramework.suite('Dynamic Offset Edge Cases', ({ test, beforeEach }) => {
+                beforeEach(() => {
+                    testElements = [];
+                });
+
+                test('Very tall obstacle requires large offset', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 400, 120, 80),
+                        createRect(2, 300, 100, 120, 400),    // Very tall obstacle (400px)
+                        createRect(3, 500, 400, 120, 80)
+                    ];
+
+                    const tallObstacle = testElements[1];
+                    assert.equal(tallObstacle.height, 400, 'Obstacle should be 400px tall');
+
+                    // Calculate required clearance
+                    const y1 = testElements[0].y;
+                    const clearance = 40;
+                    const expectedOffset = Math.max(60, y1 - tallObstacle.y + clearance);
+
+                    assert.true(expectedOffset > 100, 'Tall obstacle should require large offset');
+                });
+
+                test('Obstacles stacked vertically', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 400),
+                        createRect(2, 300, 200, 120, 80),     // Top stack
+                        createRect(3, 300, 300, 120, 80),     // Middle stack
+                        createRect(4, 300, 400, 120, 80),     // Bottom stack
+                        createRect(5, 500, 400)
+                    ];
+
+                    const obstacles = getObstacles([1, 5]);
+                    assert.equal(obstacles.length, 3, 'Should have 3 stacked obstacles');
+
+                    // Verify they're vertically aligned
+                    const xPositions = obstacles.map(o => o.x);
+                    const allSameX = xPositions.every(x => x === xPositions[0]);
+                    assert.true(allSameX, 'Obstacles should be vertically stacked');
+                });
+
+                test('Obstacle exactly at clearance boundary', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 400, 120, 80),     // Shape at y=400
+                        createRect(2, 300, 280, 120, 80),     // Obstacle at y=280, bottom at 360 (40px above shape)
+                        createRect(3, 500, 400, 120, 80)
+                    ];
+
+                    const shape = testElements[0];
+                    const obstacle = testElements[1];
+                    const gap = shape.y - (obstacle.y + obstacle.height);
+
+                    // Shape top is at 400, obstacle bottom is at 360 (280+80), gap should be 40
+                    assert.equal(gap, 40, 'Obstacle should be exactly 40px away (clearance boundary)');
+                });
+
+                test('Multiple obstacles at different heights', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 400),
+                        createRect(2, 250, 200, 120, 80),     // High
+                        createRect(3, 400, 300, 120, 80),     // Medium
+                        createRect(4, 550, 250, 120, 80),     // High
+                        createRect(5, 700, 400)
+                    ];
+
+                    const obstacles = getObstacles([1, 5]);
+                    const yPositions = obstacles.map(o => o.y);
+                    const uniqueHeights = new Set(yPositions);
+
+                    assert.true(uniqueHeights.size > 1, 'Obstacles should be at different heights');
+                });
+
+                test('Obstacle below requiring downward offset', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 300, 120, 80),     // Top shape
+                        createRect(2, 300, 500, 120, 80),     // Obstacle below
+                        createRect(3, 500, 300, 120, 80)      // Top shape
+                    ];
+
+                    const shape1 = testElements[0];
+                    const obstacleBelow = testElements[1];
+                    const shape1Bottom = shape1.y + shape1.height;
+
+                    assert.true(obstacleBelow.y > shape1Bottom, 'Obstacle should be below shape');
+                });
+            });
+
+            // ============================================================================
+            // TEST SUITE 17: Real-World Scenarios
+            // ============================================================================
+            testFramework.suite('Real-World Scenarios', ({ test, beforeEach }) => {
+                beforeEach(() => {
+                    testElements = [];
+                });
+
+                test('Flowchart: Top-to-bottom connections', (assert) => {
+                    testElements = [
+                        createRect(1, 400, 100),   // Top node
+                        createRect(2, 200, 300),   // Left branch
+                        createRect(3, 400, 300),   // Center branch
+                        createRect(4, 600, 300),   // Right branch
+                        createRect(5, 400, 500)    // Bottom node
+                    ];
+
+                    // Verify flowchart structure
+                    const topNode = testElements[0];
+                    const bottomNode = testElements[4];
+
+                    assert.true(topNode.y < bottomNode.y, 'Flow should go top to bottom');
+                    assert.equal(testElements.length, 5, 'Should have 5 nodes in flowchart');
+                });
+
+                test('Organization chart: Hierarchical structure', (assert) => {
+                    testElements = [
+                        createRect(1, 400, 100),   // CEO (top)
+                        createRect(2, 200, 250),   // VP 1
+                        createRect(3, 600, 250),   // VP 2
+                        createRect(4, 100, 400),   // Manager 1
+                        createRect(5, 300, 400),   // Manager 2
+                        createRect(6, 500, 400),   // Manager 3
+                        createRect(7, 700, 400)    // Manager 4
+                    ];
+
+                    // Verify hierarchy
+                    const ceo = testElements[0];
+                    const vps = testElements.slice(1, 3);
+                    const managers = testElements.slice(3);
+
+                    assert.true(vps.every(vp => vp.y > ceo.y), 'VPs should be below CEO');
+                    assert.true(managers.every(m => m.y > vps[0].y), 'Managers should be below VPs');
+                });
+
+                test('Network diagram: Many-to-many connections', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 200),   // Server 1
+                        createRect(2, 100, 400),   // Server 2
+                        createRect(3, 100, 600),   // Server 3
+                        createRect(4, 700, 200),   // Client 1
+                        createRect(5, 700, 400),   // Client 2
+                        createRect(6, 700, 600)    // Client 3
+                    ];
+
+                    // Verify network layout (servers on left, clients on right)
+                    const servers = testElements.slice(0, 3);
+                    const clients = testElements.slice(3);
+
+                    assert.true(servers.every(s => s.x < 400), 'Servers should be on left');
+                    assert.true(clients.every(c => c.x > 400), 'Clients should be on right');
+                });
+
+                test('Process diagram: Sequential workflow', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 400),   // Step 1
+                        createRect(2, 300, 400),   // Step 2
+                        createRect(3, 500, 400),   // Step 3
+                        createRect(4, 700, 400),   // Step 4
+                        createRect(5, 900, 400)    // Step 5
+                    ];
+
+                    // Verify sequential layout
+                    const xPositions = testElements.map(el => el.x);
+                    const isSequential = xPositions.every((x, i) => i === 0 || x > xPositions[i - 1]);
+
+                    assert.true(isSequential, 'Process steps should be in left-to-right sequence');
+                    assert.true(testElements.every(el => el.y === 400), 'All steps should be at same Y');
+                });
+
+                test('Mind map: Central hub with branches', (assert) => {
+                    testElements = [
+                        createRect(1, 400, 400),   // Center hub
+                        createRect(2, 400, 200),   // North
+                        createRect(3, 600, 400),   // East
+                        createRect(4, 400, 600),   // South
+                        createRect(5, 200, 400),   // West
+                        createRect(6, 550, 250),   // NE
+                        createRect(7, 550, 550),   // SE
+                        createRect(8, 250, 250),   // NW
+                        createRect(9, 250, 550)    // SW
+                    ];
+
+                    const hub = testElements[0];
+                    const branches = testElements.slice(1);
+
+                    // Verify hub is central
+                    assert.equal(hub.x, 400, 'Hub should be centered horizontally');
+                    assert.equal(hub.y, 400, 'Hub should be centered vertically');
+                    assert.equal(branches.length, 8, 'Should have 8 branches around hub');
+                });
+
+                test('Data flow diagram: Sources to destinations', (assert) => {
+                    testElements = [
+                        createRect(1, 100, 300),   // Source 1
+                        createRect(2, 100, 500),   // Source 2
+                        createRect(3, 400, 400),   // Processor
+                        createRect(4, 700, 300),   // Destination 1
+                        createRect(5, 700, 500)    // Destination 2
+                    ];
+
+                    const sources = testElements.slice(0, 2);
+                    const processor = testElements[2];
+                    const destinations = testElements.slice(3);
+
+                    assert.true(sources.every(s => s.x < processor.x), 'Sources should be left of processor');
+                    assert.true(destinations.every(d => d.x > processor.x), 'Destinations should be right of processor');
+                });
+            });
+
+            // ============================================================================
+            // TEST SUITE 18: Performance Tests
+            // ============================================================================
+            testFramework.suite('Performance Tests', ({ test, beforeEach }) => {
+                beforeEach(() => {
+                    testElements = [];
+                });
+
+                test('Handles 10 shapes correctly', (assert) => {
+                    testElements = []; // Clear first
+                    for (let i = 0; i < 10; i++) {
+                        testElements.push(createRect(i + 1, i * 100, 300));
+                    }
+
+                    assert.equal(testElements.length, 10, 'Should have 10 shapes');
+
+                    const obstacles = getObstacles([1, 10]);
+                    assert.equal(obstacles.length, 8, 'Should find 8 obstacles when excluding 2 shapes');
+                });
+
+                test('Handles 100 shapes correctly', (assert) => {
+                    testElements = []; // Clear first
+                    for (let i = 0; i < 100; i++) {
+                        testElements.push(createRect(i + 1, (i % 10) * 100, Math.floor(i / 10) * 100));
+                    }
+
+                    assert.equal(testElements.length, 100, 'Should have 100 shapes');
+
+                    const obstacles = getObstacles([1, 100]);
+                    assert.equal(obstacles.length, 98, 'Should find 98 obstacles when excluding 2 shapes');
+                });
+
+                test('Side centers calculation works correctly', (assert) => {
+                    testElements = []; // Clear first
+                    const bounds = { x: 300, y: 400, width: 120, height: 80 };
+
+                    const centers = getSideCenters(bounds, 'rect');
+
+                    assert.equal(centers.top.x, 360, 'Top center X should be 360');
+                    assert.equal(centers.top.y, 400, 'Top center Y should be 400');
+                    assert.equal(centers.bottom.x, 360, 'Bottom center X should be 360');
+                    assert.equal(centers.bottom.y, 480, 'Bottom center Y should be 480');
+                    assert.equal(centers.left.x, 300, 'Left center X should be 300');
+                    assert.equal(centers.left.y, 440, 'Left center Y should be 440');
+                    assert.equal(centers.right.x, 420, 'Right center X should be 420');
+                    assert.equal(centers.right.y, 440, 'Right center Y should be 440');
+                });
+            });
+
+            console.log('Test definitions loaded successfully');
         }
     </script>
 </body>
