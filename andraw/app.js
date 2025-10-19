@@ -4491,8 +4491,19 @@ function handleMouseMove(e) {
             if (primaryElement) {
                 const actualDx = primaryElement.x - oldX;
                 const actualDy = primaryElement.y - oldY;
-                startX += actualDx;
-                startY += actualDy;
+
+                // If no actual movement occurred (e.g., clamped to boundary),
+                // reset reference to current mouse position to prevent delta accumulation
+                if (actualDx === 0 && actualDy === 0 && (dx !== 0 || dy !== 0)) {
+                    // Element couldn't move (boundary or other constraint)
+                    // Reset drag reference to current position
+                    startX = currentX;
+                    startY = currentY;
+                } else {
+                    // Normal case: update reference by actual movement
+                    startX += actualDx;
+                    startY += actualDy;
+                }
             } else {
                 startX = currentX;
                 startY = currentY;
