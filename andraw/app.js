@@ -5076,7 +5076,10 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal, 
                     const pathY = y1; // Horizontal path at constant Y
                     const blocks = obsRect.top <= pathY + tolerance && obsRect.bottom >= pathY - tolerance;
 
+                    console.log(`[OBSTACLE CHECK] Horizontal path y=${pathY}, obstacle y=${obsRect.top}-${obsRect.bottom}, x=${obsRect.left}-${obsRect.right}, blocks=${blocks}`);
+
                     if (blocks) {
+                        console.log(`[OBSTACLE BLOCKED] Obstacle at (${obsRect.left},${obsRect.top}) blocks horizontal path`);
                         return true;
                     }
                 }
