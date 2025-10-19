@@ -5242,22 +5242,32 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal, 
                         };
                     } else {
                         // Both clear or both blocked
-                        // If shapes are nearly horizontally aligned (small yDiff) and both blocked,
-                        // try same-side routing (BOTTOM→BOTTOM) to route around obstacles
-                        const nearlyHorizontallyAligned = Math.abs(yDiff) < 20; // Within 20px
-
-                        if (rightBottomBlocked && topLeftBlocked && nearlyHorizontallyAligned) {
-                            // Both perpendicular paths blocked and shapes nearly aligned
+                        // If both perpendicular paths are blocked, try same-side routing first
+                        if (rightBottomBlocked && topLeftBlocked) {
+                            // Both perpendicular paths blocked
                             // Try BOTTOM→BOTTOM routing which goes around below both shapes
                             const bottomBottomBlocked = hasObstacleInPath(sidesA.bottom.x, sidesA.bottom.y, sidesB.bottom.x, sidesB.bottom.y, 'bottom');
 
                             if (!bottomBottomBlocked) {
-                                console.log(`→ Using BOTTOM→BOTTOM for northeast (nearly aligned, perpendicular paths blocked, yDiff=${yDiff.toFixed(0)})`);
+                                console.log(`→ Using BOTTOM→BOTTOM for northeast (both perpendicular paths blocked, yDiff=${yDiff.toFixed(0)})`);
                                 return {
                                     from: sidesA.bottom,
                                     to: sidesB.bottom,
                                     fromAnchor: 'bottom',
                                     toAnchor: 'bottom'
+                                };
+                            }
+
+                            // Try TOP→TOP routing
+                            const topTopBlocked = hasObstacleInPath(sidesA.top.x, sidesA.top.y, sidesB.top.x, sidesB.top.y, 'top');
+
+                            if (!topTopBlocked) {
+                                console.log(`→ Using TOP→TOP for northeast (both perpendicular paths blocked, yDiff=${yDiff.toFixed(0)})`);
+                                return {
+                                    from: sidesA.top,
+                                    to: sidesB.top,
+                                    fromAnchor: 'top',
+                                    toAnchor: 'top'
                                 };
                             }
                         }
@@ -5312,22 +5322,32 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal, 
                         };
                     } else {
                         // Both clear or both blocked
-                        // If shapes are nearly horizontally aligned (small yDiff) and both blocked,
-                        // try same-side routing (BOTTOM→BOTTOM) to route around obstacles
-                        const nearlyHorizontallyAligned = Math.abs(yDiff) < 20; // Within 20px
-
-                        if (rightTopBlocked && bottomLeftBlocked && nearlyHorizontallyAligned) {
-                            // Both perpendicular paths blocked and shapes nearly aligned
+                        // If both perpendicular paths are blocked, try same-side routing first
+                        if (rightTopBlocked && bottomLeftBlocked) {
+                            // Both perpendicular paths blocked
                             // Try BOTTOM→BOTTOM routing which goes around below both shapes
                             const bottomBottomBlocked = hasObstacleInPath(sidesA.bottom.x, sidesA.bottom.y, sidesB.bottom.x, sidesB.bottom.y, 'bottom');
 
                             if (!bottomBottomBlocked) {
-                                console.log(`→ Using BOTTOM→BOTTOM for southeast (nearly aligned, perpendicular paths blocked, yDiff=${yDiff.toFixed(0)})`);
+                                console.log(`→ Using BOTTOM→BOTTOM for southeast (both perpendicular paths blocked, yDiff=${yDiff.toFixed(0)})`);
                                 return {
                                     from: sidesA.bottom,
                                     to: sidesB.bottom,
                                     fromAnchor: 'bottom',
                                     toAnchor: 'bottom'
+                                };
+                            }
+
+                            // Try TOP→TOP routing
+                            const topTopBlocked = hasObstacleInPath(sidesA.top.x, sidesA.top.y, sidesB.top.x, sidesB.top.y, 'top');
+
+                            if (!topTopBlocked) {
+                                console.log(`→ Using TOP→TOP for southeast (both perpendicular paths blocked, yDiff=${yDiff.toFixed(0)})`);
+                                return {
+                                    from: sidesA.top,
+                                    to: sidesB.top,
+                                    fromAnchor: 'top',
+                                    toAnchor: 'top'
                                 };
                             }
                         }
@@ -5512,17 +5532,14 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal, 
                         };
                     } else {
                         // Both clear or both blocked
-                        // If shapes are nearly horizontally aligned (small yDiff) and both blocked,
-                        // try same-side routing (BOTTOM→BOTTOM) to route around obstacles
-                        const nearlyHorizontallyAligned = Math.abs(yDiff) < 20; // Within 20px
-
-                        if (leftBottomBlocked && topRightBlocked && nearlyHorizontallyAligned) {
-                            // Both perpendicular paths blocked and shapes nearly aligned
+                        // If both perpendicular paths are blocked, try same-side routing first
+                        if (leftBottomBlocked && topRightBlocked) {
+                            // Both perpendicular paths blocked
                             // Try BOTTOM→BOTTOM routing which goes around below both shapes
                             const bottomBottomBlocked = hasObstacleInPath(sidesA.bottom.x, sidesA.bottom.y, sidesB.bottom.x, sidesB.bottom.y, 'bottom');
 
                             if (!bottomBottomBlocked) {
-                                console.log(`→ Using BOTTOM→BOTTOM for northwest (nearly aligned, perpendicular paths blocked, yDiff=${yDiff.toFixed(0)})`);
+                                console.log(`→ Using BOTTOM→BOTTOM for northwest (both perpendicular paths blocked, yDiff=${yDiff.toFixed(0)})`);
                                 return {
                                     from: sidesA.bottom,
                                     to: sidesB.bottom,
@@ -5530,9 +5547,22 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal, 
                                     toAnchor: 'bottom'
                                 };
                             }
+
+                            // Try TOP→TOP routing which goes around above both shapes
+                            const topTopBlocked = hasObstacleInPath(sidesA.top.x, sidesA.top.y, sidesB.top.x, sidesB.top.y, 'top');
+
+                            if (!topTopBlocked) {
+                                console.log(`→ Using TOP→TOP for northwest (both perpendicular paths blocked, yDiff=${yDiff.toFixed(0)})`);
+                                return {
+                                    from: sidesA.top,
+                                    to: sidesB.top,
+                                    fromAnchor: 'top',
+                                    toAnchor: 'top'
+                                };
+                            }
                         }
 
-                        // Choose based on which is shorter
+                        // Choose based on which is shorter (only if same-side routing failed)
                         const leftBottomDist = Math.abs(sidesB.bottom.x - sidesA.left.x) + Math.abs(sidesB.bottom.y - sidesA.left.y);
                         const topRightDist = Math.abs(sidesB.right.x - sidesA.top.x) + Math.abs(sidesB.right.y - sidesA.top.y);
 
@@ -5582,22 +5612,32 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal, 
                         };
                     } else {
                         // Both clear or both blocked
-                        // If shapes are nearly horizontally aligned (small yDiff) and both blocked,
-                        // try same-side routing (BOTTOM→BOTTOM) to route around obstacles
-                        const nearlyHorizontallyAligned = Math.abs(yDiff) < 20; // Within 20px
-
-                        if (leftTopBlocked && bottomRightBlocked && nearlyHorizontallyAligned) {
-                            // Both perpendicular paths blocked and shapes nearly aligned
+                        // If both perpendicular paths are blocked, try same-side routing first
+                        if (leftTopBlocked && bottomRightBlocked) {
+                            // Both perpendicular paths blocked
                             // Try BOTTOM→BOTTOM routing which goes around below both shapes
                             const bottomBottomBlocked = hasObstacleInPath(sidesA.bottom.x, sidesA.bottom.y, sidesB.bottom.x, sidesB.bottom.y, 'bottom');
 
                             if (!bottomBottomBlocked) {
-                                console.log(`→ Using BOTTOM→BOTTOM for southwest (nearly aligned, perpendicular paths blocked, yDiff=${yDiff.toFixed(0)})`);
+                                console.log(`→ Using BOTTOM→BOTTOM for southwest (both perpendicular paths blocked, yDiff=${yDiff.toFixed(0)})`);
                                 return {
                                     from: sidesA.bottom,
                                     to: sidesB.bottom,
                                     fromAnchor: 'bottom',
                                     toAnchor: 'bottom'
+                                };
+                            }
+
+                            // Try TOP→TOP routing
+                            const topTopBlocked = hasObstacleInPath(sidesA.top.x, sidesA.top.y, sidesB.top.x, sidesB.top.y, 'top');
+
+                            if (!topTopBlocked) {
+                                console.log(`→ Using TOP→TOP for southwest (both perpendicular paths blocked, yDiff=${yDiff.toFixed(0)})`);
+                                return {
+                                    from: sidesA.top,
+                                    to: sidesB.top,
+                                    fromAnchor: 'top',
+                                    toAnchor: 'top'
                                 };
                             }
                         }
