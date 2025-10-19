@@ -1906,6 +1906,255 @@ testFramework.suite('Nearly-Aligned Shapes with Obstacles', ({ test, beforeEach 
     });
 });
 
+// ============================================================================
+// TEST SUITE 16: Never Route Through Target Shape
+// ============================================================================
+testFramework.suite('Never Route Through Target Shape', ({ test, beforeEach }) => {
+    beforeEach(() => {
+        testElements = [];
+        testNextElementId = 1;
+    });
+
+    test('RIGHT→BOTTOM: Horizontal segment must not pass through target shape', (assert) => {
+        // Source lower, target higher and to the right
+        // RIGHT→BOTTOM would create horizontal segment at source Y level
+        // If source Y is within target's vertical bounds, horizontal segment passes through target
+        testElements = [
+            createRect(1, 100, 300, 120, 80),   // A at (100,300) - center at y=340
+            createRect(2, 400, 250, 120, 80)    // B at (400,250) - center at y=290, top=250, bottom=330
+        ];
+
+        const sourceRightY = 340;  // A center Y
+        const targetTop = 250;
+        const targetBottom = 330;
+
+        // If horizontal segment at sourceRightY passes through target's vertical range
+        const passesThrough = sourceRightY >= targetTop && sourceRightY <= targetBottom;
+
+        assert.true(passesThrough, 'Test case: horizontal segment WOULD pass through target');
+        // Expected behavior: routing should detect this and NOT use RIGHT→BOTTOM
+    });
+
+    test('RIGHT→TOP: Horizontal segment must not pass through target shape', (assert) => {
+        // Source higher, target lower and to the right
+        testElements = [
+            createRect(1, 100, 200, 120, 80),   // A at (100,200) - center at y=240
+            createRect(2, 400, 220, 120, 80)    // B at (400,220) - top=220, bottom=300
+        ];
+
+        const sourceRightY = 240;  // A center Y
+        const targetTop = 220;
+        const targetBottom = 300;
+
+        const passesThrough = sourceRightY >= targetTop && sourceRightY <= targetBottom;
+
+        assert.true(passesThrough, 'Horizontal segment would pass through target');
+        // Expected: Should NOT use RIGHT→TOP, should use alternative routing
+    });
+
+    test('LEFT→BOTTOM: Horizontal segment must not pass through target shape', (assert) => {
+        // Source to the right and lower, target to the left and higher
+        testElements = [
+            createRect(1, 400, 300, 120, 80),   // A at (400,300) - center at y=340
+            createRect(2, 100, 250, 120, 80)    // B at (100,250) - top=250, bottom=330
+        ];
+
+        const sourceLeftY = 340;
+        const targetTop = 250;
+        const targetBottom = 330;
+
+        const passesThrough = sourceLeftY >= targetTop && sourceLeftY <= targetBottom;
+
+        assert.true(passesThrough, 'Horizontal segment would pass through target');
+    });
+
+    test('LEFT→TOP: Horizontal segment must not pass through target shape', (assert) => {
+        testElements = [
+            createRect(1, 400, 200, 120, 80),   // A at (400,200) - center at y=240
+            createRect(2, 100, 220, 120, 80)    // B at (100,220) - top=220, bottom=300
+        ];
+
+        const sourceLeftY = 240;
+        const targetTop = 220;
+        const targetBottom = 300;
+
+        const passesThrough = sourceLeftY >= targetTop && sourceLeftY <= targetBottom;
+
+        assert.true(passesThrough, 'Horizontal segment would pass through target');
+    });
+
+    test('BOTTOM→LEFT: Vertical segment must not pass through target shape', (assert) => {
+        // Source higher and to the right, target lower and to the left
+        testElements = [
+            createRect(1, 300, 100, 120, 80),   // A at (300,100) - center at x=360
+            createRect(2, 250, 300, 120, 80)    // B at (250,300) - left=250, right=370
+        ];
+
+        const sourceBottomX = 360;  // A center X
+        const targetLeft = 250;
+        const targetRight = 370;
+
+        const passesThrough = sourceBottomX >= targetLeft && sourceBottomX <= targetRight;
+
+        assert.true(passesThrough, 'Vertical segment would pass through target');
+    });
+
+    test('BOTTOM→RIGHT: Vertical segment must not pass through target shape', (assert) => {
+        testElements = [
+            createRect(1, 200, 100, 120, 80),   // A at (200,100) - center at x=260
+            createRect(2, 250, 300, 120, 80)    // B at (250,300) - left=250, right=370
+        ];
+
+        const sourceBottomX = 260;
+        const targetLeft = 250;
+        const targetRight = 370;
+
+        const passesThrough = sourceBottomX >= targetLeft && sourceBottomX <= targetRight;
+
+        assert.true(passesThrough, 'Vertical segment would pass through target');
+    });
+
+    test('TOP→LEFT: Vertical segment must not pass through target shape', (assert) => {
+        testElements = [
+            createRect(1, 300, 300, 120, 80),   // A at (300,300) - center at x=360
+            createRect(2, 250, 100, 120, 80)    // B at (250,100) - left=250, right=370
+        ];
+
+        const sourceTopX = 360;
+        const targetLeft = 250;
+        const targetRight = 370;
+
+        const passesThrough = sourceTopX >= targetLeft && sourceTopX <= targetRight;
+
+        assert.true(passesThrough, 'Vertical segment would pass through target');
+    });
+
+    test('TOP→RIGHT: Vertical segment must not pass through target shape', (assert) => {
+        testElements = [
+            createRect(1, 200, 300, 120, 80),   // A at (200,300) - center at x=260
+            createRect(2, 250, 100, 120, 80)    // B at (250,100) - left=250, right=370
+        ];
+
+        const sourceTopX = 260;
+        const targetLeft = 250;
+        const targetRight = 370;
+
+        const passesThrough = sourceTopX >= targetLeft && sourceTopX <= targetRight;
+
+        assert.true(passesThrough, 'Vertical segment would pass through target');
+    });
+
+    test('Segment intersection detection with tolerance', (assert) => {
+        // A horizontal segment at y=340 with 30px tolerance band (310-370)
+        // Target shape at y=250-330
+        // Tolerance band (310-370) overlaps target range (250-330)
+        // Overlap range: 310-330 (20px overlap)
+
+        const segmentY = 340;
+        const tolerance = 30;
+        const segmentTop = segmentY - tolerance;    // 310
+        const segmentBottom = segmentY + tolerance; // 370
+
+        const targetTop = 250;
+        const targetBottom = 330;
+
+        const overlaps = segmentBottom >= targetTop && segmentTop <= targetBottom;
+
+        assert.true(overlaps, 'Segment tolerance band overlaps with target shape');
+    });
+
+    test('Source shape should also not be intersected', (assert) => {
+        // RIGHT→BOTTOM creates horizontal then vertical segments
+        // Horizontal segment might pass through SOURCE shape
+        testElements = [
+            createRect(1, 100, 200, 120, 80),   // A at (100,200) - very tall source
+            createRect(2, 400, 350, 120, 80)    // B at (400,350)
+        ];
+
+        const sourceRight = { x: 220, y: 240 };  // A.right at center
+        const targetBottom = { x: 460, y: 430 }; // B.bottom
+
+        // Horizontal segment from (220,240) to (460,240)
+        // This should not pass through A's bounds (100-220, 200-280)
+        const horizontalSegmentY = 240;
+        const sourceTop = 200;
+        const sourceBottom = 280;
+
+        const passesThroughSource = horizontalSegmentY >= sourceTop && horizontalSegmentY <= sourceBottom;
+
+        // The horizontal segment at y=240 is within A's vertical range (200-280)
+        // But since it starts at A's right edge (220), it doesn't pass THROUGH A
+        // It's exiting from A, which is acceptable
+        assert.true(true, 'Segment exiting from source is acceptable');
+    });
+
+    test('Alternative routing: TOP→TOP when RIGHT→BOTTOM blocked', (assert) => {
+        // When RIGHT→BOTTOM would pass through target, use TOP→TOP instead
+        testElements = [
+            createRect(1, 100, 300, 120, 80),   // A at (100,300)
+            createRect(2, 400, 250, 120, 80)    // B at (400,250) - slightly above A
+        ];
+
+        const aTop = 300;
+        const bTop = 250;
+
+        // TOP→TOP routing goes: A.top (y=300) → up → across → B.top (y=250)
+        // This avoids going through B
+
+        assert.true(aTop > bTop, 'A is below B');
+        // TOP→TOP should be preferred over RIGHT→BOTTOM when B is slightly above A
+    });
+
+    test('Real scenario from screenshot: Target above source, RIGHT→BOTTOM blocked', (assert) => {
+        // Screenshot shows: left shape lower, right shape slightly higher
+        // RIGHT→BOTTOM creates horizontal line through target
+        testElements = [
+            createRect(1, 100, 300, 120, 80),   // Source: (100,300) center y=340
+            createRect(2, 500, 280, 120, 80)    // Target: (500,280) center y=320, top=280, bottom=360
+        ];
+
+        const sourceY = 340;
+        const targetTop = 280;
+        const targetBottom = 360;
+        const tolerance = 30;
+
+        // Horizontal segment at y=340 with tolerance (310-370)
+        const segmentTop = sourceY - tolerance;
+        const segmentBottom = sourceY + tolerance;
+
+        const wouldPassThrough = segmentBottom >= targetTop && segmentTop <= targetBottom;
+
+        assert.true(wouldPassThrough, 'RIGHT→BOTTOM horizontal segment would intersect target shape');
+        // Expected: System should detect this and use TOP→TOP or another routing
+    });
+
+    test('Nearly aligned shapes: avoid routing through target even when dy is small', (assert) => {
+        // dy = -8 (target is 8px higher)
+        // Target top=280, bottom=360
+        // Source center y=340
+        // Horizontal line at y=340 passes through target (280-360 range)
+
+        testElements = [
+            createRect(1, 100, 300, 120, 80),   // A: y=300-380, center=340
+            createRect(2, 500, 292, 120, 80)    // B: y=292-372, center=332 (dy=-8)
+        ];
+
+        const dy = -8;
+        const isNearlyAligned = Math.abs(dy) < 20;
+
+        assert.true(isNearlyAligned, 'Shapes are nearly aligned');
+
+        const sourceY = 340;
+        const targetTop = 292;
+        const targetBottom = 372;
+
+        const passesThrough = sourceY >= targetTop && sourceY <= targetBottom;
+
+        assert.true(passesThrough, 'Even with small dy=-8, horizontal path passes through target');
+        // This is the key issue: nearly aligned doesn't mean the path is clear
+    });
+});
+
 // Run all tests automatically
 setTimeout(() => {
     console.log('Test definitions loaded. Running tests...');

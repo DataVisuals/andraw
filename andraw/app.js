@@ -5089,7 +5089,39 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal, 
         return false;
     };
 
-    // Check if a stepped L-shaped path has obstacles
+    // Check if a line segment intersects with a shape's bounding box
+    const segmentIntersectsShape = (x1, y1, x2, y2, shape) => {
+        const tolerance = 30;
+        const isHorizontal = Math.abs(y2 - y1) < 5;
+        const isVertical = Math.abs(x2 - x1) < 5;
+
+        const shapeRect = {
+            left: shape.x,
+            right: shape.x + shape.width,
+            top: shape.y,
+            bottom: shape.y + shape.height
+        };
+
+        if (isHorizontal) {
+            // Horizontal segment at y1
+            const segmentLeft = Math.min(x1, x2);
+            const segmentRight = Math.max(x1, x2);
+            const horizontalOverlap = segmentRight >= shapeRect.left && segmentLeft <= shapeRect.right;
+            const verticalOverlap = shapeRect.top <= y1 + tolerance && shapeRect.bottom >= y1 - tolerance;
+            return horizontalOverlap && verticalOverlap;
+        } else if (isVertical) {
+            // Vertical segment at x1
+            const segmentTop = Math.min(y1, y2);
+            const segmentBottom = Math.max(y1, y2);
+            const horizontalOverlap = shapeRect.left <= x1 + tolerance && shapeRect.right >= x1 - tolerance;
+            const verticalOverlap = segmentBottom >= shapeRect.top && segmentTop <= shapeRect.bottom;
+            return horizontalOverlap && verticalOverlap;
+        }
+
+        return false;
+    };
+
+    // Check if a stepped L-shaped path has obstacles or passes through the endpoint shapes
     // For perpendicular anchors like RIGHT→BOTTOM, the path goes horizontal then vertical (or vice versa)
     const hasObstacleInSteppedPath = (x1, y1, x2, y2, startAnchor, endAnchor) => {
         const startIsHorizontal = startAnchor === 'left' || startAnchor === 'right';
@@ -5105,9 +5137,20 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal, 
             if (horizontalBlocked) {
                 return true;
             }
+            // Check if horizontal segment passes through source or target shapes
+            if (segmentIntersectsShape(x1, y1, x2, y1, boundsA) || segmentIntersectsShape(x1, y1, x2, y1, boundsB)) {
+                return true;
+            }
             // Check vertical segment: (x2,y1) to (x2,y2)
             const verticalBlocked = hasObstacleInPath(x2, y1, x2, y2);
-            return verticalBlocked;
+            if (verticalBlocked) {
+                return true;
+            }
+            // Check if vertical segment passes through source or target shapes
+            if (segmentIntersectsShape(x2, y1, x2, y2, boundsA) || segmentIntersectsShape(x2, y1, x2, y2, boundsB)) {
+                return true;
+            }
+            return false;
         } else if (!startIsHorizontal && endIsHorizontal) {
             // Start vertical, end horizontal (e.g., BOTTOM→LEFT)
             // Path: (x1,y1) → (x1,y2) → (x2,y2)
@@ -5116,9 +5159,20 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal, 
             if (verticalBlocked) {
                 return true;
             }
+            // Check if vertical segment passes through source or target shapes
+            if (segmentIntersectsShape(x1, y1, x1, y2, boundsA) || segmentIntersectsShape(x1, y1, x1, y2, boundsB)) {
+                return true;
+            }
             // Check horizontal segment: (x1,y2) to (x2,y2)
             const horizontalBlocked = hasObstacleInPath(x1, y2, x2, y2);
-            return horizontalBlocked;
+            if (horizontalBlocked) {
+                return true;
+            }
+            // Check if horizontal segment passes through source or target shapes
+            if (segmentIntersectsShape(x1, y2, x2, y2, boundsA) || segmentIntersectsShape(x1, y2, x2, y2, boundsB)) {
+                return true;
+            }
+            return false;
         }
 
         // For other cases, fall back to direct path check
