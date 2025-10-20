@@ -4515,6 +4515,9 @@ function handleMouseMove(e) {
                     // This prevents drift from smart guide snapping
                     startY += originalMouseDy;
                 }
+
+                // Debug logging for drag tracking
+                console.log(`[DRAG] Mouse(${currentX.toFixed(0)},${currentY.toFixed(0)}) Elem(${primaryElement.x.toFixed(0)},${primaryElement.y.toFixed(0)}) Ref(${startX.toFixed(0)},${startY.toFixed(0)}) OrigΔ(${originalMouseDx.toFixed(0)},${originalMouseDy.toFixed(0)}) SnapΔ(${dx.toFixed(0)},${dy.toFixed(0)}) ActualΔ(${actualDx.toFixed(0)},${actualDy.toFixed(0)}) Offset(${(primaryElement.x - startX).toFixed(0)},${(primaryElement.y - startY).toFixed(0)})`);
             } else {
                 startX = currentX;
                 startY = currentY;

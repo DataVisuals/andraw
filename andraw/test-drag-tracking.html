@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Drag Tracking Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+        }
+        .test-case {
+            margin: 20px 0;
+            padding: 10px;
+            border: 1px solid #ccc;
+            background: #f5f5f5;
+        }
+        .pass { color: green; }
+        .fail { color: red; }
+        .info { color: blue; }
+        h2 { margin-top: 30px; }
+    </style>
+</head>
+<body>
+    <h1>Drag Reference Tracking Test</h1>
+
+    <div id="results"></div>
+
+    <script>
+        const results = document.getElementById('results');
+
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = message;
+            results.appendChild(div);
+        }
+
+        function testCase(name, fn) {
+            const div = document.createElement('div');
+            div.className = 'test-case';
+            results.appendChild(div);
+
+            const oldLog = log;
+            const testLog = (msg, type) => {
+                const logDiv = document.createElement('div');
+                logDiv.className = type;
+                logDiv.textContent = msg;
+                div.appendChild(logDiv);
+            };
+
+            const h3 = document.createElement('h3');
+            h3.textContent = name;
+            div.insertBefore(h3, div.firstChild);
+
+            try {
+                fn(testLog);
+            } catch (e) {
+                testLog(`ERROR: ${e.message}`, 'fail');
+            }
+        }
+
+        // Simulate the drag tracking logic
+        function simulateDrag(scenario) {
+            const {
+                initialStart,
+                mouseMoves,
+                elementPosition,
+                boundaries = { minX: -200, maxX: 1500, minY: -200, maxY: 1500 },
+                smartGuideSnap = null
+            } = scenario;
+
+            let startX = initialStart.x;
+            let startY = initialStart.y;
+            let elementX = elementPosition.x;
+            let elementY = elementPosition.y;
+
+            const history = [];
+
+            for (const mouseMove of mouseMoves) {
+                const currentX = mouseMove.x;
+                const currentY = mouseMove.y;
+
+                // Calculate original mouse delta
+                let dx = currentX - startX;
+                let dy = currentY - startY;
+
+                const originalMouseDx = dx;
+                const originalMouseDy = dy;
+
+                // Apply smart guide snapping if provided
+                if (smartGuideSnap) {
+                    const snapped = smartGuideSnap(dx, dy, elementX, elementY);
+                    dx = snapped.dx;
+                    dy = snapped.dy;
+                }
+
+                // Save old position
+                const oldX = elementX;
+                const oldY = elementY;
+
+                // Apply movement with boundary clamping
+                const newX = elementX + dx;
+                const newY = elementY + dy;
+                elementX = Math.max(boundaries.minX, Math.min(boundaries.maxX, newX));
+                elementY = Math.max(boundaries.minY, Math.min(boundaries.maxY, newY));
+
+                const actualDx = elementX - oldX;
+                const actualDy = elementY - oldY;
+
+                // Update startX/startY using the CURRENT logic
+                if (actualDx === 0 && originalMouseDx !== 0) {
+                    startX = currentX;
+                } else {
+                    startX += originalMouseDx;
+                }
+
+                if (actualDy === 0 && originalMouseDy !== 0) {
+                    startY = currentY;
+                } else {
+                    startY += originalMouseDy;
+                }
+
+                history.push({
+                    mousePos: { x: currentX, y: currentY },
+                    originalDelta: { dx: originalMouseDx, dy: originalMouseDy },
+                    snappedDelta: { dx, dy },
+                    elementPos: { x: elementX, y: elementY },
+                    actualDelta: { dx: actualDx, dy: actualDy },
+                    dragRef: { x: startX, y: startY },
+                    offset: { x: elementX - startX, y: elementY - startY }
+                });
+            }
+
+            return history;
+        }
+
+        // Test 1: Normal drag without snapping or boundaries
+        testCase("Test 1: Normal drag (no snapping, no boundaries)", (log) => {
+            const history = simulateDrag({
+                initialStart: { x: 100, y: 100 },
+                elementPosition: { x: 100, y: 100 },
+                mouseMoves: [
+                    { x: 110, y: 110 },  // Move 10px
+                    { x: 120, y: 120 },  // Move 10px more
+                    { x: 130, y: 130 },  // Move 10px more
+                ]
+            });
+
+            history.forEach((frame, i) => {
+                log(`Frame ${i + 1}: Mouse(${frame.mousePos.x},${frame.mousePos.y}) Element(${frame.elementPos.x},${frame.elementPos.y}) DragRef(${frame.dragRef.x},${frame.dragRef.y}) Offset(${frame.offset.x},${frame.offset.y})`);
+            });
+
+            // Verify: offset should be 0,0 throughout (element at drag reference)
+            const allOffsetsZero = history.every(f => f.offset.x === 0 && f.offset.y === 0);
+            if (allOffsetsZero) {
+                log("✓ PASS: Element stays at drag reference", 'pass');
+            } else {
+                log("✗ FAIL: Element drifted from drag reference", 'fail');
+            }
+        });
+
+        // Test 2: Drag with smart guide snapping
+        testCase("Test 2: Drag with smart guide snapping", (log) => {
+            const history = simulateDrag({
+                initialStart: { x: 100, y: 100 },
+                elementPosition: { x: 100, y: 100 },
+                mouseMoves: [
+                    { x: 110, y: 110 },  // Mouse moves 10px
+                    { x: 120, y: 120 },  // Mouse moves 10px more
+                    { x: 130, y: 130 },  // Mouse moves 10px more
+                ],
+                smartGuideSnap: (dx, dy) => ({
+                    dx: dx + 5,  // Snap adds 5px on X
+                    dy: dy + 5   // Snap adds 5px on Y
+                })
+            });
+
+            history.forEach((frame, i) => {
+                log(`Frame ${i + 1}: Mouse(${frame.mousePos.x},${frame.mousePos.y}) Element(${frame.elementPos.x},${frame.elementPos.y}) DragRef(${frame.dragRef.x},${frame.dragRef.y}) Offset(${frame.offset.x},${frame.offset.y})`);
+            });
+
+            // Verify: offset should remain constant (element drifts from mouse due to snapping, but not from drag ref)
+            const firstOffset = history[0].offset;
+            const offsetConstant = history.every(f => f.offset.x === firstOffset.x && f.offset.y === firstOffset.y);
+
+            if (offsetConstant) {
+                log("✓ PASS: Offset remains constant despite snapping", 'pass');
+            } else {
+                log("✗ FAIL: Offset changed - drag reference drifted", 'fail');
+                log(`  First offset: (${firstOffset.x}, ${firstOffset.y})`, 'fail');
+                log(`  Final offset: (${history[history.length-1].offset.x}, ${history[history.length-1].offset.y})`, 'fail');
+            }
+        });
+
+        // Test 3: Drag to boundary (X axis clamped)
+        testCase("Test 3: Drag to X boundary", (log) => {
+            const history = simulateDrag({
+                initialStart: { x: 1400, y: 100 },
+                elementPosition: { x: 1400, y: 100 },
+                mouseMoves: [
+                    { x: 1450, y: 150 },  // Move 50px X, 50px Y
+                    { x: 1550, y: 200 },  // Move 100px X (beyond boundary), 50px Y
+                    { x: 1650, y: 250 },  // Move 100px X (beyond boundary), 50px Y
+                    { x: 1600, y: 300 },  // Move back 50px X, 50px Y
+                ],
+                boundaries: { minX: -200, maxX: 1500, minY: -200, maxY: 1500 }
+            });
+
+            history.forEach((frame, i) => {
+                log(`Frame ${i + 1}: Mouse(${frame.mousePos.x},${frame.mousePos.y}) Element(${frame.elementPos.x},${frame.elementPos.y}) DragRef(${frame.dragRef.x},${frame.dragRef.y}) Offset(${frame.offset.x},${frame.offset.y})`);
+            });
+
+            // Check frame 2 and 3 where X is clamped
+            const frame2 = history[1];
+            const frame3 = history[2];
+
+            const xClampedCorrectly = frame2.elementPos.x === 1500 && frame3.elementPos.x === 1500;
+            const dragRefFollowsMouse = frame2.dragRef.x === 1550 && frame3.dragRef.x === 1650;
+
+            if (xClampedCorrectly) {
+                log("✓ PASS: X clamped at boundary", 'pass');
+            } else {
+                log("✗ FAIL: X not clamped correctly", 'fail');
+            }
+
+            if (dragRefFollowsMouse) {
+                log("✓ PASS: Drag reference follows mouse when clamped", 'pass');
+            } else {
+                log("✗ FAIL: Drag reference doesn't follow mouse when clamped", 'fail');
+            }
+        });
+
+        // Test 4: Combined snapping + boundary
+        testCase("Test 4: Smart guide snapping + boundary clamping", (log) => {
+            const history = simulateDrag({
+                initialStart: { x: 1400, y: 100 },
+                elementPosition: { x: 1400, y: 100 },
+                mouseMoves: [
+                    { x: 1450, y: 150 },  // Move 50px
+                    { x: 1550, y: 200 },  // Beyond boundary
+                ],
+                boundaries: { minX: -200, maxX: 1500, minY: -200, maxY: 1500 },
+                smartGuideSnap: (dx, dy) => ({
+                    dx: dx + 10,  // Snap adds 10px
+                    dy: dy + 10
+                })
+            });
+
+            history.forEach((frame, i) => {
+                log(`Frame ${i + 1}: Mouse(${frame.mousePos.x},${frame.mousePos.y}) Element(${frame.elementPos.x},${frame.elementPos.y}) DragRef(${frame.dragRef.x},${frame.dragRef.y}) Offset(${frame.offset.x},${frame.offset.y})`);
+                log(`  Original delta: (${frame.originalDelta.dx}, ${frame.originalDelta.dy}), Snapped: (${frame.snappedDelta.dx}, ${frame.snappedDelta.dy}), Actual: (${frame.actualDelta.dx}, ${frame.actualDelta.dy})`);
+            });
+
+            // Frame 1: Element should move by snapped amount, drag ref by original
+            const frame1 = history[0];
+            const frame1Correct =
+                frame1.elementPos.x === 1460 &&  // 1400 + 50 + 10 (snapped)
+                frame1.dragRef.x === 1450;        // 1400 + 50 (original mouse delta)
+
+            // Frame 2: Element clamped, drag ref follows mouse
+            const frame2 = history[1];
+            const frame2Correct =
+                frame2.elementPos.x === 1500 &&  // Clamped
+                frame2.dragRef.x === 1550;       // Follows mouse
+
+            if (frame1Correct) {
+                log("✓ PASS: Frame 1 - Element moves by snapped delta, ref by original", 'pass');
+            } else {
+                log(`✗ FAIL: Frame 1 - Element at ${frame1.elementPos.x} (expected 1460), ref at ${frame1.dragRef.x} (expected 1450)`, 'fail');
+            }
+
+            if (frame2Correct) {
+                log("✓ PASS: Frame 2 - Element clamped, ref follows mouse", 'pass');
+            } else {
+                log(`✗ FAIL: Frame 2 - Element at ${frame2.elementPos.x} (expected 1500), ref at ${frame2.dragRef.x} (expected 1550)`, 'fail');
+            }
+        });
+
+        log("\n=== All tests complete ===\n");
+    </script>
+</body>
+</html>
