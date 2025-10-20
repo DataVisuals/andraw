@@ -4492,21 +4492,14 @@ function handleMouseMove(e) {
                 const actualDx = primaryElement.x - oldX;
                 const actualDy = primaryElement.y - oldY;
 
-                // Debug: Log drag tracking info
-                if (actualDx === 0 && actualDy === 0 && (dx !== 0 || dy !== 0)) {
-                    console.log(`[DRAG TRACKING] No movement but delta exists: dx=${dx.toFixed(1)}, dy=${dy.toFixed(1)}, resetting reference from (${startX.toFixed(0)},${startY.toFixed(0)}) to (${currentX.toFixed(0)},${currentY.toFixed(0)})`);
-                }
-
                 // If no actual movement occurred (e.g., clamped to boundary),
-                // reset reference based on where element actually is
+                // reset reference to current mouse position
                 if (actualDx === 0 && actualDy === 0 && (dx !== 0 || dy !== 0)) {
                     // Element couldn't move (boundary or other constraint)
-                    // Reset drag reference to element's current position
-                    // This maintains the offset between mouse and element
-                    const offsetX = currentX - startX;
-                    const offsetY = currentY - startY;
-                    startX = primaryElement.x;
-                    startY = primaryElement.y;
+                    // Reset drag reference to current mouse position
+                    // This prevents delta accumulation
+                    startX = currentX;
+                    startY = currentY;
                 } else {
                     // Normal case: update reference by actual movement
                     startX += actualDx;
