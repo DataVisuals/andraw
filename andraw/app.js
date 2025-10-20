@@ -4490,37 +4490,18 @@ function handleMouseMove(e) {
                 moveElement(selectedElement, dx, dy);
             }
 
-            // Update startX/startY based on mouse movement and actual element movement
-            // Handle X and Y independently to prevent drift when only one axis is clamped
+            // Update startX/startY to current mouse position
+            // This keeps the drag reference synchronized with the cursor
+            // When smart guide snapping occurs, the element may offset from cursor,
+            // but the offset is recalculated each frame based on actual positions
+            startX = currentX;
+            startY = currentY;
+
+            // Debug logging for drag tracking
             if (primaryElement) {
                 const actualDx = primaryElement.x - oldX;
                 const actualDy = primaryElement.y - oldY;
-
-                // Handle X coordinate
-                if (actualDx === 0 && originalMouseDx !== 0) {
-                    // X couldn't move (clamped or constrained), reset X reference to mouse position
-                    startX = currentX;
-                } else {
-                    // X moved, update by ORIGINAL mouse delta (before smart guide snapping)
-                    // This prevents drift from smart guide snapping
-                    startX += originalMouseDx;
-                }
-
-                // Handle Y coordinate
-                if (actualDy === 0 && originalMouseDy !== 0) {
-                    // Y couldn't move (clamped or constrained), reset Y reference to mouse position
-                    startY = currentY;
-                } else {
-                    // Y moved, update by ORIGINAL mouse delta (before smart guide snapping)
-                    // This prevents drift from smart guide snapping
-                    startY += originalMouseDy;
-                }
-
-                // Debug logging for drag tracking
                 console.log(`[DRAG] Mouse(${currentX.toFixed(0)},${currentY.toFixed(0)}) Elem(${primaryElement.x.toFixed(0)},${primaryElement.y.toFixed(0)}) Ref(${startX.toFixed(0)},${startY.toFixed(0)}) OrigΔ(${originalMouseDx.toFixed(0)},${originalMouseDy.toFixed(0)}) SnapΔ(${dx.toFixed(0)},${dy.toFixed(0)}) ActualΔ(${actualDx.toFixed(0)},${actualDy.toFixed(0)}) Offset(${(primaryElement.x - startX).toFixed(0)},${(primaryElement.y - startY).toFixed(0)})`);
-            } else {
-                startX = currentX;
-                startY = currentY;
             }
 
             redraw();
