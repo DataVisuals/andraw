@@ -4488,21 +4488,26 @@ function handleMouseMove(e) {
 
             // Update startX/startY based on ACTUAL movement (not mouse movement)
             // This prevents drift when shapes hit boundaries or are snapped
+            // Handle X and Y independently to prevent drift when only one axis is clamped
             if (primaryElement) {
                 const actualDx = primaryElement.x - oldX;
                 const actualDy = primaryElement.y - oldY;
 
-                // If no actual movement occurred (e.g., clamped to boundary),
-                // reset reference to current mouse position
-                if (actualDx === 0 && actualDy === 0 && (dx !== 0 || dy !== 0)) {
-                    // Element couldn't move (boundary or other constraint)
-                    // Reset drag reference to current mouse position
-                    // This prevents delta accumulation
+                // Handle X coordinate
+                if (actualDx === 0 && dx !== 0) {
+                    // X couldn't move (clamped or constrained), reset X reference
                     startX = currentX;
+                } else {
+                    // X moved normally, update by actual movement
+                    startX += actualDx;
+                }
+
+                // Handle Y coordinate
+                if (actualDy === 0 && dy !== 0) {
+                    // Y couldn't move (clamped or constrained), reset Y reference
                     startY = currentY;
                 } else {
-                    // Normal case: update reference by actual movement
-                    startX += actualDx;
+                    // Y moved normally, update by actual movement
                     startY += actualDy;
                 }
             } else {
