@@ -5156,9 +5156,20 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal, 
             if (verticalBlocked) {
                 return true;
             }
-            // Check if vertical segment passes through source shape only
-            // Don't check target - the segment is entering the target at its anchor
+            // Check if vertical segment passes through source shape
             if (segmentIntersectsShape(x2, y1, x2, y2, boundsA)) {
+                return true;
+            }
+            // Check if the START of the final entry segment is inside the target shape
+            // The segment should END at the anchor (touching), not START inside the shape
+            const startX = x2;
+            const startY = y1;
+            const startsInsideTarget =
+                startX >= boundsB.x &&
+                startX <= boundsB.x + boundsB.width &&
+                startY >= boundsB.y &&
+                startY <= boundsB.y + boundsB.height;
+            if (startsInsideTarget) {
                 return true;
             }
             return false;
@@ -5180,9 +5191,20 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal, 
             if (horizontalBlocked) {
                 return true;
             }
-            // Check if horizontal segment passes through source shape only
-            // Don't check target - the segment is entering the target at its anchor
+            // Check if horizontal segment passes through source shape
             if (segmentIntersectsShape(x1, y2, x2, y2, boundsA)) {
+                return true;
+            }
+            // Check if the START of the final entry segment is inside the target shape
+            // The segment should END at the anchor (touching), not START inside the shape
+            const startX = x1;
+            const startY = y2;
+            const startsInsideTarget =
+                startX >= boundsB.x &&
+                startX <= boundsB.x + boundsB.width &&
+                startY >= boundsB.y &&
+                startY <= boundsB.y + boundsB.height;
+            if (startsInsideTarget) {
                 return true;
             }
             return false;
