@@ -4486,8 +4486,7 @@ function handleMouseMove(e) {
                 moveElement(selectedElement, dx, dy);
             }
 
-            // Update startX/startY based on ACTUAL movement (not mouse movement)
-            // This prevents drift when shapes hit boundaries or are snapped
+            // Update startX/startY based on mouse movement and actual element movement
             // Handle X and Y independently to prevent drift when only one axis is clamped
             if (primaryElement) {
                 const actualDx = primaryElement.x - oldX;
@@ -4495,20 +4494,22 @@ function handleMouseMove(e) {
 
                 // Handle X coordinate
                 if (actualDx === 0 && dx !== 0) {
-                    // X couldn't move (clamped or constrained), reset X reference
+                    // X couldn't move (clamped or constrained), reset X reference to mouse position
                     startX = currentX;
                 } else {
-                    // X moved normally, update by actual movement
-                    startX += actualDx;
+                    // X moved, update by ORIGINAL mouse delta (not actual movement)
+                    // This prevents drift from smart guide snapping
+                    startX += dx;
                 }
 
                 // Handle Y coordinate
                 if (actualDy === 0 && dy !== 0) {
-                    // Y couldn't move (clamped or constrained), reset Y reference
+                    // Y couldn't move (clamped or constrained), reset Y reference to mouse position
                     startY = currentY;
                 } else {
-                    // Y moved normally, update by actual movement
-                    startY += actualDy;
+                    // Y moved, update by ORIGINAL mouse delta (not actual movement)
+                    // This prevents drift from smart guide snapping
+                    startY += dy;
                 }
             } else {
                 startX = currentX;
