@@ -4415,14 +4415,18 @@ function handleMouseMove(e) {
             let dx = currentX - startX;
             let dy = currentY - startY;
 
+            // Save original mouse delta BEFORE smart guide snapping modifies it
+            const originalMouseDx = dx;
+            const originalMouseDy = dy;
+
             // Get dragging elements
             const draggingElements = selectedElements.length > 0 ? selectedElements : (selectedElement ? [selectedElement] : []);
 
             // Apply smart guide snapping
             if (draggingElements.length > 0) {
                 const snapped = applySmartGuideSnapping(draggingElements, dx, dy);
-                dx = snapped.dx;
-                dy = snapped.dy;
+                dx = snapped.dx;  // dx is now MODIFIED for element movement
+                dy = snapped.dy;  // dy is now MODIFIED for element movement
 
                 // Find and store smart guides for visual feedback
                 // Temporarily move elements to check alignment
@@ -4493,23 +4497,23 @@ function handleMouseMove(e) {
                 const actualDy = primaryElement.y - oldY;
 
                 // Handle X coordinate
-                if (actualDx === 0 && dx !== 0) {
+                if (actualDx === 0 && originalMouseDx !== 0) {
                     // X couldn't move (clamped or constrained), reset X reference to mouse position
                     startX = currentX;
                 } else {
-                    // X moved, update by ORIGINAL mouse delta (not actual movement)
+                    // X moved, update by ORIGINAL mouse delta (before smart guide snapping)
                     // This prevents drift from smart guide snapping
-                    startX += dx;
+                    startX += originalMouseDx;
                 }
 
                 // Handle Y coordinate
-                if (actualDy === 0 && dy !== 0) {
+                if (actualDy === 0 && originalMouseDy !== 0) {
                     // Y couldn't move (clamped or constrained), reset Y reference to mouse position
                     startY = currentY;
                 } else {
-                    // Y moved, update by ORIGINAL mouse delta (not actual movement)
+                    // Y moved, update by ORIGINAL mouse delta (before smart guide snapping)
                     // This prevents drift from smart guide snapping
-                    startY += dy;
+                    startY += originalMouseDy;
                 }
             } else {
                 startX = currentX;
