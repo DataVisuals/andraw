@@ -5814,7 +5814,7 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal, 
                 if (isToRight) {
                     // B is below and to the right
                     // Enter from LEFT (closest to source which is to the left of target)
-                    console.log(`→ Using BOTTOM→LEFT for below-right direction (xDiff=${xDiff.toFixed(0)}, threshold=${threshold.toFixed(0)})`);
+                    console.log(`→ Using BOTTOM→LEFT for below-right direction (xDiff=${xDiff.toFixed(0)})`);
                     return {
                         from: sidesA.bottom,
                         to: sidesB.left,
@@ -5824,7 +5824,7 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal, 
                 } else {
                     // B is below and to the left
                     // Enter from RIGHT (closest to source which is to the right of target)
-                    console.log(`→ Using BOTTOM→RIGHT for below-left direction (xDiff=${xDiff.toFixed(0)}, threshold=${threshold.toFixed(0)})`);
+                    console.log(`→ Using BOTTOM→RIGHT for below-left direction (xDiff=${xDiff.toFixed(0)})`);
                     return {
                         from: sidesA.bottom,
                         to: sidesB.right,
@@ -5967,7 +5967,7 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal, 
                 if (isToRight) {
                     // B is above and to the right
                     // Enter from LEFT (closest to source which is to the left of target)
-                    console.log(`→ Using TOP→LEFT for above-right direction (xDiff=${xDiff.toFixed(0)}, threshold=${threshold.toFixed(0)})`);
+                    console.log(`→ Using TOP→LEFT for above-right direction (xDiff=${xDiff.toFixed(0)})`);
                     return {
                         from: sidesA.top,
                         to: sidesB.left,
@@ -5977,7 +5977,7 @@ function getDirectionalConnection(boundsA, typeA, boundsB, typeB, isHorizontal, 
                 } else {
                     // B is above and to the left
                     // Enter from RIGHT (closest to source which is to the right of target)
-                    console.log(`→ Using TOP→RIGHT for above-left direction (xDiff=${xDiff.toFixed(0)}, threshold=${threshold.toFixed(0)})`);
+                    console.log(`→ Using TOP→RIGHT for above-left direction (xDiff=${xDiff.toFixed(0)})`);
                     return {
                         from: sidesA.top,
                         to: sidesB.right,
